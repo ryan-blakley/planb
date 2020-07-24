@@ -1,5 +1,5 @@
 Name:           pbr
-Version:        0.1
+Version:        0.2
 Release:        1%{?dist}
 Summary:        Plan B Recovery is a backup and recovery utility.
 
@@ -35,4 +35,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/planb/
 
 %changelog
+* Fri Jul 24 2020 Ryan Blakley <rblakley@redhat.com> 0.2-1
+- new package built with tito
+- Push a tag with tito, to test the build process works.
 
