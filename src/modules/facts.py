@@ -19,6 +19,7 @@ from os import environ, uname
 from os.path import exists
 from re import search
 from _ped import DeviceException, DiskException, PartitionException
+from platform import machine
 from pyudev import Context
 
 from .lvm import get_lvm_report
@@ -50,6 +51,7 @@ class Facts(object):
             self.modules = self.get_modules()
             self.uefi = exists("/sys/firmware/efi")
             self.uname = uname().release
+            self.arch = machine()
 
             from selinux import is_selinux_enabled, security_getenforce
             if is_selinux_enabled():

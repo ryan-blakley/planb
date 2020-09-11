@@ -96,28 +96,38 @@ class USB(object):
 
         makedirs(self.tmp_efi_dir, exist_ok=True)
 
-        # Need to add in section for mounting the vfat partition.
-        copy2("/boot/efi/EFI/BOOT/BOOTX64.EFI", self.tmp_efi_dir)
-        if "Fedora" in self.facts.distro:
-            copy2("/boot/efi/EFI/fedora/grubx64.efi", self.tmp_efi_dir)
-            copy2("/boot/efi/EFI/fedora/mmx64.efi", self.tmp_efi_dir)
-            copy2("/boot/efi/EFI/fedora/shimx64.efi", self.tmp_efi_dir)
-        elif "Red Hat" in self.facts.distro:
-            copy2("/boot/efi/EFI/redhat/grubx64.efi", self.tmp_efi_dir)
-            copy2("/boot/efi/EFI/redhat/mmx64.efi", self.tmp_efi_dir)
-            copy2("/boot/efi/EFI/redhat/shimx64.efi", self.tmp_efi_dir)
+        copy2(glob("/boot/efi/EFI/BOOT/BOOT*.EFI")[0], self.tmp_efi_dir)
+        copy2(glob("/boot/efi/EFI/fedora/BOOT*.CSV")[0], self.tmp_efi_dir)
+
+        # Loop through any efi file under /boot/efi/EFI/<distro>/, and copy.
+        for efi in glob("/boot/efi/EFI/[a-z]*/*.efi"):
+            copy2(efi, self.tmp_efi_dir)
 
         env = Environment(loader=FileSystemLoader("/usr/share/planb/"))
         grub_cfg = env.get_template("grub.cfg")
         with open(join(self.tmp_efi_dir, "grub.cfg"), "w+") as f:
-            f.write(grub_cfg.render(
-                hostname=self.facts.hostname,
-                location="boot/syslinux",
-                label_name=self.label_name,
-                boot_args=self.cfg.rc_kernel_args
-            ))
+            # For aarch64 it doesn't use the normal efi commands in grub.cfg.
+            if self.facts.arch == "aarch64":
+                f.write(grub_cfg.render(
+                    hostname=self.facts.hostname,
+                    linux_cmd="linux",
+                    initrd_cmd="initrd",
+                    location="boot/syslinux",
+                    label_name=self.label_name,
+                    boot_args=self.cfg.rc_kernel_args,
+                    aarch64=1
+                ))
+            else:
+                f.write(grub_cfg.render(
+                    hostname=self.facts.hostname,
+                    linux_cmd="linuxefi",
+                    initrd_cmd="initrdefi",
+                    location="boot/syslinux",
+                    label_name=self.label_name,
+                    boot_args=self.cfg.rc_kernel_args,
+                    aarch64=0
+                ))
 
-        copy2(join(self.tmp_efi_dir, "grub.cfg"), join(self.tmp_efi_dir, "BOOT.conf"))
         log("Un-mounting EFI directory")
         umount(self.tmp_usbfs_dir)
 
@@ -128,15 +138,33 @@ class USB(object):
         """
         # Copy all of the needed syslinux files to the tmp dir.
         makedirs(self.tmp_syslinux_dir, exist_ok=True)
-        chdir("/usr/share/syslinux/")
-        copy2("chain.c32", self.tmp_syslinux_dir)
-        copy2("isolinux.bin", self.tmp_syslinux_dir)
-        copy2("ldlinux.c32", self.tmp_syslinux_dir)
-        copy2("libcom32.c32", self.tmp_syslinux_dir)
-        copy2("libmenu.c32", self.tmp_syslinux_dir)
-        copy2("libutil.c32", self.tmp_syslinux_dir)
-        copy2("menu.c32", self.tmp_syslinux_dir)
-        copy2("vesamenu.c32", self.tmp_syslinux_dir)
+        if self.facts.arch == "x86_64":
+            chdir("/usr/share/syslinux/")
+            copy2("chain.c32", self.tmp_syslinux_dir)
+            copy2("isolinux.bin", self.tmp_syslinux_dir)
+            copy2("ldlinux.c32", self.tmp_syslinux_dir)
+            copy2("libcom32.c32", self.tmp_syslinux_dir)
+            copy2("libmenu.c32", self.tmp_syslinux_dir)
+            copy2("libutil.c32", self.tmp_syslinux_dir)
+            copy2("menu.c32", self.tmp_syslinux_dir)
+            copy2("vesamenu.c32", self.tmp_syslinux_dir)
+
+            # If the memtest86+ pkg isn't installed, skip adding that boot option.
+            memtest = 0
+            if glob("/boot/memtest86+-*"):
+                copy2(glob("/boot/memtest86*")[0], join(self.tmp_syslinux_dir, "memtest"))
+                memtest = 1
+
+            # Write out the extlinux.conf based on the isolinux.cfg template file.
+            env = Environment(loader=FileSystemLoader("/usr/share/planb/"))
+            isolinux_cfg = env.get_template("isolinux.cfg")
+            with open(join(self.tmp_syslinux_dir, "extlinux.conf"), "w+") as f:
+                f.write(isolinux_cfg.render(
+                    hostname=self.facts.hostname,
+                    label_name=self.label_name,
+                    boot_args=self.cfg.rc_kernel_args,
+                    memtest=memtest
+                ))
 
         # Copy the current running kernel's vmlinuz file to the tmp dir.
         copy2(f"/boot/vmlinuz-{uname().release}", join(self.tmp_syslinux_dir, "vmlinuz"))
@@ -144,23 +172,6 @@ class USB(object):
         # If fedora logos pkg is installed, copy the splash image over.
         if isfile('/usr/share/planb/splash.png'):
             copy2("/usr/share/planb/splash.png", self.tmp_syslinux_dir)
-
-        # If the memtest86+ pkg isn't installed, skip adding that boot option.
-        memtest = 0
-        if glob("/boot/memtest86+-*"):
-            copy2(glob("/boot/memtest86*")[0], join(self.tmp_syslinux_dir, "memtest"))
-            memtest = 1
-
-        # Write out the extlinux.conf based on the isolinux.cfg template file.
-        env = Environment(loader=FileSystemLoader("/usr/share/planb/"))
-        isolinux_cfg = env.get_template("isolinux.cfg")
-        with open(join(self.tmp_syslinux_dir, "extlinux.conf"), "w+") as f:
-            f.write(isolinux_cfg.render(
-                hostname=self.facts.hostname,
-                label_name=self.label_name,
-                boot_args=self.cfg.rc_kernel_args,
-                memtest=memtest
-            ))
 
         if self.facts.uefi:
             self.prep_uefi()
@@ -183,6 +194,5 @@ class USB(object):
 
         log("Creating the USB's LiveOS IMG")
         liveos.create_squashfs()
-
 
 # vim:set ts=4 sw=4 et:

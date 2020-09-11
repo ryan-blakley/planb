@@ -8,9 +8,25 @@ URL:            https://github.com/ryan-blakley/pbr
 Source0:        %{name}-%{version}.tar.gz
 
 BuildArch:      noarch
+
 BuildRequires:  python3-devel
 BuildRequires:  python3-setuptools
-Requires:	dracut-live genisoimage python3 python3-distro python3-jinja2 python3-libselinux python3-magic python3-pyparted python3-pyudev python3-rpm python3-six python3-tqdm syslinux
+
+Requires: dracut-live
+Requires: genisoimage
+Requires: python3
+Requires: python3-distro
+Requires: python3-jinja2
+Requires: python3-libselinux
+Requires: python3-magic
+Requires: python3-pyparted
+Requires: python3-pyudev
+Requires: python3-rpm
+Requires: python3-six
+Requires: python3-tqdm
+%ifarch x86_64
+Requires: syslinux
+%endif
 
 %description
 Plan B Recovery is a backup and recovery utility.
