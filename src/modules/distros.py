@@ -352,3 +352,5 @@ def set_distro_pkgs(pkgs, facts):
         return pkgs + fedora_pkgs
     elif "Red Hat" in dis:
         return pkgs + rh_pkgs
+
+# vim:set ts=4 sw=4 et:

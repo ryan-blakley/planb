@@ -115,7 +115,7 @@ class Backup(object):
             copyfile("/var/log/pbr.log", join(self.tmp_bk_dir, "pbr.log"))
 
         if self.mounted:
-            logging.debug(f"Un-mounting backup location {self.tmp_mount_dir}")
+            log(f"Un-mounting backup location {self.tmp_mount_dir}")
             umount(self.tmp_mount_dir)
 
         # If keep is passed, warn the user to remove the tmp dir.
@@ -382,6 +382,8 @@ class Backup(object):
                 log("Creating backup archive, this could take a while, please be patient")
                 create_tar(self.bk_excludes, self.tmp_bk_dir)
 
+        # Create the iso after the the backup archive is created
+        # if the backup location is set to iso.
         if self.cfg.bk_location_type == "iso":
             log("Creating the ISO file")
             iso.create_iso()
