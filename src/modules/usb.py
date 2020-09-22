@@ -49,7 +49,7 @@ def fmt_usb(device):
         # so if it doesn't exist query udev on the device again.
         if not is_block(f"{device}1"):
             logging.debug("usb: fmt_usb: Partition not found yet, so query udev on the device again.")
-            dev_from_file(device)
+            dev_from_file(udev_ctx, device)
 
         uuid = f"{rand_str(8, 1)}-{rand_str(4, 1)}-{rand_str(4, 1)}-{rand_str(4, 1)}-{rand_str(12, 1)}"
         if exists("/sys/firmware/efi"):
@@ -136,8 +136,11 @@ class USB(object):
         Copy the needed files for syslinux in the tmp working directory.
         :return:
         """
-        # Copy all of the needed syslinux files to the tmp dir.
+        # Make the needed temp directory.
         makedirs(self.tmp_syslinux_dir, exist_ok=True)
+
+        # Since syslinux is only available on x86_64, check the arch.
+        # Then copy all of the needed syslinux files to the tmp dir.
         if self.facts.arch == "x86_64":
             chdir("/usr/share/syslinux/")
             copy2("chain.c32", self.tmp_syslinux_dir)

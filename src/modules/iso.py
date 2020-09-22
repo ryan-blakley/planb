@@ -156,10 +156,11 @@ class ISO(object):
         Copy the needed files for isolinux in the tmp working directory.
         :return:
         """
-        # Copy all of the needed isolinux files to the tmp dir.
+        # Make the needed temp directory.
         makedirs(self.tmp_isolinux_dir)
 
         # Since syslinux is only available on x86_64, check the arch.
+        # Then copy all of the needed isolinux files to the tmp dir.
         if self.facts.arch == "x86_64":
             chdir("/usr/share/syslinux/")
             copy2("chain.c32", self.tmp_isolinux_dir)
