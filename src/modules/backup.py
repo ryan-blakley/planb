@@ -266,6 +266,7 @@ class Backup(object):
         misc.update({"uefi": self.facts.uefi})
         misc.update({"distro": self.facts.distro})
         misc.update({"distro_pretty": self.facts.distro_pretty})
+        misc.update({"arch": self.facts.arch})
         misc.update({"hostname": self.facts.hostname})
         misc.update({"selinux_enabled": self.facts.selinux_enabled})
         misc.update({"selinux_enforcing": self.facts.selinux_enforcing})

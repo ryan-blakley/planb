@@ -15,12 +15,12 @@
 import logging
 from glob import glob
 from jinja2 import Environment, FileSystemLoader
-from os import chdir, makedirs, uname
-from os.path import exists, isfile, join
+from os import chdir, makedirs, remove, rmdir, uname
+from os.path import exists, join
 from shutil import copy2
 
 from .distros import rh_customize_rootfs, RHLiveOS
-from .exceptions import MountError
+from .exceptions import MountError, RunCMDError
 from .fs import fmt_fs
 from .logger import log
 from .utils import dev_from_file, is_block, mount, rand_str, run_cmd, umount
@@ -33,15 +33,29 @@ def fmt_usb(device):
     :return:
     """
     import pyudev
+    from platform import machine
     from .parted import Parted
 
+    # Query the arch and set the udev context.
+    arch = machine()
     udev_ctx = pyudev.Context()
+
+    # Prompt to make sure the correct device is chosen to format.
     confirmation = input(f"Are you sure you want to format {device} this will wipe it it, type YES if so: ")
+
     if dev_from_file(udev_ctx, device).get('ID_BUS', '') == "usb" and confirmation == "YES":
         p = Parted()
         if exists("/sys/firmware/efi"):
             p.create_uefi_usb(device)
+        elif "ppc64le" in arch:
+            log("Wiping the device")
+            # Wipe the disk, otherwise the grub install will complain about it not being empty.
+            run_cmd(['dd', 'bs=5M', 'count=1', 'if=/dev/zero', f"of={device}"])
+
+            log("Starting to partition the device")
+            p.create_prep_usb(device)
         else:
+            log("Starting to partition the device")
             p.create_legacy_usb(device)
         log("Partitioning complete")
 
@@ -56,6 +70,41 @@ def fmt_usb(device):
             fmt_fs(f"{device}1", rand_str(8, True), "PBR-EFI", "vfat")
             fmt_fs(f"{device}2", uuid.lower(), "PLANBRECOVER-USB", "ext4")
             log("Formatting complete")
+        elif "ppc64le" in arch:
+            from tempfile import mkdtemp
+
+            fmt_fs(f"{device}2", uuid.lower(), "PLANBRECOVER-USB", "ext4")
+            log("Formatting complete")
+
+            # Create a tmp dir to mount the usb on, so grub2 can be installed.
+            tmp_dir = mkdtemp(prefix="usb.")
+            ret = mount(f"{device}2", tmp_dir)
+            if ret.returncode:
+                stderr = ret.stderr.decode()
+                if "already mounted" not in stderr:
+                    logging.error(f" Failed running {ret.args} due to {stderr}")
+                    raise MountError()
+
+            # Go ahead and install grub2 on the usb device, I don't think grub needs
+            # to be installed every time a backup is created, so it makes sense to
+            # just do it here once.
+            ret = run_cmd(['grub2-install', '--target=powerpc-ieee1275', f"--boot-directory={tmp_dir}", f"{device}1"],
+                          ret=True)
+            if ret.returncode:
+                logging.error(f" The command {ret.args} returned in error: {ret.stderr.decode()}")
+
+                # Clean up if there is an error running grub install.
+                ret2 = umount(tmp_dir)
+                rmdir(tmp_dir)
+                if ret2.returncode:
+                    logging.error(f" The command {ret2.args} returned in error: {ret2.stderr.decode()}")
+
+                raise RunCMDError()
+
+            # Clean everything up.
+            umount(tmp_dir)
+            rmdir(tmp_dir)
+            log("Grub2 install complete")
         else:
             fmt_fs(f"{device}1", uuid.lower(), "PLANBRECOVER-USB", "ext4")
             log("Formatting complete")
@@ -81,6 +130,7 @@ class USB(object):
         self.tmp_usbfs_dir = join(tmp_dir, "usbfs")
         self.tmp_efi_dir = join(tmp_dir, "usbfs/EFI/BOOT")
         self.tmp_syslinux_dir = join(tmp_dir, "backup/boot/syslinux")
+        self.tmp_share_dir = join(tmp_dir, "/usr/share/planb")
 
     def prep_uefi(self):
         """
@@ -115,7 +165,8 @@ class USB(object):
                     location="boot/syslinux",
                     label_name=self.label_name,
                     boot_args=self.cfg.rc_kernel_args,
-                    aarch64=1
+                    arch=self.facts.arch,
+                    iso=0
                 ))
             else:
                 f.write(grub_cfg.render(
@@ -125,7 +176,8 @@ class USB(object):
                     location="boot/syslinux",
                     label_name=self.label_name,
                     boot_args=self.cfg.rc_kernel_args,
-                    aarch64=0
+                    arch=self.facts.arch,
+                    iso=0
                 ))
 
         log("Un-mounting EFI directory")
@@ -169,16 +221,30 @@ class USB(object):
                     memtest=memtest
                 ))
 
+            # Copy the splash image over.
+            copy2(join(self.tmp_share_dir, "splash.png"), self.tmp_syslinux_dir)
+        elif self.facts.arch == "ppc64le":
+            # Generate a grub.cfg.
+            env = Environment(loader=FileSystemLoader("/usr/share/planb/"))
+            grub_cfg = env.get_template("grub.cfg")
+            with open(join(self.tmp_dir, "backup/grub2/grub.cfg"), "w+") as f:
+                f.write(grub_cfg.render(
+                    hostname=self.facts.hostname,
+                    linux_cmd="linux",
+                    initrd_cmd="initrd",
+                    location="boot/syslinux",
+                    label_name=self.label_name,
+                    boot_args=self.cfg.rc_kernel_args,
+                    arch=self.facts.arch,
+                    iso=0
+                ))
+
         # Copy the current running kernel's vmlinuz file to the tmp dir.
         copy2(f"/boot/vmlinuz-{uname().release}", join(self.tmp_syslinux_dir, "vmlinuz"))
 
-        # If fedora logos pkg is installed, copy the splash image over.
-        if isfile('/usr/share/planb/splash.png'):
-            copy2("/usr/share/planb/splash.png", self.tmp_syslinux_dir)
-
         if self.facts.uefi:
             self.prep_uefi()
-        else:
+        elif self.facts.arch == "x86_64":
             run_cmd(['extlinux', '-i', self.tmp_syslinux_dir], capture_output=False)
 
     def mkusb(self):

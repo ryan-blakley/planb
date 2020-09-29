@@ -68,6 +68,8 @@ class Parted(object):
                     partition.setFlag(parted.PARTITION_BIOS_GRUB)
                 elif "esp" in flags:
                     partition.setFlag(parted.PARTITION_ESP)
+                elif "prep" in flags:
+                    partition.setFlag(parted.PARTITION_PREP)
 
             self.pdisk.addPartition(partition, constraint=parted.Constraint(exactGeom=geometry))
             self.pdisk.commit()
@@ -93,6 +95,31 @@ class Parted(object):
         self.pdisk.addPartition(partition=partition, constraint=self.device.optimalAlignedConstraint)
         partition.setFlag(parted.PARTITION_BOOT)
         partition.setFlag(parted.PARTITION_ESP)
+
+        self.pdisk.commit()
+
+        self.device.removeFromCache()
+
+    def create_prep_usb(self, disk):
+        """
+        Create the partition table on a usb, to make it bootable.
+        :param disk: USB device name.
+        :return:
+        """
+        logging.debug(f"parted: create_prep_usb: disk:{disk}")
+        self.init_disk(disk, "msdos")
+
+        geometry = parted.Geometry(device=self.device, start=2048, end=10239)
+        partition = parted.Partition(disk=self.pdisk, type=parted.PARTITION_NORMAL, geometry=geometry)
+
+        self.pdisk.addPartition(partition=partition, constraint=self.device.optimalAlignedConstraint)
+        partition.setFlag(parted.PARTITION_BOOT)
+        partition.setFlag(parted.PARTITION_PREP)
+
+        geometry = parted.Geometry(device=self.device, start=10240, length=self.device.getLength() - 10240)
+        partition = parted.Partition(disk=self.pdisk, type=parted.PARTITION_NORMAL, geometry=geometry)
+
+        self.pdisk.addPartition(partition=partition, constraint=self.device.optimalAlignedConstraint)
 
         self.pdisk.commit()
 

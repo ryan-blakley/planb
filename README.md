@@ -34,6 +34,7 @@ the last thing you want is issues to arise.
 - Architectures
   - x86_64
   - Aarch64
+  - ppc64le
 
 ## TODO
 

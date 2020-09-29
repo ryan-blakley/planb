@@ -16,7 +16,7 @@ import logging
 from glob import glob
 from jinja2 import Environment, FileSystemLoader
 from os import chdir, makedirs, uname
-from os.path import isfile, join
+from os.path import join
 from shutil import copy2
 
 from .distros import rh_customize_rootfs, RHLiveOS
@@ -40,9 +40,12 @@ class ISO(object):
         self.label_name = "PLANBRECOVER-ISO"
         self.tmp_dir = tmp_dir
         self.tmp_rootfs_dir = join(tmp_dir, "rootfs")
+        self.tmp_boot_dir = join(tmp_dir, "isofs/boot/grub")
         self.tmp_efi_dir = join(tmp_dir, "isofs/EFI/BOOT")
         self.tmp_images_dir = join(tmp_dir, "isofs/images")
         self.tmp_isolinux_dir = join(tmp_dir, "isofs/isolinux")
+        self.tmp_ppc_dir = join(tmp_dir, "isofs/ppc")
+        self.tmp_share_dir = join(tmp_dir, "/usr/share/planb")
 
     def create_iso(self):
         """
@@ -65,11 +68,16 @@ class ISO(object):
 
             cmd_isohybrid = ['/usr/bin/isohybrid', '-u', join(bk_dir, "recover.iso")]
         elif self.facts.arch == "aarch64":
-            cmd_mkisofs = ['/usr/bin/mkisofs', '-o',
-                           join(bk_dir, "recover.iso"), '-J', '-r', '-eltorito-alt-boot', '-e',
-                           'images/efiboot.img', '-no-emul-boot', '-V', self.label_name, '.']
+            cmd_mkisofs = ['/usr/bin/mkisofs', '-o', join(bk_dir, "recover.iso"), '-J', '-r', '-eltorito-alt-boot',
+                           '-e', 'images/efiboot.img', '-no-emul-boot', '-V', self.label_name, '.']
 
             # isohybrid isn't available on aarch64, so set to none.
+            cmd_isohybrid = None
+        elif self.facts.arch == "ppc64le":
+            cmd_mkisofs = ['/usr/bin/mkisofs', '-o', join(bk_dir, "recover.iso"), '-U', '-chrp-boot', '-J', '-R',
+                           '-iso-level', '3', '-graft-points', '-V', self.label_name, '.']
+
+            # isohybrid isn't available on ppc64le, so set to none.
             cmd_isohybrid = None
         else:
             cmd_mkisofs = ['/usr/bin/mkisofs', '-o',
@@ -112,7 +120,7 @@ class ISO(object):
                         location="isolinux",
                         label_name=self.label_name,
                         boot_args=self.cfg.rc_kernel_args,
-                        aarch64=1
+                        arch=self.facts.arch
                     ))
                 else:
                     f.write(grub_cfg.render(
@@ -122,7 +130,7 @@ class ISO(object):
                         location="isolinux",
                         label_name=self.label_name,
                         boot_args=self.cfg.rc_kernel_args,
-                        aarch64=0
+                        arch=self.facts.arch
                     ))
 
         makedirs(self.tmp_efi_dir)
@@ -151,9 +159,9 @@ class ISO(object):
         umount(join(self.tmp_dir, "isofs"))
         cp_files()
 
-    def prep_isolinux(self):
+    def prep_iso(self):
         """
-        Copy the needed files for isolinux in the tmp working directory.
+        Copy the needed files to create the iso in the tmp working directory.
         :return:
         """
         # Make the needed temp directory.
@@ -189,12 +197,40 @@ class ISO(object):
                     memtest=memtest
                 ))
 
+            # Copy the splash image over.
+            copy2(join(self.tmp_share_dir, "splash.png"), self.tmp_isolinux_dir)
+        elif self.facts.arch == "ppc64le":
+            makedirs(self.tmp_boot_dir)
+            makedirs(self.tmp_ppc_dir)
+
+            # Create the bootinfo.txt file.
+            with open(join(self.tmp_ppc_dir, "bootinfo.txt"), "w") as f:
+                f.writelines("<chrp-boot>\n")
+                f.writelines("<description>grub 2.00</description>\n")
+                f.writelines("<os-name>grub 2.00</os-name>\n")
+                f.writelines("<boot-script>boot &device;:\\boot\grub\core.elf</boot-script>\n")
+                f.writelines("</chrp-boot>\n")
+
+            # Generate a custom grub image file for booting iso's.
+            run_cmd(['grub2-mkimage', '-O', 'powerpc-ieee1275', '-p', '()/boot/grub', '-o', join(self.tmp_boot_dir, "core.elf"), 'linux', 'normal', 'iso9660'])
+
+            # Generate a grub.cfg.
+            env = Environment(loader=FileSystemLoader("/usr/share/planb/"))
+            grub_cfg = env.get_template("grub.cfg")
+            with open(join(self.tmp_boot_dir, "grub.cfg"), "w+") as f:
+                f.write(grub_cfg.render(
+                    hostname=self.facts.hostname,
+                    linux_cmd="linux",
+                    initrd_cmd="initrd",
+                    location="isolinux",
+                    label_name=self.label_name,
+                    boot_args=self.cfg.rc_kernel_args,
+                    arch=self.facts.arch,
+                    iso=1
+                ))
+
         # Copy the current running kernel's vmlinuz file to the tmp dir.
         copy2(f"/boot/vmlinuz-{uname().release}", join(self.tmp_isolinux_dir, "vmlinuz"))
-
-        # If fedora logos pkg is installed, copy the splash image over.
-        if isfile('/usr/share/anaconda/boot/splash.png'):
-            copy2("/usr/share/anaconda/boot/splash.png", self.tmp_isolinux_dir)
 
         if self.facts.uefi:
             self.prep_uefi()
@@ -205,7 +241,7 @@ class ISO(object):
         :return:
         """
         log("Prepping isolinux")
-        self.prep_isolinux()
+        self.prep_iso()
 
         liveos = RHLiveOS(self.cfg, self.facts, self.tmp_dir)
         liveos.create()

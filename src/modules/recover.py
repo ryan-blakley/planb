@@ -537,7 +537,10 @@ class Recover(object):
             chroot(self.tmp_rootfs_dir)
           
             # Reinstall grub2 on the recovered disk.
-            run_cmd(['grub2-install', bootloader_disk])
+            if "ppc64le" in self.bk_misc['arch']:
+                run_cmd(['grub2-install', f"{bootloader_disk}1"])
+            else:
+                run_cmd(['grub2-install', bootloader_disk])
 
             # Cd back to the rroot fd, then chroot back out.
             chdir(rroot)
