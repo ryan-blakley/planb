@@ -114,7 +114,7 @@ def restore_pv_metadata(bk_pv, bk_pv_uuid, bk_vg):
 
     # Recreate the pv metadata from the backup metadata.
     run_cmd(['/usr/sbin/pvcreate', '-ff', '--uuid', bk_pv_uuid,
-                   '--restorefile', f"/facts/vgcfg/{bk_vg}", bk_pv], timeout=15)
+             '--restorefile', f"/facts/vgcfg/{bk_vg}", bk_pv], timeout=15)
 
 
 def restore_vg_metadata(bk_vg):
@@ -202,4 +202,3 @@ class RecoveryLVM(object):
             return True
         else:
             return False
-

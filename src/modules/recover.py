@@ -15,12 +15,12 @@
 import json
 import logging
 import os
-from os import environ, chdir, chmod, chroot, makedirs, stat, sync
+from os import environ, chdir, chmod, chroot, makedirs, sync
 from os.path import exists, isdir, join
 from re import search
 from selinux import chcon
 
-from .exceptions import ExistsError, GeneralError, MountError, RunCMDError
+from .exceptions import ExistsError, MountError, RunCMDError
 from .facts import Facts
 from .fs import fmt_fs
 from .logger import log
@@ -28,7 +28,7 @@ from .lvm import deactivate_vgs, RecoveryLVM
 from .md import get_md_info, md_check
 from .parted import Parted
 from .tar import restore_tar
-from .utils import dev_from_file, dev_from_name, not_in_append, rsync, run_cmd, mount, umount
+from .utils import dev_from_file, dev_from_name, rsync, run_cmd, mount, umount
 
 
 class Recover(object):
@@ -522,8 +522,8 @@ class Recover(object):
 
         if self.bk_misc['uefi']:
             run_cmd(['efibootmgr', '-c', '-d', bootloader_disk, '-p', '1', '-l',
-                           f"\\EFI\\{self.bk_misc['distro'].lower()}\\shimx64.efi",
-                           '-L', self.bk_misc['distro_pretty']])
+                    f"\\EFI\\{self.bk_misc['distro'].lower()}\\shimx64.efi",
+                     '-L', self.bk_misc['distro_pretty']])
         else:
             tmpfs_mnts = ['dev', 'sys', 'proc']
             # Mount self.tmpfs mount points needed by grub2-install inside the chroot directory.
@@ -557,7 +557,6 @@ class Recover(object):
         :return:
         """
         if self.bk_misc.get('selinux_enabled', ''):
-            import selinux
             log("Setting selinux to relabel on first boot")
 
             # Create the /.autorelabel file.
@@ -600,7 +599,6 @@ class Recover(object):
 
         try:
             rc_part_disks = []
-            rc_vgs = []
 
             bk_vgs = self.bk_misc.get('bk_vgs', '')
             self.cmp_disks()

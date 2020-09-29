@@ -14,4 +14,3 @@ setup(
     scripts=glob('src/scripts/*'),
     data_files=[('share/planb', glob('src/data-files/*')), ('/etc/planb', glob('src/cfg/*'))],
 )
-

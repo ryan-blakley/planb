@@ -61,7 +61,7 @@ class LoadConfig(object):
             self.rc_enable_sshd = int(cfg['Default'].get('recovery_enable_sshd', "0"))
             self.rc_keep_root_password = int(cfg['Default'].get('recovery_keep_root_password', "0"))
 
-        except KeyError as ex:
+        except KeyError:
             logging.exception(" Parsing the cfg file produced a KeyError.")
             exit(1)
 

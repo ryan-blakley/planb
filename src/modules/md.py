@@ -128,8 +128,8 @@ def md_create(name, level, meta, num, uuid, devs):
     :return:
     """
     # Set the create command, and zero the superblocks.
-    cmd = ['mdadm', '--create', '-R', f"/dev/md/{name}", f"--metadata={meta}", f"--level={level}", f"--raid-devices={num}",
-           f"--uuid={uuid}", '--force']
+    cmd = ['mdadm', '--create', '-R', f"/dev/md/{name}", f"--metadata={meta}", f"--level={level}",
+           f"--raid-devices={num}", f"--uuid={uuid}", '--force']
     for d in devs:
         if exists(d):
             run_cmd(['/usr/sbin/mdadm', '--zero-superblock', '--force', f"/dev/{d}"])

@@ -16,7 +16,7 @@ import logging
 from os.path import exists
 from re import search
 
-from .exceptions import ExistsError, RunCMDError
+from .exceptions import ExistsError, GeneralError, RunCMDError
 from .logger import log
 from .utils import run_cmd
 
@@ -70,15 +70,21 @@ def fmt_fs(dev, fs_uuid, fs_label, fs_type):
             cmd = [f"/usr/sbin/mkfs.{fs_type}", '-U', fs_uuid, '-L', fs_label, dev]
         else:
             cmd = [f"/usr/sbin/mkfs.{fs_type}", '-U', fs_uuid, dev]
+    else:
+        cmd = None
 
-    ret = run_cmd(cmd, ret=True)
+    if cmd:
+        ret = run_cmd(cmd, ret=True)
 
-    if ret.returncode:
-        stderr = ret.stderr.decode()
-        if "is mounted" in stderr:
-            logging.error(f" {ret.args} returned in error due to {dev} being mounted. "
-                          "Please unmount everything and try again.")
-        else:
-            logging.error(f" The command {ret.args} returned in error: {ret.stderr.decode()}")
+        if ret.returncode:
+            stderr = ret.stderr.decode()
+            if "is mounted" in stderr:
+                logging.error(f" {ret.args} returned in error due to {dev} being mounted. "
+                              "Please unmount everything and try again.")
+            else:
+                logging.error(f" The command {ret.args} returned in error: {ret.stderr.decode()}")
 
-        raise RunCMDError()
+            raise RunCMDError()
+    else:
+        logging.error(f"Unsupported filesystem {fs_type}, exiting.")
+        raise GeneralError()

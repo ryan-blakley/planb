@@ -110,10 +110,10 @@ class ISO(object):
 
             env = Environment(loader=FileSystemLoader("/usr/share/planb/"))
             grub_cfg = env.get_template("grub.cfg")
-            with open(join(self.tmp_efi_dir, "grub.cfg"), "w+") as f:
+            with open(join(self.tmp_efi_dir, "grub.cfg"), "w+") as cfg:
                 # For aarch64 it doesn't use the normal efi commands in grub.cfg.
                 if self.facts.arch == "aarch64":
-                    f.write(grub_cfg.render(
+                    cfg.write(grub_cfg.render(
                         hostname=self.facts.hostname,
                         linux_cmd="linux",
                         initrd_cmd="initrd",
@@ -123,7 +123,7 @@ class ISO(object):
                         arch=self.facts.arch
                     ))
                 else:
-                    f.write(grub_cfg.render(
+                    cfg.write(grub_cfg.render(
                         hostname=self.facts.hostname,
                         linux_cmd="linuxefi",
                         initrd_cmd="initrdefi",
@@ -208,11 +208,12 @@ class ISO(object):
                 f.writelines("<chrp-boot>\n")
                 f.writelines("<description>grub 2.00</description>\n")
                 f.writelines("<os-name>grub 2.00</os-name>\n")
-                f.writelines("<boot-script>boot &device;:\\boot\grub\core.elf</boot-script>\n")
+                f.writelines("<boot-script>boot &device;:\\boot\\grub\\core.elf</boot-script>\n")
                 f.writelines("</chrp-boot>\n")
 
             # Generate a custom grub image file for booting iso's.
-            run_cmd(['grub2-mkimage', '-O', 'powerpc-ieee1275', '-p', '()/boot/grub', '-o', join(self.tmp_boot_dir, "core.elf"), 'linux', 'normal', 'iso9660'])
+            run_cmd(['grub2-mkimage', '-O', 'powerpc-ieee1275', '-p', '()/boot/grub', '-o',
+                     join(self.tmp_boot_dir, "core.elf"), 'linux', 'normal', 'iso9660'])
 
             # Generate a grub.cfg.
             env = Environment(loader=FileSystemLoader("/usr/share/planb/"))

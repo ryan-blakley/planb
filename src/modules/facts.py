@@ -102,14 +102,14 @@ class Facts(object):
                     md_devname = f"/dev/md/{udev_info.get('MD_DEVNAME', None)}"
 
             info.update({"path": dev, 
-                "kname": udev_info['DEVNAME'], 
-                "fs_type": udev_info.get('ID_FS_TYPE', None), 
-                "fs_uuid": udev_info.get('ID_FS_UUID', None), 
-                "fs_label": udev_info.get('ID_FS_LABEL', None), 
-                "type": d_type, 
-                "vg": vg, 
-                "parent": parent, 
-                "md_devname": md_devname})
+                         "kname": udev_info['DEVNAME'],
+                         "fs_type": udev_info.get('ID_FS_TYPE', None),
+                         "fs_uuid": udev_info.get('ID_FS_UUID', None),
+                         "fs_label": udev_info.get('ID_FS_LABEL', None),
+                         "type": d_type,
+                         "vg": vg,
+                         "parent": parent,
+                         "md_devname": md_devname})
 
             mnts.update({mp: info})
 
@@ -117,8 +117,8 @@ class Facts(object):
             with open(_file, "r") as f:
                 lines = f.readlines()
 
-            lines = [x.strip() for x in lines]
-            return [x for x in lines if x.startswith("/") and not x.startswith("//")]
+            lines = [line.strip() for line in lines]
+            return [line for line in lines if line.startswith("/") and not line.startswith("//")]
 
         for x in read_strip_filter("/proc/mounts"):
             split = x.split()
@@ -152,9 +152,9 @@ class Facts(object):
         # Define dict to store disk info.
         disks_dict = dict()
 
-        def update(dm_name, p_dev):
-            if dm_name:
-                disks_dict.update({dm_name: disk})
+        def update(name, p_dev):
+            if name:
+                disks_dict.update({name: disk})
             else:
                 disks_dict.update({d.device_node: disk})
 
@@ -228,10 +228,10 @@ class Facts(object):
 
                     # Grab any part flags, and the part type.
                     part.update({"flags": p.getFlagsAsString(), 
-                        "type": p.type})
+                                 "type": p.type})
 
                     # If the disk label isn't msdos, check for part names.
-                    if not "msdos" in p_disk.type:
+                    if "msdos" not in p_disk.type:
                         try:
                             if p.name:
                                 part.update({"name": p.name})
@@ -258,15 +258,15 @@ class Facts(object):
 
                         # Add the fs info, and the geometry info.
                         part.update({"fs_type": part_info.get('ID_FS_TYPE', ''),
-                            "fs_uuid": part_info.get('ID_FS_UUID', ''),
-                            "fs_label": part_info.get('ID_FS_LABEL', ''),
-                            "start": p.geometry.start,
-                            "end": p.geometry.end})
+                                     "fs_uuid": part_info.get('ID_FS_UUID', ''),
+                                     "fs_label": part_info.get('ID_FS_LABEL', ''),
+                                     "start": p.geometry.start,
+                                     "end": p.geometry.end})
 
                     # Add the part dict as an entry to the disk dict.
                     # Might change this to the full path later, for 
                     # now just the part number.
-                    disk.update({p.number : part})
+                    disk.update({p.number: part})
 
                 # Add the disk dict as an entry to the master dict.
                 update(dm_name, p_device)

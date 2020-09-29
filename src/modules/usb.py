@@ -15,7 +15,7 @@
 import logging
 from glob import glob
 from jinja2 import Environment, FileSystemLoader
-from os import chdir, makedirs, remove, rmdir, uname
+from os import chdir, makedirs, rmdir, uname
 from os.path import exists, join
 from shutil import copy2
 
