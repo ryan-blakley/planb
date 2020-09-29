@@ -76,7 +76,7 @@ class Parted(object):
 
         # Catch any IOException then print a warning and skip it, normally it's
         # due to the device being active in some way lvm, md, etc.
-        except IOException as e:
+        except IOException:
             logging.exception("Caught an IOException, when running parted.")
             pass
 
@@ -94,7 +94,6 @@ class Parted(object):
 
         self.pdisk.addPartition(partition=partition, constraint=self.device.optimalAlignedConstraint)
         partition.setFlag(parted.PARTITION_BOOT)
-        partition.setFlag(parted.PARTITION_ESP)
 
         self.pdisk.commit()
 
@@ -141,7 +140,7 @@ class Parted(object):
         partition.setFlag(parted.PARTITION_BOOT)
         partition.setFlag(parted.PARTITION_ESP)
 
-        geometry = parted.Geometry(device=self.device, start=206850, length=self.device.getLength() - 207874)
+        geometry = parted.Geometry(device=self.device, start=206850, length=self.device.getLength() - 206850)
         partition = parted.Partition(disk=self.pdisk, type=parted.PARTITION_NORMAL, geometry=geometry)
 
         self.pdisk.addPartition(partition=partition, constraint=self.device.optimalAlignedConstraint)
