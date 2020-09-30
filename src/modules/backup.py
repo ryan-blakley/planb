@@ -14,10 +14,10 @@
 
 import json
 import logging
-from os import listdir, makedirs, remove, rename
+from os import chdir, listdir, makedirs, remove, rename
 from os.path import exists, join
-from shutil import copyfile
-from tempfile import mkdtemp, TemporaryDirectory
+from shutil import copyfile, rmtree
+from tempfile import mkdtemp
 from time import strftime
 
 from .exceptions import ExistsError, MountError, RunCMDError
@@ -116,7 +116,7 @@ class Backup(object):
 
         if self.mounted:
             log(f"Un-mounting backup location {self.tmp_mount_dir}")
-            umount(self.tmp_mount_dir)
+            umount(self.tmp_mount_dir, lazy=True)
 
         # If keep is passed, warn the user to remove the tmp dir.
         if self.opts.keep:
@@ -401,24 +401,24 @@ class Backup(object):
         # will wipe all of the files on the nfs mount, also the nfs mount would be 
         # left hanging.
         try:
+            # Create a temporary working directory.
+            self.tmp_dir = mkdtemp(prefix="pbr.")
+            log(f"Created temporary directory {self.tmp_dir}")
+
+            # Now add the temporary directory to the excludes.
+            self.bk_excludes.append(self.tmp_dir)
+
+            # Let the games begin.
+            self.start()
+
             # By default remove the tmp dir after running, to prevent filling up /tmp.
+            # Otherwise if -k is passed don't remove the directory, this is used for debugging.
             if not self.opts.keep:
-                with TemporaryDirectory(prefix="pbr.") as tmp_dir_name:
-                    log(f"Created temporary directory {tmp_dir_name}")
-                    self.tmp_dir = tmp_dir_name
-                    self.bk_excludes.append(self.tmp_dir)
-
-                    self.start()
-            else:
-                # If -k is used create a temp directory that will not be
-                # automatically removed when finished. This is great for
-                # debugging what is outputted to the tmp working directory.
-                self.tmp_dir = mkdtemp(prefix="pbr.")
-                log(f"Created temporary directory {self.tmp_dir}")
-                self.bk_excludes.append(self.tmp_dir)
-
-                self.start()
+                rmtree(self.tmp_dir)
         except (Exception, KeyboardInterrupt, RunCMDError):
+            # Change the cwd to /tmp to avoid any umount errors.
+            chdir("/tmp")
+
             # Call cleanup before exiting.
             self.cleanup(error=1)
 

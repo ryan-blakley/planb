@@ -242,16 +242,25 @@ def mount(src, dest, fstype=None, opts=None):
     return run_cmd(cmd, ret=True, timeout=10)
 
 
-def umount(mnt, recursive=False):
+def umount(mnt, recursive=False, lazy=False):
     """
     Wrapper that calls the umount command.
+    :param lazy: Perform a lazy umount.
     :param recursive: Bool, weather to un-mount recursively or not.
     :param mnt: Mount point to un-mount.
     :return: The output, and return code.
     """
     if recursive:
-        return run_cmd(['/usr/bin/umount', '-R', mnt], ret=True)
+        if lazy:
+            cmd = ['/usr/bin/umount', '-l', '-R', mnt]
+        else:
+            cmd = ['/usr/bin/umount', '-R', mnt]
     else:
-        return run_cmd(['/usr/bin/umount', mnt], ret=True)
+        if lazy:
+            cmd = ['/usr/bin/umount', '-l', mnt]
+        else:
+            cmd = ['/usr/bin/umount', mnt]
+
+    return run_cmd(cmd, ret=True)
 
 # vim:set ts=4 sw=4 et:
