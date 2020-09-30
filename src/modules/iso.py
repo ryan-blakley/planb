@@ -60,7 +60,7 @@ class ISO(object):
         makedirs(bk_dir, exist_ok=True)
 
         if self.facts.uefi and self.facts.arch == "x86_64":
-            cmd_mkisofs = ['/usr/bin/mkisofs', '-o',
+            cmd_mkisofs = ['/usr/bin/genisoimage', '-o',
                            join(bk_dir, "recover.iso"), '-b', 'isolinux/isolinux.bin', '-J', '-R', '-l', '-c',
                            'isolinux/boot.cat', '-no-emul-boot', '-boot-load-size', '4', '-boot-info-table',
                            '-eltorito-alt-boot', '-e', 'images/efiboot.img', '-no-emul-boot', '-graft-points',
@@ -68,19 +68,19 @@ class ISO(object):
 
             cmd_isohybrid = ['/usr/bin/isohybrid', '-u', join(bk_dir, "recover.iso")]
         elif self.facts.arch == "aarch64":
-            cmd_mkisofs = ['/usr/bin/mkisofs', '-o', join(bk_dir, "recover.iso"), '-J', '-r', '-eltorito-alt-boot',
+            cmd_mkisofs = ['/usr/bin/genisoimage', '-o', join(bk_dir, "recover.iso"), '-J', '-r', '-eltorito-alt-boot',
                            '-e', 'images/efiboot.img', '-no-emul-boot', '-V', self.label_name, '.']
 
             # isohybrid isn't available on aarch64, so set to none.
             cmd_isohybrid = None
         elif self.facts.arch == "ppc64le":
-            cmd_mkisofs = ['/usr/bin/mkisofs', '-o', join(bk_dir, "recover.iso"), '-U', '-chrp-boot', '-J', '-R',
+            cmd_mkisofs = ['/usr/bin/genisoimage', '-o', join(bk_dir, "recover.iso"), '-U', '-chrp-boot', '-J', '-R',
                            '-iso-level', '3', '-graft-points', '-V', self.label_name, '.']
 
             # isohybrid isn't available on ppc64le, so set to none.
             cmd_isohybrid = None
         else:
-            cmd_mkisofs = ['/usr/bin/mkisofs', '-o',
+            cmd_mkisofs = ['/usr/bin/genisoimage', '-o',
                            join(bk_dir, "recover.iso"), '-b', 'isolinux/isolinux.bin', '-J', '-R', '-l', '-c',
                            'isolinux/boot.cat', '-no-emul-boot', '-boot-load-size', '4', '-boot-info-table',
                            '-graft-points', '-V', self.label_name, '.']
