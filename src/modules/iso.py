@@ -212,7 +212,7 @@ class ISO(object):
                 f.writelines("</chrp-boot>\n")
 
             # Generate a custom grub image file for booting iso's.
-            run_cmd(['grub2-mkimage', '-O', 'powerpc-ieee1275', '-p', '()/boot/grub', '-o',
+            run_cmd(['/usr/bin/grub2-mkimage', '-O', 'powerpc-ieee1275', '-p', '()/boot/grub', '-o',
                      join(self.tmp_boot_dir, "core.elf"), 'linux', 'normal', 'iso9660'])
 
             # Generate a grub.cfg.

@@ -50,7 +50,7 @@ def fmt_usb(device):
         elif "ppc64le" in arch:
             log("Wiping the device")
             # Wipe the disk, otherwise the grub install will complain about it not being empty.
-            run_cmd(['dd', 'bs=5M', 'count=1', 'if=/dev/zero', f"of={device}"])
+            run_cmd(['/usr/bin/dd', 'bs=5M', 'count=1', 'if=/dev/zero', f"of={device}"])
 
             log("Starting to partition the device")
             p.create_prep_usb(device)
@@ -88,8 +88,8 @@ def fmt_usb(device):
             # Go ahead and install grub2 on the usb device, I don't think grub needs
             # to be installed every time a backup is created, so it makes sense to
             # just do it here once.
-            ret = run_cmd(['grub2-install', '--target=powerpc-ieee1275', f"--boot-directory={tmp_dir}", f"{device}1"],
-                          ret=True)
+            ret = run_cmd(['/usr/sbin/grub2-install', '--target=powerpc-ieee1275', f"--boot-directory={tmp_dir}",
+                           f"{device}1"], ret=True)
             if ret.returncode:
                 logging.error(f" The command {ret.args} returned in error: {ret.stderr.decode()}")
 
@@ -245,7 +245,7 @@ class USB(object):
         if self.facts.uefi:
             self.prep_uefi()
         elif self.facts.arch == "x86_64":
-            run_cmd(['extlinux', '-i', self.tmp_syslinux_dir], capture_output=False)
+            run_cmd(['/usr/sbin/extlinux', '-i', self.tmp_syslinux_dir], capture_output=False)
 
     def mkusb(self):
         """

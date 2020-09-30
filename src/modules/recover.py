@@ -521,7 +521,7 @@ class Recover(object):
         rroot = os.open("/", os.O_RDONLY)
 
         if self.bk_misc['uefi']:
-            run_cmd(['efibootmgr', '-c', '-d', bootloader_disk, '-p', '1', '-l',
+            run_cmd(['/usr/sbin/efibootmgr', '-c', '-d', bootloader_disk, '-p', '1', '-l',
                     f"\\EFI\\{self.bk_misc['distro'].lower()}\\shimx64.efi",
                      '-L', self.bk_misc['distro_pretty']])
         else:
@@ -538,9 +538,9 @@ class Recover(object):
           
             # Reinstall grub2 on the recovered disk.
             if "ppc64le" in self.bk_misc['arch']:
-                run_cmd(['grub2-install', f"{bootloader_disk}1"])
+                run_cmd(['/usr/sbin/grub2-install', f"{bootloader_disk}1"])
             else:
-                run_cmd(['grub2-install', bootloader_disk])
+                run_cmd(['/usr/sbin/grub2-install', bootloader_disk])
 
             # Cd back to the rroot fd, then chroot back out.
             chdir(rroot)
