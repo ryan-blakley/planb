@@ -33,13 +33,13 @@ def parse_args():
     parser.add_argument("-f", "--facts", help="Print all the facts.", action='store_true')
     parser.add_argument("--format", help="Format the specified usb device.", action='store', type=str)
     parser.add_argument("-k", "--keep", help="Keep, don't remove temporary backup directory.", action='store_true')
-    parser.add_argument("-m", "--mkiso", help="Create rescue media only.", action='store_true')
+    parser.add_argument("-m", "--mkrescue", help="Create rescue media only.", action='store_true')
     parser.add_argument("-r", "--recover", help="Recover system from backup.", action='store_true')
     parser.add_argument("-v", "--verbose", help="Add verbosity.", action='store_true')
 
     opts = parser.parse_args()
 
-    if not opts.backup and not opts.recover and not opts.mkiso:
+    if not opts.backup and not opts.recover and not opts.mkrescue:
         if not opts.facts and not opts.format:
             logging.error("Please provide a valid argument.")
             parser.print_help()
@@ -76,7 +76,7 @@ class PBR(object):
         if self.opts.facts:
             facts = Facts()
             facts.test()
-        elif self.opts.backup or self.opts.mkiso:
+        elif self.opts.backup or self.opts.mkrescue:
             from .backup import Backup
 
             bkup = Backup(self.opts, self.cfg)

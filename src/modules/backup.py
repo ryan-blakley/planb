@@ -372,7 +372,7 @@ class Backup(object):
             logging.error("Please set a valid boot_type in the cfg file.")
             raise ExistsError()
 
-        if not self.opts.mkiso:
+        if not self.opts.mkrescue:
             if self.cfg.bk_location_type == "rsync":
                 log("Creating backup using rsync, this could take a while, please be patient")
                 rsync(self.cfg, self.opts, self.facts, bk_excludes=self.bk_excludes)
