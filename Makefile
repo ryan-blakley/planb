@@ -5,8 +5,10 @@ clean:
 
 build:
 	python3 setup.py sdist
-	rpmbuild -bb -D "_topdir $(PWD)" -D "_sourcedir $(PWD)/dist" pbr.spec
+	rpmbuild -ba -D "_topdir $(PWD)" -D "_sourcedir $(PWD)/dist" pbr.spec
+	mock -r fedora-31-x86_64 --rebuild SRPMS/pbr-*.src.rpm
+	mock -r epel-8-x86_64 --rebuild SRPMS/pbr-*.src.rpm
 
 cleanbuild:
-	-/usr/bin/rm -rf dist BUILD BUILDROOT SOURCE SRPMS SPECS MANIFEST
+	-/usr/bin/rm -rf dist BUILD BUILDROOT SOURCE SPECS MANIFEST
 
