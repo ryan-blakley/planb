@@ -182,9 +182,9 @@ class RHLiveOS(object):
             lvm_pkgs = ['device-mapper', 'device-mapper-event', 'device-mapper-persistent-data', 'lvm2']
             pkgs.extend(lvm_pkgs)
 
-        # Add the needed grub2 pkgs.
+        # Add the needed bootloader pkgs.
         grub_pkgs = ['grub2-common', 'grub2-pc', 'grub2-pc-modules', 'grub2-ppc64le', 'grub2-ppc64le-modules',
-                     'grub2-tools', 'grub2-tools-minimal', 'grub2-tools-extra']
+                     'grub2-tools', 'grub2-tools-minimal', 'grub2-tools-extra', 's390utils-base']
         pkgs.extend(grub_pkgs)
 
         # Set any pkgs needed by pbr, and pbr itself.

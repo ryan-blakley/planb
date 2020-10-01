@@ -35,6 +35,7 @@ the last thing you want is issues to arise.
   - x86_64
   - Aarch64
   - ppc64le
+  - s390x
 
 ## TODO
 
@@ -49,7 +50,7 @@ the last thing you want is issues to arise.
 - [ ] Add support for luks.
 - [ ] Add support for btrfs.
 - [ ] Add support for scp and lftp possibly.
-- [ ] Test other archs beside x86.
+- [x] Test other archs beside x86.
 - [ ] Would like to add an option to create pxe boot entries.
 - [ ] Possibly add in hooks to cockpit or ansible way down the line.
 - [ ] Possibly add other distros, this is a maybe since all I run is Fedora/RHEL based.

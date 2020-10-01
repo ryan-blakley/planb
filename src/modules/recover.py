@@ -536,9 +536,11 @@ class Recover(object):
             # Chroot into the restored rootfs to reinstall grub2.
             chroot(self.tmp_rootfs_dir)
           
-            # Reinstall grub2 on the recovered disk.
+            # Reinstall the bootloader on the recovered disk.
             if "ppc64le" in self.bk_misc['arch']:
                 run_cmd(['/usr/sbin/grub2-install', f"{bootloader_disk}1"])
+            elif "s390x" in self.bk_misc['arch']:
+                run_cmd(['/usr/sbin/zipl'])
             else:
                 run_cmd(['/usr/sbin/grub2-install', bootloader_disk])
 

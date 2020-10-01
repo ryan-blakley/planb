@@ -14,6 +14,7 @@
 
 import logging
 from configparser import ConfigParser
+from platform import machine
 
 
 class LoadConfig(object):
@@ -23,11 +24,17 @@ class LoadConfig(object):
             cfg.read("/etc/planb/pbr.cfg")
             allowed_boot_types = ['iso', 'usb']
             allowed_bk_types = ['nfs', 'cifs', 'usb', 'iso', 'rsync', 'local']
+            arch = machine()
 
             if cfg['Default'].get('boot_type', '') and cfg['Default'].get('backup_location_type', ''):
                 self.boot_type = cfg['Default']['boot_type']
                 if self.boot_type not in allowed_boot_types:
                     logging.error("The boot_type set isn't supported, please set to either iso or usb.")
+                    exit(1)
+
+                # For the s390x architecture, it doesn't really have usb options since it's a mainframe.
+                if self.boot_type == "usb" and arch == "s390x":
+                    logging.error("The boot_type of usb isn't supported for the s390x platform, please change to iso.")
                     exit(1)
 
                 self.bk_location_type = cfg['Default']['backup_location_type']

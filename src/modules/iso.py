@@ -15,7 +15,7 @@
 import logging
 from glob import glob
 from jinja2 import Environment, FileSystemLoader
-from os import chdir, makedirs, uname
+from os import chdir, makedirs, stat, uname
 from os.path import join
 from shutil import copy2
 
@@ -23,7 +23,7 @@ from .distros import rh_customize_rootfs, RHLiveOS
 from .exceptions import MountError
 from .fs import fmt_fs
 from .logger import log
-from .utils import mount, rand_str, run_cmd, umount
+from .utils import mk_cdboot, mount, rand_str, run_cmd, umount
 
 
 class ISO(object):
@@ -79,11 +79,26 @@ class ISO(object):
 
             # isohybrid isn't available on ppc64le, so set to none.
             cmd_isohybrid = None
+        elif self.facts.arch == "s390x":
+            with open(join(self.tmp_images_dir, "initrd.addrsize"), "wb") as f:
+                from struct import pack
+
+                data = pack(">iiii", 0, int("0x02000000", 16), 0,
+                            stat(join(self.tmp_isolinux_dir, "initramfs.img")).st_size)
+                f.write(data)
+
+            mk_cdboot("isolinux/vmlinuz", "isolinux/initramfs.img", "images/cdboot.prm", "images/cdboot.img")
+
+            cmd_mkisofs = ['/usr/bin/genisoimage', '-o', join(bk_dir, "recover.iso"), '-b', 'images/cdboot.img',
+                           '-J', '-R', '-l', '-c', 'isolinux/boot.cat', '-no-emul-boot', '-boot-load-size', '4',
+                           '-V', self.label_name, '-graft-points', '.']
+
+            # isohybrid isn't available on s390x, so set to none.
+            cmd_isohybrid = None
         else:
-            cmd_mkisofs = ['/usr/bin/genisoimage', '-o',
-                           join(bk_dir, "recover.iso"), '-b', 'isolinux/isolinux.bin', '-J', '-R', '-l', '-c',
-                           'isolinux/boot.cat', '-no-emul-boot', '-boot-load-size', '4', '-boot-info-table',
-                           '-graft-points', '-V', self.label_name, '.']
+            cmd_mkisofs = ['/usr/bin/genisoimage', '-o', join(bk_dir, "recover.iso"), '-b', 'isolinux/isolinux.bin',
+                           '-J', '-R', '-l', '-c', 'isolinux/boot.cat', '-no-emul-boot', '-boot-load-size', '4',
+                           '-boot-info-table', '-V', self.label_name, '-graft-points', '.']
 
             cmd_isohybrid = ['/usr/bin/isohybrid', join(bk_dir, "recover.iso")]
 
@@ -229,6 +244,38 @@ class ISO(object):
                     arch=self.facts.arch,
                     iso=1
                 ))
+        elif self.facts.arch == "s390x":
+            makedirs(self.tmp_images_dir)
+            
+            # Set the cmdline arguments for the iso.
+            with open(join(self.tmp_images_dir, "cdboot.prm"), "w") as f:
+                f.writelines(f"ro root=live:LABEL={self.label_name} rd.live.image selinux=0 "
+                             f"{' '.join(self.cfg.rc_kernel_args)}\n")
+            with open(join(self.tmp_images_dir, "genericdvd.prm"), "w") as f:
+                f.writelines(f"ro root=live:LABEL={self.label_name} rd.live.image selinux=0 "
+                             f"{' '.join(self.cfg.rc_kernel_args)}\n")
+            with open(join(self.tmp_images_dir, "generic.prm"), "w") as f:
+                f.writelines(f"ro root=live:LABEL={self.label_name} rd.live.image selinux=0 "
+                             f"{' '.join(self.cfg.rc_kernel_args)}\n")
+
+            # Create the punch file.
+            with open(join(self.tmp_images_dir, "redhat.exec"), "w") as f:
+                f.writelines("/* */\n")
+                f.writelines("'CL RDR'\n")
+                f.writelines("'PURGE RDR ALL'\n")
+                f.writelines("'SPOOL PUNCH * RDR'\n")
+                f.writelines("'PUNCH KERNEL IMG A (NOH'\n")
+                f.writelines("'PUNCH GENERIC PRM A (NOH'\n")
+                f.writelines("'PUNCH INITRD IMG A (NOH'\n")
+                f.writelines("'CH RDR ALL KEEP NOHOLD'\n")
+                f.writelines("'I 00C'\n")
+
+            # Create the mapping file.
+            with open(join(join(self.tmp_dir, "isofs"), "generic.ins"), "w") as f:
+                f.writelines("isolinux/vmlinuz 0x00000000\n")
+                f.writelines("isolinux/initramfs.img 0x02000000\n")
+                f.writelines("images/genericdvd.prm 0x00010480\n")
+                f.writelines("images/initrd.addrsize 0x00010408\n")
 
         # Copy the current running kernel's vmlinuz file to the tmp dir.
         copy2(f"/boot/vmlinuz-{uname().release}", join(self.tmp_isolinux_dir, "vmlinuz"))
