@@ -7,8 +7,6 @@ License:        GPLv3
 URL:            https://github.com/ryan-blakley/pbr
 Source0:        %{name}-%{version}.tar.gz
 
-BuildArch:      noarch
-
 BuildRequires:  python3-devel
 BuildRequires:  python3-setuptools
 
@@ -24,12 +22,19 @@ Requires: python3-pyudev
 Requires: python3-rpm
 Requires: python3-six
 Requires: python3-tqdm
+# The syslinux pkg is only available for x86_64.
 %ifarch x86_64
 Requires: syslinux
+Requires: syslinux-extlinux
 %endif
 
 %description
 Plan B Recovery is a backup and recovery utility.
+
+# Had to remove BuildArch noarch, so I could filter Requires for syslinux,
+# doing that switched it to wanting to build a debuginfo rpm. Since this is
+# purely python, it doesn't need a debuginfo rpm, so disable generating one.
+%global debug_package %{nil}
 
 %prep
 %setup -q -n %{name}-%{version}
