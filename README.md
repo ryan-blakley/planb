@@ -36,12 +36,15 @@ the last thing you want is issues to arise.
   - Aarch64
   - ppc64le
   - s390x
+- OS's
+  - Fedora(whatever versions are currently being supported)
+  - RHEL 8+
+  - CentOS 8+
 
 ## TODO
 
-- [ ] Potentially change the name to something better, will list some possibilities below.
 - [ ] Add man page(s).
-- [ ] Add arg for specifying the backup archive to use.
+- [x] Add arg for specifying the backup archive to use.
 - [ ] Add in restore data only argument.
 - [ ] Continue adding debugging output through out the app.
 - [ ] Potentially find a better way to do the pam files, instead of including them in the pkg.
@@ -54,13 +57,3 @@ the last thing you want is issues to arise.
 - [ ] Would like to add an option to create pxe boot entries.
 - [ ] Possibly add in hooks to cockpit or ansible way down the line.
 - [ ] Possibly add other distros, this is a maybe since all I run is Fedora/RHEL based.
-
-## List of possible new name
-
-- Simple Backup and Recovery Tool(sbart)
-- Backup and Recover Tool(bart)
-- Sit Back and Recover(sbar/sbr)
-- Kinetic Backup and Recovery(kbar/kbr)
-- Forget it and Recover(fart)
-- Wipe and Restore(war)
-- FOO Backup and Recover(foobar)
