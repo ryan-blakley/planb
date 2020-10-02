@@ -16,11 +16,11 @@ import json
 import logging
 import os
 from os import environ, chdir, chmod, chroot, makedirs, sync
-from os.path import exists, isdir, join
+from os.path import exists, isdir, isfile, join
 from re import search
 from selinux import chcon
 
-from .exceptions import ExistsError, MountError, RunCMDError
+from .exceptions import ExistsError, GeneralError, MountError, RunCMDError
 from .facts import Facts
 from .fs import fmt_fs
 from .logger import log
@@ -431,34 +431,37 @@ class Recover(object):
         If the backup location type isn't rsync, then mount bk_mount in the tmp directory.
         :return:
         """
-        if self.cfg.boot_type == "usb" and self.cfg.bk_location_type == "usb":
-            # Since we use LiveOS it mounts the partition up,
-            # so just use that instead of another mount point.
-            self.tmp_bk_mnt = "/run/initramfs/live"
-        elif self.cfg.boot_type == "iso" and self.cfg.bk_location_type == "iso":
-            # Since we use LiveOS it mounts the partition up,
-            # so just use that instead of another mount point.
-            self.tmp_bk_mnt = "/run/initramfs/live"
-        elif self.cfg.bk_location_type == "rsync":
-            self.tmp_bk_mnt = None
+        if not self.opts.backup_archive:
+            if self.cfg.boot_type == "usb" and self.cfg.bk_location_type == "usb":
+                # Since we use LiveOS it mounts the partition up,
+                # so just use that instead of another mount point.
+                self.tmp_bk_mnt = "/run/initramfs/live"
+            elif self.cfg.boot_type == "iso" and self.cfg.bk_location_type == "iso":
+                # Since we use LiveOS it mounts the partition up,
+                # so just use that instead of another mount point.
+                self.tmp_bk_mnt = "/run/initramfs/live"
+            elif self.cfg.bk_location_type == "rsync":
+                self.tmp_bk_mnt = None
+            else:
+                # Mount bk_mount, which is where the backup archive
+                # will be stored later on.
+                if self.cfg.bk_mount_opts:
+                    ret = mount(self.cfg.bk_mount, self.tmp_bk_mnt, opts=self.cfg.bk_mount_opts)
+                else:
+                    ret = mount(self.cfg.bk_mount, self.tmp_bk_mnt)
+
+                # If the mount fails exit, and print the mount error.
+                if ret.returncode:
+                    logging.error(f" Failed mounting {self.cfg.bk_mount} due to {ret.stderr.decode().strip()}")
+                    raise MountError()
+                else:
+                    log(f"Successfully mounted {self.cfg.bk_mount} at {self.tmp_bk_mnt}")
+                    self.bk_mounted = True
+
+            logging.debug(f"recover: mnt_bk_mount: boot_type:{self.cfg.boot_type} "
+                          f"bk_location_type:{self.cfg.bk_location_type} tmp_bk_mnt:{self.tmp_bk_mnt}")
         else:
-            # Mount bk_mount, which is where the backup archive
-            # will be stored later on.
-            if self.cfg.bk_mount_opts:
-                ret = mount(self.cfg.bk_mount, self.tmp_bk_mnt, opts=self.cfg.bk_mount_opts)
-            else:
-                ret = mount(self.cfg.bk_mount, self.tmp_bk_mnt)
-
-            # If the mount fails exit, and print the mount error.
-            if ret.returncode:
-                logging.error(f" Failed mounting {self.cfg.bk_mount} due to {ret.stderr.decode().strip()}")
-                raise MountError()
-            else:
-                log(f"Successfully mounted {self.cfg.bk_mount} at {self.tmp_bk_mnt}")
-                self.bk_mounted = True
-
-        logging.debug(f"recover: mnt_bk_mount: boot_type:{self.cfg.boot_type} "
-                      f"bk_location_type:{self.cfg.bk_location_type} tmp_bk_mnt:{self.tmp_bk_mnt}")
+            logging.debug(f"recover: mnt_bk_mount: Skipping mounting, since backup archive arg was passed.")
 
     def mnt_restored_rootfs(self):
         """
@@ -656,8 +659,18 @@ class Recover(object):
                 log("Restoring backup using rsync, this could take a while, please be patient")
                 rsync(self.cfg, self.opts, self.facts)
             else:
+                # Set the backup archive depending on if it's specified via an arg or not.
+                if self.opts.backup_archive:
+                    if isfile(self.opts.backup_archive):
+                        backup_archive = self.opts.backup_archive
+                    else:
+                        logging.error("The specified backup archive isn't a valid file.")
+                        raise GeneralError()
+                else:
+                    backup_archive = join(self.tmp_bk_mnt, f"{self.bk_misc['hostname'].split('.')[0]}/backup.tar.gz")
+
                 log("Restoring backup using tar, this could take a while, please be patient")
-                restore_tar(self.tmp_rootfs_dir, join(self.tmp_bk_mnt, self.bk_misc['hostname'].split('.')[0]))
+                restore_tar(self.tmp_rootfs_dir, backup_archive)
 
             log("Restoring the bootloader")
             self.restore_bootloader(self.grab_bootloader_disk())

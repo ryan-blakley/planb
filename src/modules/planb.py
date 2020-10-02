@@ -36,6 +36,8 @@ def parse_args():
     parser.add_argument("-m", "--mkrescue", help="Create rescue media only.", action='store_true')
     parser.add_argument("-r", "--recover", help="Recover system from backup.", action='store_true')
     parser.add_argument("-v", "--verbose", help="Add verbosity.", action='store_true')
+    parser.add_argument("-ba", "--backup-archive", help="Specify the location of the backup archive to use on restore.",
+                        action='store', type=str)
 
     opts = parser.parse_args()
 
@@ -47,6 +49,11 @@ def parse_args():
     
     if opts.backup and opts.recover:
         logging.error("Choose either backup or recover not both.")
+        parser.print_help()
+        exit(1)
+
+    if opts.backup_archive and not opts.recover:
+        logging.error("The backup archive can only be specified when running recover.")
         parser.print_help()
         exit(1)
 

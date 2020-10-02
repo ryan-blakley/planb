@@ -63,7 +63,7 @@ def create_tar(bk_excludes, tmp_dir):
                 pbar.update()
 
 
-def restore_tar(rootfs_dir, bk_dir):
+def restore_tar(rootfs_dir, archive):
     """
     restore_tar: Restore the backup archive file to the newly formatted mounts.
     """
@@ -71,9 +71,9 @@ def restore_tar(rootfs_dir, bk_dir):
     chdir(rootfs_dir)
 
     # Extract the backup archive.
-    with tarfile.open(join(bk_dir, "backup.tar.gz")) as tar:
+    with tarfile.open(archive) as tar:
         # Create progress bar and set the description.
-        with tqdm(total=len(tar.getmembers()), leave=False, desc="backup.tar.gz") as pbar:
+        with tqdm(total=len(tar.getmembers()), leave=False, desc=archive) as pbar:
             # Loop through the files and extract.
             for member_info in tar.getmembers():
                 with suppress(FileExistsError):
