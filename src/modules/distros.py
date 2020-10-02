@@ -27,6 +27,7 @@ from .utils import rpmql, rpmqf, run_cmd
 
 fedora_pkgs = ['python3', 'fedora-release', 'fedora-release-common', 'fedora-release-server']
 rh_pkgs = ['dbus-daemon', 'platform-python', 'python36', 'redhat-release']
+cent_pkgs = ['dbus-daemon', 'platform-python', 'python36', 'centos-release']
 
 
 class RHLiveOS(object):
@@ -352,5 +353,7 @@ def set_distro_pkgs(pkgs, facts):
         return pkgs + fedora_pkgs
     elif "Red Hat" in dis:
         return pkgs + rh_pkgs
+    elif "CentOS" in dis:
+        return pkgs + cent_pkgs
 
 # vim:set ts=4 sw=4 et:
