@@ -116,12 +116,25 @@ class ISO(object):
             Copy the efi files onto the efiboot.img and to the tmp working directory.
             :return:
             """
-            copy2(glob("/boot/efi/EFI/BOOT/BOOT*.EFI")[0], self.tmp_efi_dir)
-            copy2(glob("/boot/efi/EFI/fedora/BOOT*.CSV")[0], self.tmp_efi_dir)
+            if glob("/boot/efi/EFI/BOOT/BOOT*.EFI"):
+                copy2(glob("/boot/efi/EFI/BOOT/BOOT*.EFI")[0], self.tmp_efi_dir)
+                
+            if glob("/boot/efi/EFI/[a-z]*/BOOT*.CSV"):
+                copy2(glob("/boot/efi/EFI/[a-z]*/BOOT*.CSV")[0], self.tmp_efi_dir)
 
             # Loop through any efi file under /boot/efi/EFI/<distro>/, and copy.
             for efi in glob("/boot/efi/EFI/[a-z]*/*.efi"):
                 copy2(efi, self.tmp_efi_dir)
+
+            # Set the local distro variable for the grub.cfg file.
+            if "fedora" in self.facts.distro:
+                distro = "fedora"
+            elif "Red Hat" in self.facts.distro:
+                distro = "redhat"
+            elif "CentOS" in self.facts.distro:
+                distro = "centos"
+            else:
+                distro = None
 
             env = Environment(loader=FileSystemLoader("/usr/share/planb/"))
             grub_cfg = env.get_template("grub.cfg")
@@ -145,7 +158,8 @@ class ISO(object):
                         location="isolinux",
                         label_name=self.label_name,
                         boot_args=self.cfg.rc_kernel_args,
-                        arch=self.facts.arch
+                        arch=self.facts.arch,
+                        distro=distro
                     ))
 
         makedirs(self.tmp_efi_dir)
