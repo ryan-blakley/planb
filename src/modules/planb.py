@@ -38,6 +38,7 @@ def parse_args():
     parser.add_argument("-v", "--verbose", help="Add verbosity.", action='store_true')
     parser.add_argument("-ba", "--backup-archive", help="Specify the location of the backup archive to use on restore.",
                         action='store', type=str)
+    parser.add_argument("-ro", "--restore-only", help="Restore backup archive only.", action='store_true')
 
     opts = parser.parse_args()
 
@@ -53,7 +54,12 @@ def parse_args():
         exit(1)
 
     if opts.backup_archive and not opts.recover:
-        logging.error("The backup archive can only be specified when running recover.")
+        logging.error("--backup-archive can only be specified when running recover.")
+        parser.print_help()
+        exit(1)
+
+    if opts.restore_only and not opts.recover:
+        logging.error("--restore-only can only be specified when running recover.")
         parser.print_help()
         exit(1)
 

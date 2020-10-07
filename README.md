@@ -45,7 +45,7 @@ the last thing you want is issues to arise.
 
 - [ ] Add man page(s).
 - [x] Add arg for specifying the backup archive to use.
-- [ ] Add in restore data only argument.
+- [x] Add in restore data only argument.
 - [ ] Continue adding debugging output through out the app.
 - [ ] Potentially find a better way to do the pam files, instead of including them in the pkg.
 - [ ] Need to figure out how to implement something like ReaR's check layout and cron job.

@@ -603,56 +603,61 @@ class Recover(object):
         self.handle_vg_excludes()
 
         try:
-            rc_part_disks = []
+            if not self.opts.restore_only:
+                rc_part_disks = []
 
-            bk_vgs = self.bk_misc.get('bk_vgs', '')
-            self.cmp_disks()
+                bk_vgs = self.bk_misc.get('bk_vgs', '')
+                self.cmp_disks()
 
-            # Deactivate any vgs before doing anything.
-            if bk_vgs:
-                # Deactivate any volume groups before doing any parted stuff.
-                deactivate_vgs()
+                # Deactivate any vgs before doing anything.
+                if bk_vgs:
+                    # Deactivate any volume groups before doing any parted stuff.
+                    deactivate_vgs()
 
-            # Loop through the disks keys, and check if the disk match, if not add
-            # to the rc_parts_disks to be re-partitioned.
-            for d in self.bk_disks.keys():
-                if not self.cmp_disk_layout(d, d, self.facts):
-                    rc_part_disks.append(d)
+                # Loop through the disks keys, and check if the disk match, if not add
+                # to the rc_parts_disks to be re-partitioned.
+                for d in self.bk_disks.keys():
+                    if not self.cmp_disk_layout(d, d, self.facts):
+                        rc_part_disks.append(d)
 
-            # Check if any disk need partition scheme recovered, if they do, then 
-            # recover the disk's parititon table from the backup info.
-            if rc_part_disks:
-                log("Starting disk partition recreation")
-                parted = Parted()
+                # Check if any disk need partition scheme recovered, if they do, then
+                # recover the disk's parititon table from the backup info.
+                if rc_part_disks:
+                    log("Starting disk partition recreation")
+                    parted = Parted()
 
-                # Loop through the dict, and restore the partitions on all the disk.
-                for d in rc_part_disks:
-                    log(f"  Re-partitioning {d}")
-                    parted.recreate_disk(self.bk_disks[d], d)
+                    # Loop through the dict, and restore the partitions on all the disk.
+                    for d in rc_part_disks:
+                        log(f"  Re-partitioning {d}")
+                        parted.recreate_disk(self.bk_disks[d], d)
 
-            # If md_info in bk_misc, then check the md arrays.
-            if self.bk_misc.get('md_info', False):
-                log("Starting MD raid check")
-                md_check(self.facts.udev_ctx, self.bk_misc['md_info'])
+                # If md_info in bk_misc, then check the md arrays.
+                if self.bk_misc.get('md_info', False):
+                    log("Starting MD raid check")
+                    md_check(self.facts.udev_ctx, self.bk_misc['md_info'])
 
-            # Check if the bk_vgs match or if they need recovering.
-            if bk_vgs:
-                log("Starting LVM check")
-                rc_lvm = RecoveryLVM(self.facts, self.bk_mnts, self.bk_lvm)
-                rc_lvm.lvm_check(bk_vgs)
+                # Check if the bk_vgs match or if they need recovering.
+                if bk_vgs:
+                    log("Starting LVM check")
+                    rc_lvm = RecoveryLVM(self.facts, self.bk_mnts, self.bk_lvm)
+                    rc_lvm.lvm_check(bk_vgs)
 
-            # Now format all the fs.
-            log("Starting filesystem restoring")
-            for mnt in self.bk_mnts:
-                m = self.bk_mnts[mnt]
-                if m['type'].startswith("raid") and m['md_devname']:
-                    dev = m['md_devname']
-                else:
-                    dev = m['path']
+                # Now format all the fs.
+                log("Starting filesystem restoring")
+                for mnt in self.bk_mnts:
+                    m = self.bk_mnts[mnt]
+                    if m['type'].startswith("raid") and m['md_devname']:
+                        dev = m['md_devname']
+                    else:
+                        dev = m['path']
 
-                fmt_fs(dev, m['fs_uuid'], m['fs_label'], m['fs_type'])
+                    fmt_fs(dev, m['fs_uuid'], m['fs_label'], m['fs_type'])
 
-            log("Starting to mount the restored filesystems")
+                log("Starting to mount the restored filesystems")
+            else:
+                self.cmp_disks()
+                log("Starting to mount the filesystems")
+
             self.mnt_restored_rootfs()
 
             if self.cfg.bk_location_type == "rsync":
