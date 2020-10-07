@@ -16,7 +16,7 @@ import logging
 import tarfile
 from contextlib import suppress
 from os import chdir, listdir
-from os.path import join
+from os.path import exists, join
 from tqdm import tqdm
 
 
@@ -76,8 +76,16 @@ def restore_tar(rootfs_dir, archive):
         with tqdm(total=len(tar.getmembers()), leave=False, desc=archive) as pbar:
             # Loop through the files and extract.
             for member_info in tar.getmembers():
-                with suppress(FileExistsError):
-                    tar.extract(member_info)
+                # If the member is a symlink, check to make sure the link doesn't exist,
+                # if the symlink exist, it will causes a massive performance hit on
+                # extraction. So skip it if it exist, and move on.
+                if (member_info.islnk() or member_info.issym()) and exists(join(rootfs_dir, member_info.name)):
+                    continue
+                else:
+                    with suppress(FileExistsError):
+                        tar.extract(member_info)
 
                 # Update the progress.
                 pbar.update()
+
+# vim:set ts=4 sw=4 et:
