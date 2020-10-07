@@ -79,7 +79,7 @@ def restore_tar(rootfs_dir, archive):
                 # If the member is a symlink, check to make sure the link doesn't exist,
                 # if the symlink exist, it will causes a massive performance hit on
                 # extraction. So skip it if it exist, and move on.
-                if (member_info.islnk() or member_info.issym()) and exists(join(rootfs_dir, member_info.name)):
+                if (member_info.islnk() or member_info.issym()) and exists(member_info.name):
                     continue
                 else:
                     with suppress(FileExistsError):
