@@ -50,8 +50,11 @@ the last thing you want is issues to arise.
 - [ ] Potentially find a better way to do the pam files, instead of including them in the pkg.
 - [ ] Need to figure out how to implement something like ReaR's check layout and cron job.
 - [ ] Add option for secondary backup location for backup archive duplication.
+- [ ] Add option to name the backup archive, and iso files.
+- [ ] Add option for pre/post scripting.
 - [ ] Add support for luks.
 - [ ] Add support for btrfs.
+- [ ] Add support for stratis.
 - [ ] Add support for scp and lftp possibly.
 - [x] Test other archs beside x86.
 - [ ] Would like to add an option to create pxe boot entries.
