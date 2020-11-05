@@ -1,0 +1,126 @@
+.\"    Title: pbr
+.\"   Auther: [see the "AUTHORS" section]
+.\"     Date: 10/12/2020
+.\" Language: English
+.\"
+.TH pbr.conf 5 "10/12/2020" " " "Plan B Recovery"
+.SH NAME
+pbr.conf \- configuration file for pbr
+.SH SYNOPSIS
+\fI/etc/pbr/pbr.conf\fR
+.SH DESCRIPTION
+\fIpbr.conf\fR is loaded during the initialization phase of pbr. Certain command line parameters will override
+values set here.
+.sp
+\fBboot_type =\fR iso
+.RS 4
+Sets the boot media type. Valid values are \fIiso\fR and \fIusb\fR.
+.RE
+.PP
+\fBbackup_location_type =\fR nfs
+.RS 4
+Sets the backup location type, basically the method used to store or transfer the backup to and from the server.
+Valid values are \fInfs\fR, \fIcifs\fR, \fIrsync\fR, and \fIusb\fR.
+.RE
+.PP
+\fBbackup_mount =\fR example.com:/nfs-export
+.RS 4
+The mountable device, path or user@host if using RSYNC.
+
+\fBExamples:\fR
+.RS 4
+NFS: example.com:/nfs-export
+.br
+CIFS: //example.com/cifs-share
+.br
+RSYNC: user@example.com:/rsync-path.
+.br
+USB: /dev/disk/by-label/PLANBRECOVER-USB
+.RE
+.RE
+.PP
+\fBbackup_mount_opts =\fR <mount opts>
+.RS 4
+Mount options to use when mounting \fBbackup_mount\fR, this is useful for nfs and cifs mounts mostly.
+\fBExample:\fR quest vers=3
+.RE
+.PP
+\fBlog_verbosity =\fR info
+.RS 4
+Set the logging level for the log file, the logging level of the console is controlled by the verbosity command
+line parameter. Valid values are \fIinfo\fR, \fIdebug\fR.
+.RE
+.PP
+\fBtmp_dir =\fR /tmp
+.RS 4
+This directory is where the temporary working folder will be created under, it needs to have enough free space to
+contain the files needed to create the bootable iso.
+.RE
+.PP
+\fBbackup_exclude_paths =\fR /var/crash /tmp/
+.RS 4
+Add any path that you would like excluded from the backup archive. Be mindful this is a recursive exclude, so any sub
+directories will be excluded also. The format is /path space /path, don't add quotes or end with a slash please.
+Also this doesn't exclude the underlying lvm or disk, you will need to set those in \fBbackup_exclude_vgs\fR and
+\fBbackup_exclude_disks\fR.
+.RE
+.PP
+\fBbackup_include_pkgs =\fR strace iscsi\-initiator\-utils
+.RS 4
+List any additional packages that might be needed in the recover environment, so they be included in the bootable
+iso's rootfs.
+.RE
+.PP
+\fBnum_of_old_backups =\fR 3
+.RS 4
+The maximum number of old backups to keep, each backup will have the data appended to the name.
+.RE
+.PP
+\fBbackup_exclude_vgs =\fR example_vg data_vg
+.RS 4
+List of volume groups to exclude from the backup, this will also remove any pv and mount point restoration being set
+in the backup files. This will not exclude data from mount points of this volume group from the backup archive or rsync,
+those paths would need to be added above to \fBbackup_exclude_paths\fR.
+.RE
+.PP
+\fBbackup_exclude_disks =\fR /dev/sdX /dev/vdX
+.RS 4
+Setting this will exclude the disk from the back up data meaning it will also be excluded from the recovery also.
+This will also add any vgs that this disk is a pv of to the exclude_vgs list above. So be warned, if the vg or disk
+are set to mount in the fstab file, setting this will cause the server not to boot if the fstab isn't corrected after
+recovery is finished.
+.RE
+.PP
+\fBrecover_exclude_vgs =\fR example_vg data_vg
+.RS 4
+List of volume groups to exclude from the recovery, this will also remove any mount points set to use the volume group.
+You will need to exclude the pv disk below if you don't want it re-partitioned.
+.RE
+.PP
+\fBrecover_exclude_disks =\fR /dev/sdX /dev/vdX
+.RS 4
+Setting this will exclude any disk that were captured in the backup, but you don't want that storage layout restored.
+The disk below should be the disk name mentioned in /facts/disk.json, not a name of of a disk in the recovery
+environment. Also this will only remove entries from the stored backup disks and the backup mounts, it will not exclude
+any vgs. You will need to add the vg to the \fBexclude_vgs\fR also, you've been warned!
+.RE
+.PP
+\fBrecovery_kernel_args =\fR console=tty0 console=ttyS0,115200 systemd.debug-shell=1
+.RS 4
+Add any kernel args that you would like added to the bootable iso's kernel cmdline.
+.RE
+.PP
+\fBrecovery_enable_sshd =\fR 1
+.RS 4
+Set to 1 to enable sshd to start in the iso environment and 0 to disable it.
+.RE
+.PP
+\fBrecovery_keep_root_password =\fR 0
+.RS 4
+Set to 0 to set the iso environment's root passwd to empty, if set to 1 or higher it will use the root passwd of the
+server for the iso environment root user.
+.SH AUTHOR
+Ryan Blakley (rblakley@redhat.com)
+.SH "SEE ALSO"
+.sp
+\fBpbr\fR(8)

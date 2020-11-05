@@ -54,6 +54,9 @@ rm -rf $RPM_BUILD_ROOT
 %{python3_sitelib}/*
 # For files under /usr/share.
 %{_datadir}/planb/
+# Add the man pages to the package.
+%doc %{_mandir}/man8/pbr.8*
+%doc %{_mandir}/man5/pbr.conf.5*
 
 %changelog
 * Fri Jul 24 2020 Ryan Blakley <rblakley@redhat.com> 0.2-1

@@ -1,0 +1,74 @@
+.\"    Title: pbr
+.\"   Auther: [see the "AUTHORS" section]
+.\"     Date: 10/12/2020
+.\" Language: English
+.\"
+.TH pbr 8 "10/12/2020" " " "Plan B Recovery"
+.SH NAME
+pbr \- backup and recovery tool.
+.SH SYNOPSIS
+pbr [\-h|\-\-help] [\-b|\-\-backup] [\-f|\-\-facts] [\-\-format DEVICE] [\-k|\-\-keep] [\-m|\-\-mkrescue]
+[\-r|\-\-recover] [\-v|\-\-verbose] [\-ba|\-\-backup\-archive FILE] [\-ro|\-\-restore\-only]
+.SH DESCRIPTION
+Plan B Recovery is a full Linux backup and recovery tool for when plan A doesn't work out.
+.sp
+Plan B Recovery creates a bootable ISO file, or bootable USB device for the recovery environment. When booted into the
+recovery environment, the recovery can be initiated. For the backup location, currently NFS, CIFS, RSYNC, and USB are
+supported.
+.sp
+Plan B Recovery provides NO WARRANTY, please review the GNU General Public License at:
+http://www.gnu.org/licenses/gpl.html for more details.
+.SH OPTIONS
+\fB\-h \-\-help\fR
+.RS 4
+show usage information
+.RE
+.PP
+\fB\-b \-\-backup\fR
+.RS 4
+create the rescue media, and backup the system
+.RE
+.PP
+\fB\-f \-\-facts\fR
+.RS 4
+show facts about the system
+.RE
+.PP
+\fB\-\-format DEVICE\fR
+.RS 4
+format and label the USB device specified ex. /dev/sdX
+.RE
+.PP
+\fB\-k \-\-keep\fR
+.RS 4
+don't remove the temporary working directory
+.RE
+.PP
+\fB\-m \-\-mkrescue\fR
+.RS 4
+create the rescue media only
+.RE
+.PP
+\fB\-r \-\-recover\fR
+.RS 4
+recover the system from the backup
+.RE
+.PP
+\fB\-v \-\-verbose\fR
+.RS 4
+add verbose output
+.RE
+.PP
+\fB\-ba \-\-backup\-archive FILE\fR
+.RS 4
+specify the backup archive file to use in the recovery
+.RE
+.PP
+\fB\-ro \-\-restore\-only\fR
+.RS 4
+restore the backup archive/files only
+.SH AUTHOR
+Ryan Blakley (rblakley@redhat.com)
+.SH "SEE ALSO"
+.sp
+\fBpbr.conf\fR(5)

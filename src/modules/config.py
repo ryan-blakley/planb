@@ -21,7 +21,7 @@ class LoadConfig(object):
     def __init__(self):
         try:
             cfg = ConfigParser()
-            cfg.read("/etc/planb/pbr.cfg")
+            cfg.read("/etc/planb/pbr.conf")
             allowed_boot_types = ['iso', 'usb']
             allowed_bk_types = ['nfs', 'cifs', 'usb', 'iso', 'rsync', 'local']
             arch = machine()

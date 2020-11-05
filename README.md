@@ -43,7 +43,7 @@ the last thing you want is issues to arise.
 
 ## TODO
 
-- [ ] Add man page(s).
+- [x] Add man page(s).
 - [x] Add arg for specifying the backup archive to use.
 - [x] Add in restore data only argument.
 - [ ] Continue adding debugging output through out the app.
