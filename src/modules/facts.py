@@ -273,12 +273,30 @@ class Facts(object):
 
         return disks_dict
 
-    def test(self):
-        print(json.dumps(self.lvm, indent=4))
+    def print_facts(self):
+        print("General Facts")
+        print(f"  Hostname: {self.hostname}")
+        print(f"  Distro: {self.distro}")
+        print(f"  UEFI: {self.uefi}")
+        print(f"  Uname: {self.uname}")
+        print(f"  Arch: {self.arch}")
+        print(f"  Selinux Enabled: {self.selinux_enabled}\n")
+
+        if self.lvm:
+            print("LVM Facts")
+            print(json.dumps(self.lvm, indent=4))
+            print("")
+
+        print("Disk Facts")
         print(json.dumps(self.disks, indent=4))
+        print("")
+        print("Mount Facts")
         print(json.dumps(self.mnts, indent=4))
         print("")
-        print(json.dumps(self.md_info, indent=4))
-        print("")
+
+        if self.md_info:
+            print("MD Raid Facts")
+            print(json.dumps(self.md_info, indent=4))
+            print("")
 
 # vim:set ts=4 sw=4 et:

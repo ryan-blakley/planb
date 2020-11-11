@@ -88,7 +88,7 @@ class PBR(object):
         log("Plan (B)ackup Recovery")
         if self.opts.facts:
             facts = Facts()
-            facts.test()
+            facts.print_facts()
         elif self.opts.backup or self.opts.mkrescue:
             from .backup import Backup
 
