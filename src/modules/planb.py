@@ -105,7 +105,7 @@ class PBR(object):
             fmt_usb(self.opts.format)
 
 
-def main(args):
+def main():
     """
     Main function that executes the main PBR class.
     :return:
