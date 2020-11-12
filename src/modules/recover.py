@@ -22,7 +22,7 @@ from selinux import chcon
 
 from .exceptions import ExistsError, GeneralError, MountError, RunCMDError
 from .facts import Facts
-from .fs import fmt_fs
+from .fs import fmt_fs, get_mnts
 from .logger import log
 from .lvm import deactivate_vgs, RecoveryLVM
 from .md import get_md_info, md_check
@@ -274,7 +274,7 @@ class Recover(object):
         and return tha disk's path.
         :return:
         """
-        for mnt, info in self.facts.get_mnts().items():
+        for mnt, info in get_mnts(self.facts.udev_ctx).items():
             if mnt == f"{self.tmp_rootfs_dir}/boot":
                 dev_info = dev_from_file(self.facts.udev_ctx, info['path'])
                 if info['type'] == "part":

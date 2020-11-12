@@ -79,6 +79,20 @@ def get_dev_type(udev_info):
     return d_type
 
 
+def get_modules():
+    """
+    Parse /proc/modules, and return all loaded modules.
+    :return:
+    """
+    with open("/proc/modules", "r") as f:
+        lines = f.readlines()
+        # Strip new lines.
+        lines = [x.strip() for x in lines]
+        # Split on spaces, return first column.
+        modules = [x.split()[0] for x in lines]
+    return modules
+
+
 def is_block(dev):
     """
     Check if the device path exist and is a block device.

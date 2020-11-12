@@ -14,7 +14,143 @@
 
 import logging
 import parted
-from _ped import IOException
+from glob import glob
+from re import search
+from _ped import DeviceException, DiskException, IOException, PartitionException
+
+from .utils import dev_from_file, is_block
+
+
+def get_part_layout(udev_ctx):
+    """
+    Loop through the disk and use parted and udev to capture the
+    partition layout. Might need to add threading to the for loop in the
+    future for servers with a ton of disk.
+    :return:
+    """
+    # Define dict to store disk info.
+    disks_dict = dict()
+
+    def update(name, p_dev):
+        if name:
+            disks_dict.update({name: disk})
+        else:
+            disks_dict.update({d.device_node: disk})
+
+        p_dev.removeFromCache()
+
+    # Loop through disk pulled from udev.
+    for d in udev_ctx.list_devices(subsystem='block', DEVTYPE='disk'):
+        dm_name = None
+
+        # Skip if the device is a /dev/loop, mdraid, cd, or usb.
+        if (not search("/dev/loop", d.device_node)
+                and not d.get('MD_NAME', False)
+                and not search("cd", d.get('ID_TYPE', ""))
+                and not search("usb", d.get('ID_BUS', ""))
+                and not int(d.get('DM_MULTIPATH_DEVICE_PATH', False))):
+
+            # If it's a dm device check if it's mpath if not skip it,
+            # if it is set the dm_name.
+            if search("dm-", d.device_node):
+                if search("^mpath-", d.get('DM_UUID', "")):
+                    dm_name = f"/dev/mapper/{d.get('DM_NAME')}"
+                else:
+                    continue
+
+            # If the device is an mpath path, then skip it, would prefer
+            # to query udev here, but apparently in the recovery
+            # environment the DM_MULTIPATH_DEVICE_PATH variable is always
+            # a zero for some reason. So I don't trust using it, so check
+            # if the dev has any holders, and if they're an mpath device.
+            holders = glob(f"/sys/block/{d.device_node.split('/')[-1]}/holders/*/dm/uuid")
+            if holders:
+                with open(holders[0]) as f:
+                    if f.readline().split()[0].startswith("mpath-"):
+                        continue
+
+            # Define a dict to store each disk info.
+            disk = dict()
+
+            # Fetch the parted device.
+            p_device = parted.getDevice(d.device_node)
+
+            # Add parted info, and udev info to the dict.
+            disk.update({"id_serial": d.get('ID_SERIAL_SHORT'),
+                         "id_wwn": d.get('ID_WWN'),
+                         "id_path": d.get('ID_PATH'),
+                         "size": p_device.length})
+
+            # Add a catch for disk that don't have a label and skip them.
+            try:
+                # Fetch the parted disk object.
+                p_disk = parted.newDisk(p_device)
+            except (DeviceException, DiskException):
+                disk.update({"fs_type": d.get('ID_FS_TYPE'),
+                             "fs_uuid": d.get('ID_FS_UUID', '')})
+                update(dm_name, p_device)
+                continue
+
+            # Add parted info, and udev info to the dict.
+            disk.update({"type": p_disk.type})
+
+            if p_disk.type == "loop":
+                disk.update({"fs_type": d.get('ID_FS_TYPE'),
+                             "fs_uuid": d.get('ID_FS_UUID', '')})
+                update(dm_name, p_device)
+                continue
+
+            # Loop through the partitions, and grab info.
+            for p in p_disk.partitions:
+                # Define dict to store partition info.
+                part = dict()
+
+                # Grab any part flags, and the part type.
+                part.update({"flags": p.getFlagsAsString(),
+                             "type": p.type})
+
+                # If the disk label isn't msdos, check for part names.
+                if "msdos" not in p_disk.type:
+                    try:
+                        if p.name:
+                            part.update({"name": p.name})
+                        else:
+                            part.update({"name": None})
+                    except PartitionException:
+                        part.update({"name": None})
+                        pass
+                else:
+                    part.update({"name": None})
+
+                # Pull the fs type from udev instead of parted.
+                if dm_name and dm_name[-1].isnumeric():
+                    dev = f"{dm_name}p{p.number}"
+                elif dm_name:
+                    dev = f"{dm_name}{p.number}"
+                elif d.device_node[-1].isnumeric():
+                    dev = f"{d.device_node}p{p.number}"
+                else:
+                    dev = f"{d.device_node}{p.number}"
+
+                if is_block(dev):
+                    part_info = dev_from_file(udev_ctx, dev)
+
+                    # Add the fs info, and the geometry info.
+                    part.update({"fs_type": part_info.get('ID_FS_TYPE', ''),
+                                 "fs_uuid": part_info.get('ID_FS_UUID', ''),
+                                 "fs_label": part_info.get('ID_FS_LABEL', ''),
+                                 "start": p.geometry.start,
+                                 "end": p.geometry.end})
+
+                # Add the part dict as an entry to the disk dict.
+                # Might change this to the full path later, for
+                # now just the part number.
+                disk.update({p.number: part})
+
+            # Add the disk dict as an entry to the master dict.
+            update(dm_name, p_device)
+
+    return disks_dict
 
 
 class Parted(object):

@@ -18,7 +18,7 @@ from re import search
 
 from .exceptions import ExistsError, GeneralError, RunCMDError
 from .logger import log
-from .utils import run_cmd
+from .utils import dev_from_file, get_dev_type, run_cmd
 
 
 def fmt_fs(dev, fs_uuid, fs_label, fs_type):
@@ -88,3 +88,66 @@ def fmt_fs(dev, fs_uuid, fs_label, fs_type):
     else:
         logging.error(f"Unsupported filesystem {fs_type}, exiting.")
         raise GeneralError()
+
+
+def get_mnts(udev_ctx):
+    """
+    Query and store information about anything that's mounted.
+    :return:
+    """
+    mnts = dict()
+
+    def add_entries(dev, mp):
+        info = dict()
+        vg = None
+        parent = None
+        md_devname = None
+
+        udev_info = dev_from_file(udev_ctx, dev)
+
+        if dev.startswith("/dev/dm-"):
+            dev = f"/dev/mapper/{udev_info['DM_NAME']}"
+
+        d_type = get_dev_type(udev_info)
+
+        if d_type == "lvm":
+            vg = udev_info.get('DM_VG_NAME', '')
+            if udev_info.get('MD_DEVNAME', False):
+                md_devname = f"/dev/md/{udev_info.get('MD_DEVNAME', None)}"
+        elif d_type == "part" or d_type == "part-raid":
+            parent = udev_info.find_parent('block').device_node
+        elif d_type == "part-mpath":
+            parent = f"/dev/mapper/{udev_info['DM_MPATH']}"
+        elif d_type == "raid":
+            if udev_info['DEVTYPE'] == "partition":
+                parent = udev_info.find_parent('block').device_node
+            else:
+                md_devname = f"/dev/md/{udev_info.get('MD_DEVNAME', None)}"
+
+        info.update({"path": dev,
+                     "kname": udev_info['DEVNAME'],
+                     "fs_type": udev_info.get('ID_FS_TYPE', None),
+                     "fs_uuid": udev_info.get('ID_FS_UUID', None),
+                     "fs_label": udev_info.get('ID_FS_LABEL', None),
+                     "type": d_type,
+                     "vg": vg,
+                     "parent": parent,
+                     "md_devname": md_devname})
+
+        mnts.update({mp: info})
+
+    def read_strip_filter(_file):
+        with open(_file, "r") as f:
+            lines = f.readlines()
+
+        lines = [line.strip() for line in lines]
+        return [line for line in lines if line.startswith("/") and not line.startswith("//")]
+
+    for x in read_strip_filter("/proc/mounts"):
+        split = x.split()
+        add_entries(split[0], split[1])
+
+    for x in read_strip_filter("/proc/swaps"):
+        add_entries(x.split()[0], "[SWAP]")
+
+    return mnts
