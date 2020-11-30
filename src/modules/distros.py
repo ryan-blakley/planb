@@ -25,7 +25,8 @@ from .exceptions import RunCMDError
 from .logger import log
 from .utils import rpmql, rpmqf, run_cmd
 
-fedora_pkgs = ['python3', 'fedora-release', 'fedora-release-common', 'fedora-release-server']
+fedora_pkgs = ['python3', 'fedora-release', 'fedora-release-common', 'fedora-release-server',
+               'fedora-release-identity-server']
 rh_pkgs = ['dbus-daemon', 'platform-python', 'python36', 'redhat-release']
 cent_pkgs = ['dbus-daemon', 'platform-python', 'python36', 'centos-release']
 
