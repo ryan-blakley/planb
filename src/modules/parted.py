@@ -169,7 +169,7 @@ class Parted(object):
         :return:
         """
         # An array of a few fs that aren't actually valid parted fs's.
-        bad_fs = ['LVM2_member', 'swap', 'linux_raid_member', 'vfat']
+        bad_fs = ['LVM2_member', 'swap', 'linux_raid_member', 'vfat', 'crypto_LUKS']
 
         try:
             # Set the partition type.

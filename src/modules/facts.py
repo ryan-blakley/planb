@@ -19,6 +19,7 @@ from platform import machine
 from pyudev import Context
 
 from .fs import get_mnts
+from .luks import get_luks_devs
 from .lvm import get_lvm_report
 from .parted import get_part_layout
 from .md import get_md_info
@@ -64,6 +65,7 @@ class Facts(object):
             self.lvm = get_lvm_report(self.udev_ctx)
 
         self.md_info = get_md_info(self.udev_ctx)
+        self.luks = get_luks_devs(self.udev_ctx)
 
     def print_facts(self):
         print("General Facts")
@@ -89,6 +91,11 @@ class Facts(object):
         if self.md_info:
             print("MD Raid Facts")
             print(json.dumps(self.md_info, indent=4))
+            print("")
+
+        if self.luks:
+            print("Luks Facts")
+            print(json.dumps(self.luks, indent=4))
             print("")
 
 # vim:set ts=4 sw=4 et:

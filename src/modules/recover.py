@@ -19,11 +19,13 @@ from os import environ, chdir, chmod, chroot, makedirs, sync
 from os.path import exists, isdir, isfile, join
 from re import search
 from selinux import chcon
+from shutil import move
 
 from .exceptions import ExistsError, GeneralError, MountError, RunCMDError
 from .facts import Facts
 from .fs import fmt_fs, get_mnts
 from .logger import log
+from .luks import luks_check
 from .lvm import deactivate_vgs, RecoveryLVM
 from .md import get_md_info, md_check
 from .parted import Parted
@@ -395,8 +397,8 @@ class Recover(object):
                 # Append the mp to the mapped list, so it can be skipped.
                 self.lst_mapped_mps.append(mnt)
 
-                logging.debug(f"recover: map_disk: od:{o_disk} nd:{n_disk} d:{d}")
-                logging.debug(f"recover: map_disk: bk_mnts[mnt]:{self.bk_mnts[mnt]}")
+                logging.debug(f"recover: map_disk: mnts: od:{o_disk} nd:{n_disk} d:{d}")
+                logging.debug(f"recover: map_disk: mnts: bk_mnts[mnt]:{self.bk_mnts[mnt]}")
 
         # If md_info exist in bk_misc, update the devs entries if they need to be.
         if self.bk_misc.get('md_info', ''):
@@ -425,6 +427,23 @@ class Recover(object):
 
                         self.bk_lvm['PVS'][i]['parent'] = pv['parent'].replace(o_disk, n_disk)
                 i += 1
+
+        # If there are luks devices, map any disk that needs it.
+        if self.bk_misc.get('luks', ''):
+            p = None
+            for dev in self.bk_misc['luks']:
+                if o_disk.split('/')[-1] == search("([a-z]+)", dev.split('/')[-1]).group():
+                    p = search("([0-9]+)", dev.split('/')[-1]).group()
+                    if p:
+                        self.bk_misc['luks'][f"{n_disk}{p}"] = self.bk_misc['luks'].pop(dev)
+                        logging.debug(f"recover: map_disk: luks: od:{o_disk} nd:{n_disk} p:{p}")
+                        break
+
+            # If the header file exist, rename it to match n_disk.
+            luks_header = f"/facts/luks/{o_disk.split('/')[-1]}{p}.backup"
+            if exists(luks_header) and p:
+                move(luks_header, f"/facts/luks/{n_disk.split('/')[-1]}{p}.backup")
+                logging.debug(f"recover: map_disk: luks: luks_header:{luks_header}")
 
     def mnt_bk_mount(self):
         """
@@ -606,12 +625,14 @@ class Recover(object):
             if not self.opts.restore_only:
                 rc_part_disks = []
 
+                # Grab any bk_vgs.
                 bk_vgs = self.bk_misc.get('bk_vgs', '')
+
+                # Compare the disks, and map if necessary.
                 self.cmp_disks()
 
                 # Deactivate any vgs before doing anything.
                 if bk_vgs:
-                    # Deactivate any volume groups before doing any parted stuff.
                     deactivate_vgs()
 
                 # Loop through the disks keys, and check if the disk match, if not add
@@ -621,7 +642,7 @@ class Recover(object):
                         rc_part_disks.append(d)
 
                 # Check if any disk need partition scheme recovered, if they do, then
-                # recover the disk's parititon table from the backup info.
+                # recover the disk's partition table from the backup info.
                 if rc_part_disks:
                     log("Starting disk partition recreation")
                     parted = Parted()
@@ -636,11 +657,25 @@ class Recover(object):
                     log("Starting MD raid check")
                     md_check(self.facts.udev_ctx, self.bk_misc['md_info'])
 
+                # If luks in bk_misc, then check if it was on a partition.
+                if self.bk_misc.get('luks', False):
+                    log("Starting Luks check for encrypted partitions")
+                    for dev in self.bk_misc['luks']:
+                        if "part" in self.bk_misc['luks'][dev]['type']:
+                            luks_check(self.facts.udev_ctx, self.bk_misc['luks'], dev)
+
                 # Check if the bk_vgs match or if they need recovering.
                 if bk_vgs:
                     log("Starting LVM check")
                     rc_lvm = RecoveryLVM(self.facts, self.bk_mnts, self.bk_lvm)
                     rc_lvm.lvm_check(bk_vgs)
+
+                # If luks in bk_misc, then check if it was on an lvm device.
+                if self.bk_misc.get('luks', False):
+                    log("Starting Luks check for encrypted lvms")
+                    for dev in self.bk_misc['luks']:
+                        if "lvm" in self.bk_misc['luks'][dev]['type']:
+                            luks_check(self.facts.udev_ctx, self.bk_misc['luks'], dev)
 
                 # Now format all the fs.
                 log("Starting filesystem restoring")

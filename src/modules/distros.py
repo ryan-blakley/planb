@@ -47,9 +47,9 @@ class RHLiveOS(object):
                           'bash-completion', 'initscripts', 'coreutils', 'coreutils-common', 'pam', 'util-linux',
                           'dbus', 'dbus-broker', 'dbus-common', 'polkit', 'python3-libs', 'alternatives',
                           'NetworkManager', 'binutils', 'crypto-policies', 'device-mapper-multipath',
-                          'dosfstools', 'e2fsprogs', 'gawk', 'grep', 'iproute', 'iputils', 'kbd', 'kbd-misc', 'kmod',
-                          'kpartx', 'less', 'libpwquality', 'lsof', 'mdadm', 'ncurses-base', 'openssh',
-                          'openssh-clients', 'openssh-server', 'parted', 'passwd', 'procps-ng', 'rng-tools',
+                          'dosfstools', 'e2fsprogs', 'gawk', 'grep', 'gzip', 'iproute', 'iputils', 'kbd', 'kbd-misc',
+                          'kmod', 'kpartx', 'less', 'libpwquality', 'lsof', 'mdadm', 'ncurses-base', 'openssh',
+                          'openssh-clients', 'openssh-server', 'parted', 'passwd', 'plymouth', 'procps-ng', 'rng-tools',
                           'rootfiles', 'rpm', 'sed', 'vim-minimal', 'xfsprogs']
 
         self.pkgs = self.set_pkgs()
@@ -183,6 +183,11 @@ class RHLiveOS(object):
             lvm_pkgs = ['device-mapper', 'device-mapper-event', 'device-mapper-persistent-data', 'lvm2']
             pkgs.extend(lvm_pkgs)
 
+        # Check if luks is in use, and set the proper pkgs.
+        if self.facts.luks:
+            luks_pkgs = ['cryptsetup', 'device-mapper']
+            pkgs.extend(luks_pkgs)
+
         # Add the needed bootloader pkgs.
         grub_pkgs = ['grub2-common', 'grub2-pc', 'grub2-pc-modules', 'grub2-ppc64le', 'grub2-ppc64le-modules',
                      'grub2-tools', 'grub2-tools-minimal', 'grub2-tools-extra', 's390utils-base']
@@ -259,8 +264,7 @@ def rh_customize_rootfs(cfg, tmp_dir, tmp_rootfs_dir):
     # Create the needed getty wants dir and lnk the service files.
     makedirs(join(tmp_rootfs_dir, "usr/lib/systemd/system/getty.target.wants"))
     chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/getty.target.wants"))
-    symlink("../getty@.service", "getty@tty0.service")
-    symlink("../serial-getty@.service", "serial-getty@ttyS0.service")
+    symlink("../getty@.service", "getty@tty1.service")
 
     # Create the custom target wants dir, and lnk the needed service and target files.
     makedirs(join(tmp_rootfs_dir, "usr/lib/systemd/system/pbr.target.wants"))
@@ -268,6 +272,9 @@ def rh_customize_rootfs(cfg, tmp_dir, tmp_rootfs_dir):
     symlink("../getty.target", "getty.target")
     symlink("../NetworkManager.service", "NetworkManager.service")
     symlink("../rngd.service", "rngd.service")
+    symlink("../systemd-logind.service", "systemd-logind.service")
+    symlink("../plymouth-quit.service", "plymouth-quit.service")
+    symlink("../plymouth-quit-wait.service", "plymouth-quit-wait.service")
 
     # Enable sshd to start by default or not, depening on cfg setting.
     if cfg.rc_enable_sshd:
@@ -296,6 +303,9 @@ def rh_customize_rootfs(cfg, tmp_dir, tmp_rootfs_dir):
 
     # Remove the fstab so nothing tries to mount on boot.
     remove(join(tmp_rootfs_dir, "etc/fstab"))
+
+    # Remove the crypttab so the luks generator doesn't start on boot.
+    remove(join(tmp_rootfs_dir, "etc/crypttab"))
 
     # Check if the mdadm.conf file exist if it does copy it.
     if exists("/etc/mdadm.conf"):

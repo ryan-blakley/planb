@@ -52,7 +52,7 @@ the last thing you want is issues to arise.
 - [ ] Add option for secondary backup location for backup archive duplication.
 - [ ] Add option to name the backup archive, and iso files.
 - [ ] Add option for pre/post scripting.
-- [ ] Add support for luks.
+- [x] Add support for luks.
 - [ ] Add support for btrfs.
 - [ ] Add support for stratis.
 - [ ] Add support for scp and lftp possibly.

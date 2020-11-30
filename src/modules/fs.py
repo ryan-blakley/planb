@@ -13,6 +13,7 @@
 # <http://www.gnu.org/licenses/>.
 
 import logging
+from glob import glob
 from os.path import exists
 from re import search
 
@@ -123,6 +124,16 @@ def get_mnts(udev_ctx):
                 parent = udev_info.find_parent('block').device_node
             else:
                 md_devname = f"/dev/md/{udev_info.get('MD_DEVNAME', None)}"
+        # For luks devices that are on lvm, we need to grab the vg name.
+        elif d_type == "crypt":
+            # If a slave device exist, and it is a dm device, grab the vg name.
+            if glob(f"/sys/block/{udev_info['DEVNAME'].split('/')[-1]}/slaves/*/dm/name"):
+                dm_parent = glob(f"/sys/block/{udev_info['DEVNAME'].split('/')[-1]}/slaves/*")[0].split('/')[-1]
+                vg = dev_from_file(udev_ctx, f"/dev/{dm_parent}").get('DM_VG_NAME', '')
+            # Else grab the slave device name and set the parent to it.
+            else:
+                dm_parent = glob(f"/sys/block/{udev_info['DEVNAME'].split('/')[-1]}/slaves/*")[0].split('/')[-1]
+                parent = f"/dev/{dm_parent}"
 
         info.update({"path": dev,
                      "kname": udev_info['DEVNAME'],

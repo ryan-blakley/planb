@@ -272,6 +272,7 @@ class Backup(object):
         misc.update({"selinux_enforcing": self.facts.selinux_enforcing})
         misc.update({"bk_vgs": bk_vgs})
         misc.update({"md_info": self.facts.md_info})
+        misc.update({"luks": self.facts.luks})
 
         # Write out the facts to the tmp iso dir.
         with open(join(self.tmp_facts_dir, "disks.json"), 'w') as f:
@@ -292,6 +293,13 @@ class Backup(object):
             makedirs(join(self.tmp_facts_dir, "vgcfg"))
             run_cmd(['/usr/sbin/vgcfgbackup', '-f', f"{join(self.tmp_facts_dir, 'vgcfg')}/%s"])
 
+        # If luks detected, then dump the headers to files to be included in the iso.
+        if self.facts.luks:
+            makedirs(join(self.tmp_facts_dir, "luks"))
+            for dev in self.facts.luks:
+                run_cmd(['/usr/sbin/cryptsetup', 'luksHeaderBackup', dev, '--header-backup-file',
+                         f"{join(join(self.tmp_facts_dir, 'luks'), dev.split('/')[-1])}.backup"])
+
     def get_bk_vgs(self):
         """
         Gather a list of volume groups needing to be checked/restored during recovery. Also remove
@@ -304,45 +312,43 @@ class Backup(object):
 
         # Loop through each mp, to capture list of vgs.
         for mnt, info in mnts.items():
-            # If the mp isn't an lv skip it.
-            if not info['type'] == "lvm":
-                continue
+            # If the mp isn't an lv or luks skip it.
+            if (info['type'] == "lvm" or info['type'] == "crypt") and not info['parent']:
+                vg = info['vg']
 
-            vg = info['vg']
+                # If the vg is in the excludes list, remove the mp and continue.
+                if vg in self.cfg.bk_exclude_vgs:
+                    self.facts.mnts.pop(mnt)
+                    # If the vg has two pvs, check and remove
+                    # the vg if it's in bk_vgs already.
+                    if vg in bk_vgs:
+                        bk_vgs.remove(vg)
+                    continue
 
-            # If the vg is in the excludes list, remove the mp and continue.
-            if vg in self.cfg.bk_exclude_vgs:
-                self.facts.mnts.pop(mnt)
-                # If the vg has two pvs, check and remove
-                # the vg if it's in bk_vgs already.
-                if vg in bk_vgs:
-                    bk_vgs.remove(vg)
-                continue
+                # Check if there are any bk_exlude_disks set, before running the below.
+                if self.cfg.bk_exclude_disks:
+                    for pv in self.facts.lvm['PVS']:
+                        logging.debug(f"backup: get_bk_vgs: Checking if {pv} is in the excludes.")
+                        # Check for the mp's vg, and that the parent isn't null.
+                        if pv['vg_name'] == vg and pv['parent']:
+                            # Check if the parent is in the exclude list, if so remove the mp and continue.
+                            # Also append the vg to the bk_exclude_vgs list, in case the vg has multiple pvs.
+                            if pv['parent'] in self.cfg.bk_exclude_disks:
+                                logging.debug(f"backup: get_bk_vgs: Excluding {vg} since it's parent is in the excludes.")
+                                self.cfg.bk_exclude_vgs.append(vg)
+                                self.facts.mnts.pop(mnt)
+                                continue
+                        # Next if the parent is null just use the pv_name, this is for pvs that aren't partitioned.
+                        elif pv['vg_name'] == vg and not pv['parent']:
+                            # Check if the pv_name is in the exclude list, if so remove the mp and continue.
+                            # Also append the vg to the bk_exclude_vgs list, in case the vg has multiple pvs.
+                            if pv['pv_name'] in self.cfg.bk_exclude_disks:
+                                logging.debug(f"backup: get_bk_vgs: Excluding {vg} since it's pv_name is in the excludes.")
+                                self.cfg.bk_exclude_vgs.append(vg)
+                                self.facts.mnts.pop(mnt)
+                                continue
 
-            # Check if there are any bk_exlude_disks set, before running the below.
-            if self.cfg.bk_exclude_disks:
-                for pv in self.facts.lvm['PVS']:
-                    logging.debug(f"backup: get_bk_vgs: Checking if {pv} is in the excludes.")
-                    # Check for the mp's vg, and that the parent isn't null.
-                    if pv['vg_name'] == vg and pv['parent']:
-                        # Check if the parent is in the exclude list, if so remove the mp and continue.
-                        # Also append the vg to the bk_exclude_vgs list, in case the vg has multiple pvs.
-                        if pv['parent'] in self.cfg.bk_exclude_disks:
-                            logging.debug(f"backup: get_bk_vgs: Excluding {vg} since it's parent is in the excludes.")
-                            self.cfg.bk_exclude_vgs.append(vg)
-                            self.facts.mnts.pop(mnt)
-                            continue
-                    # Next if the parent is null just use the pv_name, this is for pvs that aren't partitioned.
-                    elif pv['vg_name'] == vg and not pv['parent']:
-                        # Check if the pv_name is in the exclude list, if so remove the mp and continue.
-                        # Also append the vg to the bk_exclude_vgs list, in case the vg has multiple pvs.
-                        if pv['pv_name'] in self.cfg.bk_exclude_disks:
-                            logging.debug(f"backup: get_bk_vgs: Excluding {vg} since it's pv_name is in the excludes.")
-                            self.cfg.bk_exclude_vgs.append(vg)
-                            self.facts.mnts.pop(mnt)
-                            continue
-
-            not_in_append(vg, bk_vgs)
+                not_in_append(vg, bk_vgs)
 
         return bk_vgs
 

@@ -19,7 +19,6 @@ Before=rescue.service
 [Service]
 Environment=HOME=/root
 WorkingDirectory=-/root
-ExecStartPre=-/bin/plymouth --wait quit
 ExecStartPre=-/bin/echo -e 'Welcome to Plan (B)ackup Recovery!\\n'
 ExecStart=-/bin/sh -c "/usr/bin/dmesg -n1; /usr/bin/rm /run/nologin"
 Type=idle
