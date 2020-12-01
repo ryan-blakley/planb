@@ -8,7 +8,7 @@ setup(
     author_email='rblakley@redhat.com',
     maintainer='Ryan Blakley',
     maintainer_email='rblakley@redhat.com',
-    version='0.3',
+    version='0.4',
     package_dir={'planb': 'src/modules'},
     packages=['planb'],
     scripts=glob('src/scripts/*'),

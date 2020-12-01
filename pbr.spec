@@ -1,5 +1,5 @@
 Name:           pbr
-Version:        0.3
+Version:        0.4
 Release:        1%{?dist}
 Summary:        Plan B Recovery is a backup and recovery utility.
 
@@ -59,6 +59,18 @@ rm -rf $RPM_BUILD_ROOT
 %doc %{_mandir}/man5/pbr.conf.5*
 
 %changelog
+* Tue Dec 01 2020 Ryan Blakley <rblakley@redhat.com> 0.4-1
+- Update the README. (rblakley@redhat.com)
+- Remove version number from isolinux.cfg. (rblakley@redhat.com)
+- Fix issue when multiple swap devices, also ignore zram devices.
+  kley@redhat.com)
+- Fix a can't boot when on F33, and add build options.
+  kley@redhat.com)
+- Add in inital LUKS support. (rblakley@redhat.com)
+- Move static functions out of the Facts class. (rblakley@redhat.com)
+- Removed the un-needed passing of sys.argv to main. (rblakley@redhat.com)
+- Fix the facts output, to output everything. (rblakley@redhat.com)
+
 * Thu Nov 05 2020 Ryan Blakley <rblakley@redhat.com> 0.3-1
 - Add in man pages, and change pbr.cfg to pbr.conf. (rblakley@redhat.com)
 - Update the README with more todo's. (rblakley@redhat.com)
