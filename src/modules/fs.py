@@ -104,6 +104,10 @@ def get_mnts(udev_ctx):
         parent = None
         md_devname = None
 
+        # If the dev is a zram device, skip adding it.
+        if dev.startswith("/dev/zram"):
+            return
+
         udev_info = dev_from_file(udev_ctx, dev)
 
         if dev.startswith("/dev/dm-"):
@@ -158,7 +162,11 @@ def get_mnts(udev_ctx):
         split = x.split()
         add_entries(split[0], split[1])
 
+    loop = 0
     for x in read_strip_filter("/proc/swaps"):
-        add_entries(x.split()[0], "[SWAP]")
+        # To distinguish from actual mount points, name the entries SWAP-X,
+        # this is in case there are multiple swap devices in use.
+        add_entries(x.split()[0], f"SWAP-{loop}")
+        loop += 1
 
     return mnts
