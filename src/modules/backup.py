@@ -20,7 +20,7 @@ from shutil import copyfile, rmtree
 from tempfile import mkdtemp
 from time import strftime
 
-from .exceptions import ExistsError, MountError, RunCMDError
+from .exceptions import ExistsError, GeneralError, MountError, RunCMDError
 from .facts import Facts
 from .logger import log
 from .iso import ISO
@@ -68,10 +68,14 @@ class Backup(object):
                 self.tmp_bk_dir = None
         # If saving the backup to the iso, set the tmp_bk_dir under the isofs directory.
         elif t == "iso":
-            log("Skipping mounting since the backup will be on the ISO")
-            self.tmp_bk_dir = join(self.tmp_isofs_dir, self.facts.hostname.split('.')[0])
-            # Create backup dir based on the hostname in the isofs directory.
-            makedirs(self.tmp_bk_dir, exist_ok=True)
+            if not self.opts.backup_only:
+                log("Skipping mounting since the backup will be on the ISO")
+                self.tmp_bk_dir = join(self.tmp_isofs_dir, self.facts.hostname.split('.')[0])
+                # Create backup dir based on the hostname in the isofs directory.
+                makedirs(self.tmp_bk_dir, exist_ok=True)
+            else:
+                logging.error("Can't run with --backup-only if the backup_location_type is set to iso.")
+                raise GeneralError()
         else:
             if (t == "nfs" or t == "cifs") and not rpmq(f"{t}-utils"):
                 logging.error(f" Backup location type is set to {t}, but {t}-utils isn't installed, please install.")
@@ -361,22 +365,24 @@ class Backup(object):
         # Create the needed dirs in the tmp dir.
         self.create_tmp_dirs()
 
-        # Dump all the facts gathered to json files in the tmp dir.
-        self.dump_facts()
+        if not self.opts.backup_only:
+            # Dump all the facts gathered to json files in the tmp dir.
+            self.dump_facts()
 
         # Check if any addition pkgs need to be installed,
         # and mount the bk_mount if needed.
         self.chk_bk_settings()
 
-        if self.cfg.boot_type == "iso":
-            iso = ISO(self.cfg, self.facts, self.tmp_dir)
-            iso.mkiso()
-        elif self.cfg.boot_type == "usb":
-            usb = USB(self.cfg, self.facts, self.tmp_dir)
-            usb.mkusb()
-        else:
-            logging.error("Please set a valid boot_type in the cfg file.")
-            raise ExistsError()
+        if not self.opts.backup_only:
+            if self.cfg.boot_type == "iso":
+                iso = ISO(self.cfg, self.facts, self.tmp_dir)
+                iso.mkiso()
+            elif self.cfg.boot_type == "usb":
+                usb = USB(self.cfg, self.facts, self.tmp_dir)
+                usb.mkusb()
+            else:
+                logging.error("Please set a valid boot_type in the cfg file.")
+                raise ExistsError()
 
         if not self.opts.mkrescue:
             if self.cfg.bk_location_type == "rsync":

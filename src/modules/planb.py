@@ -30,6 +30,7 @@ def parse_args():
                                         Plan B Recover comes with ABSOLUTELY NO WARRANTY.""")
 
     parser.add_argument("-b", "--backup", help="Create rescue media, and full system backup.", action='store_true')
+    parser.add_argument("-bo", "--backup-only", help="Create backup archive only.", action='store_true')
     parser.add_argument("-f", "--facts", help="Print all the facts.", action='store_true')
     parser.add_argument("--format", help="Format the specified usb device.", action='store', type=str)
     parser.add_argument("-k", "--keep", help="Keep, don't remove temporary backup directory.", action='store_true')
@@ -42,24 +43,44 @@ def parse_args():
 
     opts = parser.parse_args()
 
-    if not opts.backup and not opts.recover and not opts.mkrescue:
+    if not opts.backup and not opts.recover and not opts.mkrescue and not opts.backup_only:
         if not opts.facts and not opts.format:
             logging.error("Please provide a valid argument.")
             parser.print_help()
             exit(1)
     
-    if opts.backup and opts.recover:
+    if (opts.backup or opts.backup_only) and opts.recover:
         logging.error("Choose either backup or recover not both.")
         parser.print_help()
         exit(1)
 
+    if (opts.backup or opts.backup_only) and opts.mkrescue:
+        logging.error("Choose either backup or mkrescue not both.")
+        parser.print_help()
+        exit(1)
+
     if opts.backup_archive and not opts.recover:
-        logging.error("--backup-archive can only be specified when running recover.")
+        logging.error("-bo/--backup-archive can only be specified when running recover.")
         parser.print_help()
         exit(1)
 
     if opts.restore_only and not opts.recover:
-        logging.error("--restore-only can only be specified when running recover.")
+        logging.error("-ro/--restore-only can only be specified when running recover.")
+        parser.print_help()
+        exit(1)
+
+    if opts.backup and opts.backup_only:
+        logging.error("-bo/--backup-only can't be specified when -b/--backup is specified, and vice versa.")
+        parser.print_help()
+        exit(1)
+
+    if opts.facts and (opts.backup or opts.backup_only or opts.recover or opts.restore_only):
+        logging.error("-f/--facts can't be specified if backup or recover is specified also.")
+        parser.print_help()
+        exit(1)
+
+    if opts.format and (opts.backup or opts.backup_only or opts.recover or opts.restore_only):
+        logging.error("--format can't be specified if backup or recover is specified also.")
         parser.print_help()
         exit(1)
 
@@ -89,7 +110,7 @@ class PBR(object):
         if self.opts.facts:
             facts = Facts()
             facts.print_facts()
-        elif self.opts.backup or self.opts.mkrescue:
+        elif self.opts.backup or self.opts.mkrescue or self.opts.backup_only:
             from .backup import Backup
 
             bkup = Backup(self.opts, self.cfg)
