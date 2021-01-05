@@ -234,6 +234,35 @@ class Backup(object):
         # Remove the unused disks from the facts disks.
         for d in rm_disks:
             self.facts.disks.pop(d)
+    
+    def cmp_mnts_fstab(self):
+        """
+        Compare the currently mount points and fstab for any differences, this will
+        hopefully help prevent any can't boots after restoration due to fstab entries.
+        :return:
+        """
+        mp = []
+        with open("/etc/fstab", "r") as f:
+            lines = f.readlines()
+
+        lines = [line.strip() for line in lines]
+
+        # Loop over the lines and grab the mount points set in the fstab.
+        for line in lines:
+            if line and not line.startswith('#'):
+                if line.split()[1].startswith('/'):
+                    mp.append(line.split()[1])
+
+        # Now compare and remove any mount points that match.
+        for mnt in self.facts.mnts:
+            if mnt in mp:
+                mp.remove(mnt)
+
+        # If there is anymore entries in mp, throw an error.
+        if len(mp) > 0:
+            logging.error("""There is a discrepancy between the mount points and the fstab, please correct the fstab """
+                          """and try again. This is here to help prevent a can't boot after restoration.""")
+            raise GeneralError()
 
     def create_tmp_dirs(self):
         """
@@ -366,6 +395,8 @@ class Backup(object):
         self.create_tmp_dirs()
 
         if not self.opts.backup_only:
+            # Before dumping facts, compare the mnts and fstab.
+            self.cmp_mnts_fstab()
             # Dump all the facts gathered to json files in the tmp dir.
             self.dump_facts()
 
