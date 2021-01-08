@@ -54,6 +54,8 @@ rm -rf $RPM_BUILD_ROOT
 %{python3_sitelib}/*
 # For files under /usr/share.
 %{_datadir}/planb/
+# Directory for outputting files.
+%dir /var/lib/pbr
 # Add the man pages to the package.
 %doc %{_mandir}/man8/pbr.8*
 %doc %{_mandir}/man5/pbr.conf.5*

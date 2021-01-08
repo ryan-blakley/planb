@@ -16,7 +16,7 @@ import json
 import logging
 from os import chdir, listdir, makedirs, remove, rename
 from os.path import exists, join
-from shutil import copyfile, rmtree
+from shutil import copyfile, copytree, rmtree
 from tempfile import mkdtemp
 from time import strftime
 
@@ -46,6 +46,7 @@ class Backup(object):
         self.tmp_mount_dir = None
         self.tmp_bk_dir = None
         self.tmp_isofs_dir = None
+        self.var_lib = "/var/lib/pbr"
 
         # Define the immutable excludes.
         self.bk_excludes = ['/dev', '/lost+found', '/proc', '/run', '/sys']
@@ -325,6 +326,13 @@ class Backup(object):
         if self.facts.lvm_installed:
             makedirs(join(self.tmp_facts_dir, "vgcfg"))
             run_cmd(['/usr/sbin/vgcfgbackup', '-f', f"{join(self.tmp_facts_dir, 'vgcfg')}/%s"])
+
+        # Copy the facts to /var/lib/pbr/facts/ used for checking for layout changes.
+        # Do this before dumping the luks header, so that it's not copied on disk.
+        if exists(join(self.var_lib, "facts")):
+            rmtree(join(self.var_lib, "facts"))
+
+        copytree(self.tmp_facts_dir, join(self.var_lib, "facts"))
 
         # If luks detected, then dump the headers to files to be included in the iso.
         if self.facts.luks:
