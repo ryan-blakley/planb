@@ -106,6 +106,10 @@ class ISO(object):
         if cmd_isohybrid:
             run_cmd(cmd_isohybrid)
 
+        # Copy the iso locally under /var/lib/pbr.
+        makedirs(join("/var/lib/pbr", "output"), exist_ok=True)
+        copy2(join(bk_dir, "recover.iso"), "/var/lib/pbr/output/recover.iso")
+
     def prep_uefi(self):
         """
         Prep the isofs working directory to work for uefi.
