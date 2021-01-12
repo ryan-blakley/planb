@@ -29,6 +29,7 @@ def parse_args():
     parser = ArgumentParser(description="""Plan B Recovery, if all else fails go to Plan B! 
                                         Plan B Recover comes with ABSOLUTELY NO WARRANTY.""")
 
+    parser.add_argument("-c", "--check-facts", help="Check if the existing facts changed.", action='store_true')
     parser.add_argument("-b", "--backup", help="Create rescue media, and full system backup.", action='store_true')
     parser.add_argument("-bo", "--backup-only", help="Create backup archive only.", action='store_true')
     parser.add_argument("-f", "--facts", help="Print all the facts.", action='store_true')
@@ -43,7 +44,7 @@ def parse_args():
 
     opts = parser.parse_args()
 
-    if not opts.backup and not opts.recover and not opts.mkrescue and not opts.backup_only:
+    if not opts.backup and not opts.recover and not opts.mkrescue and not opts.backup_only and not opts.check_facts:
         if not opts.facts and not opts.format:
             logging.error("Please provide a valid argument.")
             parser.print_help()
@@ -110,7 +111,7 @@ class PBR(object):
         if self.opts.facts:
             facts = Facts()
             facts.print_facts()
-        elif self.opts.backup or self.opts.mkrescue or self.opts.backup_only:
+        elif self.opts.backup or self.opts.mkrescue or self.opts.backup_only or self.opts.check_facts:
             from .backup import Backup
 
             bkup = Backup(self.opts, self.cfg)

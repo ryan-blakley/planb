@@ -40,6 +40,7 @@ class Backup(object):
         self.cfg = cfg
         self.facts = Facts()
 
+        self.matched = False
         self.mounted = False
         self.tmp_dir = None
         self.tmp_facts_dir = None
@@ -327,12 +328,13 @@ class Backup(object):
             makedirs(join(self.tmp_facts_dir, "vgcfg"))
             run_cmd(['/usr/sbin/vgcfgbackup', '-f', f"{join(self.tmp_facts_dir, 'vgcfg')}/%s"])
 
-        # Copy the facts to /var/lib/pbr/facts/ used for checking for layout changes.
-        # Do this before dumping the luks header, so that it's not copied on disk.
-        if exists(join(self.var_lib, "facts")):
-            rmtree(join(self.var_lib, "facts"))
+        if not self.opts.check_facts:
+            # Copy the facts to /var/lib/pbr/facts/ used for checking for layout changes.
+            # Do this before dumping the luks header, so that it's not copied on disk.
+            if exists(join(self.var_lib, "facts")):
+                rmtree(join(self.var_lib, "facts"))
 
-        copytree(self.tmp_facts_dir, join(self.var_lib, "facts"))
+            copytree(self.tmp_facts_dir, join(self.var_lib, "facts"))
 
         # If luks detected, then dump the headers to files to be included in the iso.
         if self.facts.luks:
@@ -405,8 +407,27 @@ class Backup(object):
         if not self.opts.backup_only:
             # Before dumping facts, compare the mnts and fstab.
             self.cmp_mnts_fstab()
+
             # Dump all the facts gathered to json files in the tmp dir.
             self.dump_facts()
+
+            if self.opts.check_facts:
+                log("Checking if the facts have changed")
+                import filecmp
+
+                # Compare the 4 facts files to see if they're different.
+                match, mismatch, errors = filecmp.cmpfiles(self.tmp_facts_dir, join(self.var_lib, "facts"),
+                                 ['disks.json', 'lvm.json', 'mnts.json', 'misc.json'])
+
+                # If no mismatch or errors, set matched to true, if there is any
+                # log the mismatch and errors to the log file.
+                if not mismatch and not errors:
+                    self.matched = True
+                else:
+                    logging.debug(f"backup: start: check_facts: mismatched: {mismatch} errors: {errors}")
+
+                self.cleanup()
+                return
 
         # Check if any addition pkgs need to be installed,
         # and mount the bk_mount if needed.
@@ -477,6 +498,15 @@ class Backup(object):
             logging.exception("Caught an exception in the main handler.")
             exit(1)
 
-        log("Finished backing everything up")
+        # For check facts, we need to set the proper exit code.
+        if self.opts.check_facts:
+            if not self.matched:
+                log("Facts have changed.")
+                exit(1)
+            else:
+                log("Facts matched.")
+                exit(0)
+        else:
+            log("Finished backing everything up")
 
 # vim:set ts=4 sw=4 et:
