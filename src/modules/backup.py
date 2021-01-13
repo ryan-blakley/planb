@@ -377,7 +377,7 @@ class Backup(object):
                             # Check if the parent is in the exclude list, if so remove the mp and continue.
                             # Also append the vg to the bk_exclude_vgs list, in case the vg has multiple pvs.
                             if pv['parent'] in self.cfg.bk_exclude_disks:
-                                logging.debug(f"backup: get_bk_vgs: Excluding {vg} since it's parent is in the excludes.")
+                                logging.debug(f"backup: get_bk_vgs: Excluding {vg} it's parent is in the excludes.")
                                 self.cfg.bk_exclude_vgs.append(vg)
                                 self.facts.mnts.pop(mnt)
                                 continue
@@ -386,7 +386,7 @@ class Backup(object):
                             # Check if the pv_name is in the exclude list, if so remove the mp and continue.
                             # Also append the vg to the bk_exclude_vgs list, in case the vg has multiple pvs.
                             if pv['pv_name'] in self.cfg.bk_exclude_disks:
-                                logging.debug(f"backup: get_bk_vgs: Excluding {vg} since it's pv_name is in the excludes.")
+                                logging.debug(f"backup: get_bk_vgs: Excluding {vg} it's pv_name is in the excludes.")
                                 self.cfg.bk_exclude_vgs.append(vg)
                                 self.facts.mnts.pop(mnt)
                                 continue
@@ -417,7 +417,7 @@ class Backup(object):
 
                 # Compare the 4 facts files to see if they're different.
                 match, mismatch, errors = filecmp.cmpfiles(self.tmp_facts_dir, join(self.var_lib, "facts"),
-                                 ['disks.json', 'lvm.json', 'mnts.json', 'misc.json'])
+                                                           ['disks.json', 'lvm.json', 'mnts.json', 'misc.json'])
 
                 # If no mismatch or errors, set matched to true, if there is any
                 # log the mismatch and errors to the log file.

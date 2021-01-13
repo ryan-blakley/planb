@@ -50,10 +50,9 @@ the last thing you want are issues to arise.
 - [x] Test other archs beside x86.
 - [x] Add support for luks.
 - [x] Add a backup only option.
-- [ ] Continue adding debugging output and comments through out the app.
-- [ ] Need to add checks for what's in the fstab and what's actually mounted.
+- [x] Need to add checks for what's in the fstab and what's actually mounted.
+- [x] Need to figure out how to implement an option, that can be called from a cron job that rebuilds the iso on layout changes.
 - [ ] Potentially find a better way to do the pam files, instead of including them in the pkg.
-- [ ] Need to figure out how to implement an option, that can be called from a cron job that rebuilds the iso on layout changes.
 - [ ] Add option for secondary backup location for backup archive duplication.
 - [ ] Add option to name the backup archive, and iso files.
 - [ ] Add option for pre/post scripting.
