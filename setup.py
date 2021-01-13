@@ -13,5 +13,6 @@ setup(
     packages=['planb'],
     scripts=glob('src/scripts/*'),
     data_files=[('share/planb', glob('src/data-files/*')), ('share/man/man8', glob('src/doc/*.8')),
-                ('share/man/man5', glob('src/doc/*.5')), ('/etc/planb', glob('src/cfg/*.conf')), ('/var/lib/pbr', [])]
+                ('share/man/man5', glob('src/doc/*.5')), ('/etc/planb', glob('src/cfg/*.conf')),
+                ('/etc/cron.d', ['src/data-files/pbr']), ('/var/lib/pbr', [])]
 )

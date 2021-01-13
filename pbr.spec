@@ -48,6 +48,7 @@ rm -rf $RPM_BUILD_ROOT
 %files
 # For cfg files.
 %config(noreplace) %{_sysconfdir}/planb/
+%config(noreplace) %{_sysconfdir}/cron.d/pbr
 # For the base scripts in /bin.
 %{_bindir}/*
 # For noarch packages: sitelib
