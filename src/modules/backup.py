@@ -133,12 +133,12 @@ class Backup(object):
         Rotate the old backup archive files, and remove any if needed.
         :return:
         """
-        if exists(join(self.tmp_bk_dir, "backup.tar.gz")):
+        if exists(join(self.tmp_bk_dir, f"{self.cfg.bk_archive_prefix}.tar.gz")):
             num_bks = []
             times = []
 
             for b in listdir(self.tmp_bk_dir):
-                if b.startswith("backup-"):
+                if b.startswith(f"{self.cfg.bk_archive_prefix}-"):
                     num_bks.append(b)
 
             for b in num_bks:
@@ -148,10 +148,10 @@ class Backup(object):
 
             times.sort(reverse=True)
             if len(times) >= self.cfg.num_of_old_backups:
-                remove(join(self.tmp_bk_dir, f"backup-{times.pop()}.tar.gz"))
+                remove(join(self.tmp_bk_dir, f"{self.cfg.bk_archive_prefix}-{times.pop()}.tar.gz"))
 
-            rename(join(self.tmp_bk_dir, "backup.tar.gz"),
-                   join(self.tmp_bk_dir, f"backup-{strftime('%Y%m%d-%H%M%S')}.tar.gz"))
+            rename(join(self.tmp_bk_dir, f"{self.cfg.bk_archive_prefix}.tar.gz"),
+                   join(self.tmp_bk_dir, f"{self.cfg.bk_archive_prefix}-{strftime('%Y%m%d-%H%M%S')}.tar.gz"))
 
     def cleanup_disks(self, bk_vgs):
         """
@@ -449,11 +449,11 @@ class Backup(object):
                 log("Creating backup using rsync, this could take a while, please be patient")
                 rsync(self.cfg, self.opts, self.facts, bk_excludes=self.bk_excludes)
             else:
-                if exists(join(self.tmp_bk_dir, "backup.tar.gz")):
+                if exists(join(self.tmp_bk_dir, f"{self.cfg.bk_archive_prefix}.tar.gz")):
                     self.cleanup_bks()
 
                 log("Creating backup archive, this could take a while, please be patient")
-                create_tar(self.bk_excludes, self.tmp_bk_dir)
+                create_tar(self.cfg, self.bk_excludes, self.tmp_bk_dir)
 
         # Create the iso after the the backup archive is created
         # if the backup location is set to iso.

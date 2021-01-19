@@ -20,7 +20,7 @@ from os.path import join, lexists
 from tqdm import tqdm
 
 
-def create_tar(bk_excludes, tmp_dir):
+def create_tar(cfg, bk_excludes, tmp_dir):
     """
     create_tar: Create a tar file of the rootfs, and exclude cfg'd dirs.
     """
@@ -30,7 +30,7 @@ def create_tar(bk_excludes, tmp_dir):
     # Sort the excludes, they're easier to parse if they are sorted.
     bk_excludes.sort()
 
-    with tarfile.open(join(tmp_dir, "backup.tar.gz"), "w:gz") as tar:
+    with tarfile.open(join(tmp_dir, f"{cfg.bk_archive_prefix}.tar.gz"), "w:gz") as tar:
         # Filter callback function for tarfile.add.
         def tar_filter(tarinfo):
             f_exclude = [x for x in bk_excludes if tarinfo.name.startswith(f"{x[1:]}/")]

@@ -96,6 +96,7 @@ class PBR(object):
         self.opts = parse_args()
         self.cfg = LoadConfig()
         set_log_cfg(self.opts, self.cfg)
+        logging.debug(f"planb: PBR: __int__: cfg: {dict(self.cfg.__dict__)}")
 
         if not getuid() == 0:
             logging.error("Please run as root")

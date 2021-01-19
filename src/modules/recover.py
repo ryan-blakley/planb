@@ -707,7 +707,9 @@ class Recover(object):
                         logging.error("The specified backup archive isn't a valid file.")
                         raise GeneralError()
                 else:
-                    backup_archive = join(self.tmp_bk_mnt, f"{self.bk_misc['hostname'].split('.')[0]}/backup.tar.gz")
+                    backup_archive = join(self.tmp_bk_mnt,
+                                          f"{self.bk_misc['hostname'].split('.')[0]}/"
+                                          f"{self.cfg.bk_archive_prefix}.tar.gz")
 
                 log("Restoring backup using tar, this could take a while, please be patient")
                 restore_tar(self.tmp_rootfs_dir, backup_archive)
