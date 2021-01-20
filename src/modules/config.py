@@ -77,6 +77,7 @@ class LoadConfig(object):
             self.num_of_old_backups = int(cfg['Backup'].get('num_of_old_backups', "1"))
             self.bk_exclude_vgs = list(cfg['Backup'].get('backup_exclude_vgs', '').split())
             self.bk_exclude_disks = list(cfg['Backup'].get('backup_exclude_disks', '').split())
+            self.rc_iso_prefix = cfg['Recover'].get('recover_iso_prefix', 'recover')
             self.rc_exclude_vgs = list(cfg['Recover'].get('recover_exclude_vgs', '').split())
             self.rc_exclude_disks = list(cfg['Recover'].get('recover_exclude_disks', '').split())
             self.rc_kernel_args = list(cfg['Recover'].get('recovery_kernel_args', '').split())
