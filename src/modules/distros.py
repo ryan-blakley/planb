@@ -200,8 +200,8 @@ class RHLiveOS(object):
         pkgs.extend(pbr_pkgs)
 
         # If there are additional pkgs set in the cfg, include them in the list.
-        if self.cfg.bk_include_pkgs:
-            for x in self.cfg.bk_include_pkgs:
+        if self.cfg.rc_include_pkgs:
+            for x in self.cfg.rc_include_pkgs:
                 if x not in pkgs:
                     pkgs.append(x)
 
