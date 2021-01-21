@@ -22,7 +22,6 @@ from shutil import copy2
 from .distros import rh_customize_rootfs, RHLiveOS
 from .exceptions import MountError, RunCMDError
 from .fs import fmt_fs
-from .logger import log
 from .utils import dev_from_file, is_block, mount, rand_str, run_cmd, umount
 
 
@@ -39,6 +38,7 @@ def fmt_usb(device):
     # Query the arch and set the udev context.
     arch = machine()
     udev_ctx = pyudev.Context()
+    logger = logging.getLogger('pbr')
 
     # Prompt to make sure the correct device is chosen to format.
     confirmation = input(f"Are you sure you want to format {device} this will wipe it it, type YES if so: ")
@@ -48,33 +48,33 @@ def fmt_usb(device):
         if exists("/sys/firmware/efi"):
             p.create_uefi_usb(device)
         elif "ppc64le" in arch:
-            log("Wiping the device")
+            logger.info("Wiping the device")
             # Wipe the disk, otherwise the grub install will complain about it not being empty.
             run_cmd(['/usr/bin/dd', 'bs=5M', 'count=1', 'if=/dev/zero', f"of={device}"])
 
-            log("Starting to partition the device")
+            logger.info("Starting to partition the device")
             p.create_prep_usb(device)
         else:
-            log("Starting to partition the device")
+            logger.info("Starting to partition the device")
             p.create_legacy_usb(device)
-        log("Partitioning complete")
+        logger.info("Partitioning complete")
 
         # Apparently the system take a second to recognize the new partition,
         # so if it doesn't exist query udev on the device again.
         if not is_block(f"{device}1"):
-            logging.debug("usb: fmt_usb: Partition not found yet, so query udev on the device again.")
+            logger.debug("usb: fmt_usb: Partition not found yet, so query udev on the device again.")
             dev_from_file(udev_ctx, device)
 
         uuid = f"{rand_str(8, 1)}-{rand_str(4, 1)}-{rand_str(4, 1)}-{rand_str(4, 1)}-{rand_str(12, 1)}"
         if exists("/sys/firmware/efi"):
             fmt_fs(f"{device}1", rand_str(8, True), "PBR-EFI", "vfat")
             fmt_fs(f"{device}2", uuid.lower(), "PLANBRECOVER-USB", "ext4")
-            log("Formatting complete")
+            logger.info("Formatting complete")
         elif "ppc64le" in arch:
             from tempfile import mkdtemp
 
             fmt_fs(f"{device}2", uuid.lower(), "PLANBRECOVER-USB", "ext4")
-            log("Formatting complete")
+            logger.info("Formatting complete")
 
             # Create a tmp dir to mount the usb on, so grub2 can be installed.
             tmp_dir = mkdtemp(prefix="usb.")
@@ -82,7 +82,7 @@ def fmt_usb(device):
             if ret.returncode:
                 stderr = ret.stderr.decode()
                 if "already mounted" not in stderr:
-                    logging.error(f" Failed running {ret.args} due to {stderr}")
+                    logger.error(f" Failed running {ret.args} due to {stderr}")
                     raise MountError()
 
             # Go ahead and install grub2 on the usb device, I don't think grub needs
@@ -91,36 +91,37 @@ def fmt_usb(device):
             ret = run_cmd(['/usr/sbin/grub2-install', '--target=powerpc-ieee1275', f"--boot-directory={tmp_dir}",
                            f"{device}1"], ret=True)
             if ret.returncode:
-                logging.error(f" The command {ret.args} returned in error: {ret.stderr.decode()}")
+                logger.error(f" The command {ret.args} returned in error: {ret.stderr.decode()}")
 
                 # Clean up if there is an error running grub install.
                 ret2 = umount(tmp_dir)
                 rmdir(tmp_dir)
                 if ret2.returncode:
-                    logging.error(f" The command {ret2.args} returned in error: {ret2.stderr.decode()}")
+                    logger.error(f" The command {ret2.args} returned in error: {ret2.stderr.decode()}")
 
                 raise RunCMDError()
 
             # Clean everything up.
             umount(tmp_dir)
             rmdir(tmp_dir)
-            log("Grub2 install complete")
+            logger.info("Grub2 install complete")
         else:
             fmt_fs(f"{device}1", uuid.lower(), "PLANBRECOVER-USB", "ext4")
-            log("Formatting complete")
+            logger.info("Formatting complete")
 
             # Write the mbr.bin to the beginning of the device.
             with open(device, 'wb') as dev:
                 with open("/usr/share/syslinux/mbr.bin", 'rb', buffering=0) as f:
                     dev.writelines(f.readlines())
-            log("Writing mbr.bin complete")
+            logger.info("Writing mbr.bin complete")
     else:
-        logging.error("Either device isn't a usb or you didn't type YES in all caps.")
+        logger.error("Either device isn't a usb or you didn't type YES in all caps.")
         exit(1)
 
 
 class USB(object):
     def __init__(self, cfg, facts, tmp_dir):
+        self.log = logging.getLogger('pbr')
         self.cfg = cfg
         self.facts = facts
 
@@ -137,11 +138,11 @@ class USB(object):
         Prep the usb to work for uefi.
         :return:
         """
-        log("Mounting EFI directory")
+        self.log.info("Mounting EFI directory")
         makedirs(self.tmp_usbfs_dir)
         ret = mount("/dev/disk/by-label/PBR-EFI", self.tmp_usbfs_dir)
         if ret.returncode:
-            logging.error(f"{ret.args} returned the following error: {ret.stderr.decode()}")
+            self.log.error(f"{ret.args} returned the following error: {ret.stderr.decode()}")
             raise MountError()
 
         makedirs(self.tmp_efi_dir, exist_ok=True)
@@ -194,7 +195,7 @@ class USB(object):
                     distro=distro
                 ))
 
-        log("Un-mounting EFI directory")
+        self.log.info("Un-mounting EFI directory")
         umount(self.tmp_usbfs_dir)
 
     def prep_usb(self):
@@ -266,16 +267,16 @@ class USB(object):
         Main function of the class.
         :return:
         """
-        log("Prepping the USB")
+        self.log.info("Prepping the USB")
         self.prep_usb()
 
         liveos = RHLiveOS(self.cfg, self.facts, self.tmp_dir)
         liveos.create()
 
-        log("Customizing the copied files to work in the USB environment")
+        self.log.info("Customizing the copied files to work in the USB environment")
         rh_customize_rootfs(self.cfg, self.tmp_dir, self.tmp_rootfs_dir)
 
-        log("Creating the USB's LiveOS IMG")
+        self.log.info("Creating the USB's LiveOS IMG")
         liveos.create_squashfs()
 
 # vim:set ts=4 sw=4 et:

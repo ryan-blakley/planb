@@ -18,7 +18,7 @@ from os import getuid
 
 from .config import LoadConfig
 from .facts import Facts
-from .logger import log, set_log_cfg
+from .logger import set_log_cfg
 
 
 def parse_args():
@@ -26,6 +26,7 @@ def parse_args():
     Function that parses the args passed on the command line.
     :return:
     """
+    logger = logging.getLogger('pbr')
     parser = ArgumentParser(description="""Plan B Recovery, if all else fails go to Plan B! 
                                         Plan B Recover comes with ABSOLUTELY NO WARRANTY.""")
 
@@ -46,42 +47,42 @@ def parse_args():
 
     if not opts.backup and not opts.recover and not opts.mkrescue and not opts.backup_only and not opts.check_facts:
         if not opts.facts and not opts.format:
-            logging.error("Please provide a valid argument.")
+            logger.error("Please provide a valid argument.")
             parser.print_help()
             exit(1)
     
     if (opts.backup or opts.backup_only) and opts.recover:
-        logging.error("Choose either backup or recover not both.")
+        logger.error("Choose either backup or recover not both.")
         parser.print_help()
         exit(1)
 
     if (opts.backup or opts.backup_only) and opts.mkrescue:
-        logging.error("Choose either backup or mkrescue not both.")
+        logger.error("Choose either backup or mkrescue not both.")
         parser.print_help()
         exit(1)
 
     if opts.backup_archive and not opts.recover:
-        logging.error("-bo/--backup-archive can only be specified when running recover.")
+        logger.error("-bo/--backup-archive can only be specified when running recover.")
         parser.print_help()
         exit(1)
 
     if opts.restore_only and not opts.recover:
-        logging.error("-ro/--restore-only can only be specified when running recover.")
+        logger.error("-ro/--restore-only can only be specified when running recover.")
         parser.print_help()
         exit(1)
 
     if opts.backup and opts.backup_only:
-        logging.error("-bo/--backup-only can't be specified when -b/--backup is specified, and vice versa.")
+        logger.error("-bo/--backup-only can't be specified when -b/--backup is specified, and vice versa.")
         parser.print_help()
         exit(1)
 
     if opts.facts and (opts.backup or opts.backup_only or opts.recover or opts.restore_only):
-        logging.error("-f/--facts can't be specified if backup or recover is specified also.")
+        logger.error("-f/--facts can't be specified if backup or recover is specified also.")
         parser.print_help()
         exit(1)
 
     if opts.format and (opts.backup or opts.backup_only or opts.recover or opts.restore_only):
-        logging.error("--format can't be specified if backup or recover is specified also.")
+        logger.error("--format can't be specified if backup or recover is specified also.")
         parser.print_help()
         exit(1)
 
@@ -93,13 +94,13 @@ class PBR(object):
         """
         Main class that handles executing everything.
         """
+        self.log = set_log_cfg(self.opts, self.cfg)
         self.opts = parse_args()
         self.cfg = LoadConfig()
-        set_log_cfg(self.opts, self.cfg)
-        logging.debug(f"planb: PBR: __int__: cfg: {dict(self.cfg.__dict__)}")
+        self.log.debug(f"planb: PBR: __int__: cfg: {dict(self.cfg.__dict__)}")
 
         if not getuid() == 0:
-            logging.error("Please run as root")
+            self.log.error("Please run as root")
             exit(1)
 
     def run(self):
@@ -107,8 +108,9 @@ class PBR(object):
         Main run function.
         :return:
         """
-        logging.info("")
-        log("Plan (B)ackup Recovery")
+        self.log.info("")
+        self.log.info("Plan (B)ackup Recovery")
+        self.log.info("")
         if self.opts.facts:
             facts = Facts()
             facts.print_facts()

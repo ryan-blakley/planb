@@ -22,7 +22,6 @@ from shutil import copy2
 from .distros import rh_customize_rootfs, RHLiveOS
 from .exceptions import MountError
 from .fs import fmt_fs
-from .logger import log
 from .utils import mk_cdboot, mount, rand_str, run_cmd, umount
 
 
@@ -34,6 +33,7 @@ class ISO(object):
         :param facts: The facts object.
         :param tmp_dir: The tmp working directory.
         """
+        self.log = logging.getLogger('pbr')
         self.cfg = cfg
         self.facts = facts
 
@@ -103,8 +103,11 @@ class ISO(object):
 
             cmd_isohybrid = ['/usr/bin/isohybrid', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso")]
 
+        self.log.debug(f"iso: make_iso: cmd_mkisofs: {cmd_mkisofs}")
         run_cmd(cmd_mkisofs)
+        
         if cmd_isohybrid:
+            self.log.debug(f"iso: make_iso: cmd_isohybrid: {cmd_isohybrid}")
             run_cmd(cmd_isohybrid)
 
         # Copy the iso locally under /var/lib/pbr.
@@ -179,7 +182,7 @@ class ISO(object):
         fmt_fs(join(self.tmp_images_dir, "efiboot.img"), rand_str(8, True), "PBR-EFI", "vfat")
         ret = mount(join(self.tmp_images_dir, "efiboot.img"), join(self.tmp_dir, "isofs"))
         if ret.returncode:
-            logging.error(f"{ret.args} returned the following error: {ret.stderr.decode()}")
+            self.log.error(f"{ret.args} returned the following error: {ret.stderr.decode()}")
             raise MountError()
 
         # Create the efi directories, and copy the efi files.
@@ -307,23 +310,23 @@ class ISO(object):
         Main function of the class.
         :return:
         """
-        log("Prepping isolinux")
+        self.log.info("Prepping isolinux")
         self.prep_iso()
 
         liveos = RHLiveOS(self.cfg, self.facts, self.tmp_dir)
         liveos.create()
 
-        log("Customizing the copied files to work in the ISO environment")
+        self.log.info("Customizing the copied files to work in the ISO environment")
         rh_customize_rootfs(self.cfg, self.tmp_dir, self.tmp_rootfs_dir)
 
-        log("Creating the ISO's LiveOS IMG")
+        self.log.info("Creating the ISO's LiveOS IMG")
         liveos.create_squashfs()
 
         # If the bk location isn't set to iso, then create the iso. Otherwise
         # skip this step since the iso needs to be created after the backup
         # archive is done.
         if not self.cfg.bk_location_type == "iso":
-            log("Creating the ISO file")
+            self.log.info("Creating the ISO file")
             self.create_iso()
 
     """

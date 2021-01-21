@@ -155,6 +155,7 @@ def get_part_layout(udev_ctx):
 
 class Parted(object):
     def __init__(self):
+        self.log = logging.getLogger('pbr')
         self.device = None
         self.pdisk = None
 
@@ -213,7 +214,7 @@ class Parted(object):
         # Catch any IOException then print a warning and skip it, normally it's
         # due to the device being active in some way lvm, md, etc.
         except IOException:
-            logging.exception("Caught an IOException, when running parted.")
+            self.log.exception("Caught an IOException, when running parted.")
             pass
 
     def create_legacy_usb(self, disk):
@@ -222,7 +223,7 @@ class Parted(object):
         :param disk: USB device name.
         :return:
         """
-        logging.debug(f"parted: create_legacy_usb: disk:{disk}")
+        self.log.debug(f"parted: create_legacy_usb: disk:{disk}")
         self.init_disk(disk, "msdos")
 
         geometry = parted.Geometry(device=self.device, start=2048, length=self.device.getLength() - 2049)
@@ -241,7 +242,7 @@ class Parted(object):
         :param disk: USB device name.
         :return:
         """
-        logging.debug(f"parted: create_prep_usb: disk:{disk}")
+        self.log.debug(f"parted: create_prep_usb: disk:{disk}")
         self.init_disk(disk, "msdos")
 
         geometry = parted.Geometry(device=self.device, start=2048, end=10239)
@@ -266,7 +267,7 @@ class Parted(object):
         :param disk: USB device name.
         :return:
         """
-        logging.debug(f"parted: create_legacy_usb: disk:{disk}")
+        self.log.debug(f"parted: create_legacy_usb: disk:{disk}")
         self.init_disk(disk, "msdos")
 
         geometry = parted.Geometry(device=self.device, start=2048, end=206849)
@@ -292,7 +293,7 @@ class Parted(object):
         :param ptable: Partition table to use msdos/gpt.
         :return:
         """
-        logging.debug(f"parted: init_disk: disk:{disk} ptable:{ptable}")
+        self.log.debug(f"parted: init_disk: disk:{disk} ptable:{ptable}")
         # Set the device.
         self.device = parted.getDevice(disk)
 
@@ -309,12 +310,12 @@ class Parted(object):
         :param rdisk: The disk to recovery the partition onto.
         :return:
         """
-        logging.debug(f"parted: recreate_disk: bdisk:{bdisk}")
+        self.log.debug(f"parted: recreate_disk: bdisk:{bdisk}")
         # Initialize the disk and create a label on it.
         if bdisk.get('type', False):
             self.init_disk(rdisk, bdisk['type'])
         else:
-            logging.debug("parted: recreate_disk: skipping disk due to no partitions")
+            self.log.debug("parted: recreate_disk: skipping disk due to no partitions")
             return
 
         # Go through the backup disk dict, and recreate the

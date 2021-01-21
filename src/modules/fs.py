@@ -18,7 +18,6 @@ from os.path import exists
 from re import search
 
 from .exceptions import ExistsError, GeneralError, RunCMDError
-from .logger import log
 from .utils import dev_from_file, get_dev_type, run_cmd
 
 
@@ -31,12 +30,14 @@ def fmt_fs(dev, fs_uuid, fs_label, fs_type):
     :param fs_type: The type of filesystem to format the device.
     :return:
     """
+    logger = logging.getLogger('pbr')
+
     # Check to make sure the path is actually device before continuing.
     if not exists(dev):
-        logging.error(f"ERROR: Can't format {dev}, because it isn't a valid device.")
+        logger.error(f"ERROR: Can't format {dev}, because it isn't a valid device.")
         raise ExistsError()
     
-    log(f"  Formatting {dev} as {fs_type}")
+    logger.info(f"  Formatting {dev} as {fs_type}")
 
     # Format the devs with the uuid and label if there was one.
     if fs_type == "swap":
@@ -80,14 +81,14 @@ def fmt_fs(dev, fs_uuid, fs_label, fs_type):
         if ret.returncode:
             stderr = ret.stderr.decode()
             if "is mounted" in stderr:
-                logging.error(f" {ret.args} returned in error due to {dev} being mounted. "
-                              "Please unmount everything and try again.")
+                logger.error(f" {ret.args} returned in error due to {dev} being mounted. "
+                             "Please unmount everything and try again.")
             else:
-                logging.error(f" The command {ret.args} returned in error: {ret.stderr.decode()}")
+                logger.error(f" The command {ret.args} returned in error: {ret.stderr.decode()}")
 
             raise RunCMDError()
     else:
-        logging.error(f"Unsupported filesystem {fs_type}, exiting.")
+        logger.error(f"Unsupported filesystem {fs_type}, exiting.")
         raise GeneralError()
 
 

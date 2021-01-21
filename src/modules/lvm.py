@@ -17,7 +17,6 @@ import logging
 from os.path import exists
 
 from .exceptions import RunCMDError
-from .logger import log
 from .utils import dev_from_file, get_dev_type, run_cmd
 
 
@@ -35,15 +34,17 @@ def deactivate_vgs():
     Run vgchange to deactivate all the volume groups.
     :return:
     """
+    logger = logging.getLogger('pbr')
+
     ret = run_cmd(['/usr/sbin/vgchange', '-an'], ret=True)
     if ret.returncode:
         stderr = ret.stderr.decode()
         if "open logical volume" in stderr:
-            logging.error("Can't deactivate volume groups because one or more is still open,"
-                          "more than likely it's mounted, please make sure nothing is mounted before continuing.")
+            logger.error("Can't deactivate volume groups because one or more is still open,"
+                         "more than likely it's mounted, please make sure nothing is mounted before continuing.")
             raise RunCMDError()
         else:
-            logging.warning(f"{ret.args} returned in error: {ret.stderr.decode()}")
+            logger.warning(f"{ret.args} returned in error: {ret.stderr.decode()}")
 
 
 def get_lvm_report(udev_ctx):
@@ -59,7 +60,7 @@ def get_lvm_report(udev_ctx):
         # Capture the output of each command and add to the dict.
         ret = run_cmd([f"/usr/sbin/{c}", "-v", "--reportformat", "json"], ret=True)
         if ret.returncode:
-            logging.error(f" The command {ret.args} returned in error: {ret.stderr.decode()}")
+            logging.getLogger('pbr').error(f" The command {ret.args} returned in error: {ret.stderr.decode()}")
             raise RunCMDError()
 
         if c == "pvs":
@@ -104,13 +105,14 @@ def restore_pv_metadata(bk_pv, bk_pv_uuid, bk_vg):
     :param bk_vg: The volume group the physical volume will be a part of.
     :return:
     """
+    logger = logging.getLogger('pbr')
     # Wipe any lvm metadata if there is any.
     ret = run_cmd(['/usr/sbin/pvremove', '-ffy', bk_pv], ret=True)
     if ret.returncode:
-        logging.warning(f" {ret.args} returned in error, re-running vgchange -an: {ret.stderr.decode()}")
+        logger.warning(f" {ret.args} returned in error, re-running vgchange -an: {ret.stderr.decode()}")
         deactivate_vgs()
 
-    log(f"  Restoring the pv metadata on {bk_pv}")
+    logger.info(f"  Restoring the pv metadata on {bk_pv}")
 
     # Recreate the pv metadata from the backup metadata.
     run_cmd(['/usr/sbin/pvcreate', '-ff', '--uuid', bk_pv_uuid,
@@ -123,7 +125,7 @@ def restore_vg_metadata(bk_vg):
     :param bk_vg: The volume group name being restored.
     :return:
     """
-    log(f"  Restoring the vg metadata for the {bk_vg} volume group.")
+    logging.getLogger('pbr').info(f"  Restoring the vg metadata for the {bk_vg} volume group.")
 
     # Restore volume group metadata from backup metadata.
     run_cmd(['/usr/sbin/vgcfgrestore', '--force', '-f', f"/facts/vgcfg/{bk_vg}", bk_vg], timeout=15)
@@ -131,6 +133,7 @@ def restore_vg_metadata(bk_vg):
 
 class RecoveryLVM(object):
     def __init__(self, facts, bk_mnts, bk_lvm):
+        self.log = logging.getLogger('pbr')
         self.facts = facts
         self.bk_mnts = bk_mnts
         self.bk_lvm = bk_lvm
@@ -149,28 +152,28 @@ class RecoveryLVM(object):
 
         # Recover any vgs needing it.
         if rc_vgs:
-            logging.debug("LVM doesn't match.")
+            self.log.debug("LVM doesn't match.")
             # Deactivate any vgs in case it was never run prior.
             deactivate_vgs()
 
             for vg in rc_vgs:
-                logging.debug(f"lvm: lvm_check: vg:{vg}")
+                self.log.debug(f"lvm: lvm_check: vg:{vg}")
                 for pv in self.bk_lvm['PVS']:
                     if vg == pv['vg_name'] and exists(pv['pv_name']):
-                        logging.debug(f"lvm: lvm_check: pv:{pv['pv_name']} vg:{vg}")
+                        self.log.debug(f"lvm: lvm_check: pv:{pv['pv_name']} vg:{vg}")
                         restore_pv_metadata(pv['pv_name'], pv['pv_uuid'], vg)
 
                 restore_vg_metadata(vg)
 
         # Activate the volume groups, so mkfs can be ran.
         for vg in bk_vgs:
-            log(f"  Activating the {vg} volume group")
+            self.log.info(f"  Activating the {vg} volume group")
             activate_vg(vg)
 
             # Double check that the backup lvm matches the restored lvm.
             if not self.matching_lvm(vg):
-                logging.error(f" After restoring lvm metadata for {vg}, "
-                              "the lvm layout doesn't match the layout from the backup.")
+                self.log.error(f" After restoring lvm metadata for {vg}, "
+                               "the lvm layout doesn't match the layout from the backup.")
                 raise RunCMDError()
 
     def matching_lvm(self, vg):

@@ -24,6 +24,8 @@ def create_tar(cfg, bk_excludes, tmp_dir):
     """
     create_tar: Create a tar file of the rootfs, and exclude cfg'd dirs.
     """
+    logger = logging.getLogger('pbr')
+
     # Change the directory to / before hand.
     chdir("/")
 
@@ -36,7 +38,7 @@ def create_tar(cfg, bk_excludes, tmp_dir):
             f_exclude = [x for x in bk_excludes if tarinfo.name.startswith(f"{x[1:]}/")]
 
             if f_exclude:
-                logging.debug(f"tar: create_tar: tar_filter: excluding {tarinfo.name} from backup.")
+                logger.debug(f"tar: create_tar: tar_filter: excluding {tarinfo.name} from backup.")
                 return None
             else:
                 return tarinfo
@@ -54,10 +56,10 @@ def create_tar(cfg, bk_excludes, tmp_dir):
                 exclude = [x for x in bk_excludes if x[1:] == d]
 
                 if exclude:
-                    logging.debug(f"tar: create_tar: excluding {d} from backup.")
+                    logger.debug(f"tar: create_tar: excluding {d} from backup.")
                     tar.add(d, recursive=False)
                 else:
-                    logging.debug(f"tar: create_tar: including {d} in the backup.")
+                    logger.debug(f"tar: create_tar: including {d} in the backup.")
                     tar.add(d, filter=tar_filter)
 
                 pbar.update()

@@ -22,7 +22,6 @@ from re import search
 from shutil import copy2, copyfile, copystat, copytree, SameFileError
 
 from .exceptions import RunCMDError
-from .logger import log
 from .utils import rpmql, rpmqf, run_cmd
 
 fedora_pkgs = ['python3', 'fedora-release', 'fedora-release-common', 'fedora-release-server',
@@ -33,6 +32,7 @@ cent_pkgs = ['dbus-daemon', 'platform-python', 'python36', 'centos-release']
 
 class RHLiveOS(object):
     def __init__(self, cfg, facts, tmp_dir):
+        self.log = logging.getLogger('pbr')
         self.cfg = cfg
         self.facts = facts
         self.tmp_dir = tmp_dir
@@ -99,10 +99,10 @@ class RHLiveOS(object):
         Create the needed files for the LiveOS.
         :return:
         """
-        log("Creating initramfs for the LiveOS")
+        self.log.info("Creating initramfs for the LiveOS")
         self.create_initramfs()
 
-        log("Copying pkg files for the LiveOS's rootfs")
+        self.log.info("Copying pkg files for the LiveOS's rootfs")
         self.find_libs(self.pkgs)
         self.copy_pkg_files(self.pkgs)
         self.copy_pkg_files(self.lib_pkgs)
@@ -155,7 +155,7 @@ class RHLiveOS(object):
                     if search("ELF", mg):
                         ret = run_cmd(['/usr/bin/ldd', fname], ret=True)
                         if ret.returncode > 1:
-                            logging.error(f" This command {ret.args} returned in error: {ret.stderr.decode()}")
+                            self.log.error(f" This command {ret.args} returned in error: {ret.stderr.decode()}")
                             raise RunCMDError()
 
                         for x in ret.stdout.decode().split():

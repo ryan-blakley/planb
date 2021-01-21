@@ -217,6 +217,8 @@ def rsync(cfg, opts, facts, bk_excludes=None):
     :param bk_excludes: A list of paths to exclude from the backup.
     :return:
     """
+    logger = logging.getLogger('pbr')
+
     if opts.verbose:
         cmd = ['/usr/bin/rsync', '-av']
     else:
@@ -240,14 +242,14 @@ def rsync(cfg, opts, facts, bk_excludes=None):
         cmd.append('/')
         cmd.append(f"{cfg.bk_mount}/{facts.hostname.split('.')[0]}/")
 
-    logging.debug(f"utils: rsync: cmd:{cmd}")
+    logger.debug(f"utils: rsync: cmd:{cmd}")
 
     ret = run_cmd(cmd, ret=True)
     if ret.returncode:
-        logging.error(f" The command {ret.args} returned in error: {ret.stderr.decode()}")
+        logger.error(f" The command {ret.args} returned in error: {ret.stderr.decode()}")
         raise RunCMDError()
     else:
-        logging.debug(f"utils: rsync: stdout:{ret.stdout}")
+        logger.debug(f"utils: rsync: stdout:{ret.stdout}")
 
 
 def run_cmd(cmd, ret=False, timeout=None, capture_output=True):
@@ -259,6 +261,8 @@ def run_cmd(cmd, ret=False, timeout=None, capture_output=True):
     :param capture_output: Bool, on weather to capture the output or not.
     :return: The output/return code.
     """
+    logger = logging.getLogger('pbr')
+
     try:
         if capture_output:
             if ret:
@@ -272,10 +276,10 @@ def run_cmd(cmd, ret=False, timeout=None, capture_output=True):
                 _ret = run(cmd, timeout=timeout, stderr=PIPE)
 
         if _ret.returncode:
-            logging.error(f" The command {_ret.args} returned in error: {_ret.stderr.decode()}")
+            logger.error(f" The command {_ret.args} returned in error: {_ret.stderr.decode()}")
             raise RunCMDError()
     except TimeoutExpired:
-        logging.error(f" The command ({cmd}) timed out, exiting.")
+        logger.error(f" The command ({cmd}) timed out, exiting.")
         raise RunCMDError()
 
 

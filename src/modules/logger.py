@@ -24,7 +24,7 @@ def set_log_cfg(opts, cfg):
     :return:
     """
     # Create the main logger.
-    logger = logging.getLogger('')
+    logger = logging.getLogger('pbr')
     
     # Set the log level based on cfg file.
     if cfg.log_verbosity == "debug":
@@ -41,8 +41,8 @@ def set_log_cfg(opts, cfg):
         con_format = logging.Formatter('%(asctime)s - %(levelname)s: %(message)s')
         log_con.setLevel(logging.DEBUG)
     else:
-        con_format = logging.Formatter('%(levelname)s: %(message)s')
-        log_con.setLevel(logging.WARNING)
+        con_format = logging.Formatter('%(message)s')
+        log_con.setLevel(logging.INFO)
 
     log_con.setFormatter(con_format)
     logger.addHandler(log_con)
@@ -53,14 +53,4 @@ def set_log_cfg(opts, cfg):
     log_file.setFormatter(log_format)
     logger.addHandler(log_file)
 
-
-def log(msg):
-    """
-    log: Since all levels use the format, I can't make it where info doesn't print the level. So
-    use this method for info msgs, it will print and log info, and the minimum level will be set
-    to warning so info's aren't printed to the console.
-    :param msg: Message to print, and log.
-    :return:
-    """
-    print(msg)
-    logging.info(msg)
+    return logger

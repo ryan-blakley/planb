@@ -22,7 +22,6 @@ from time import strftime
 
 from .exceptions import ExistsError, GeneralError, MountError, RunCMDError
 from .facts import Facts
-from .logger import log
 from .iso import ISO
 from .tar import create_tar
 from .usb import USB
@@ -39,6 +38,7 @@ class Backup(object):
         self.opts = opts
         self.cfg = cfg
         self.facts = Facts()
+        self.log = logging.getLogger('pbr')
 
         self.matched = False
         self.mounted = False
@@ -65,22 +65,22 @@ class Backup(object):
         # the remote host to confirm.
         if t == "rsync":
             if not rpmq("rsync"):
-                logging.error(" Backup location type is set to rsync, but rsync isn't installed, please install.")
+                self.log.error(" Backup location type is set to rsync, but rsync isn't installed, please install.")
             else:
                 self.tmp_bk_dir = None
         # If saving the backup to the iso, set the tmp_bk_dir under the isofs directory.
         elif t == "iso":
             if not self.opts.backup_only:
-                log("Skipping mounting since the backup will be on the ISO")
+                self.log.info("Skipping mounting since the backup will be on the ISO")
                 self.tmp_bk_dir = join(self.tmp_isofs_dir, self.facts.hostname.split('.')[0])
                 # Create backup dir based on the hostname in the isofs directory.
                 makedirs(self.tmp_bk_dir, exist_ok=True)
             else:
-                logging.error("Can't run with --backup-only if the backup_location_type is set to iso.")
+                self.log.error("Can't run with --backup-only if the backup_location_type is set to iso.")
                 raise GeneralError()
         else:
             if (t == "nfs" or t == "cifs") and not rpmq(f"{t}-utils"):
-                logging.error(f" Backup location type is set to {t}, but {t}-utils isn't installed, please install.")
+                self.log.error(f" Backup location type is set to {t}, but {t}-utils isn't installed, please install.")
                 raise ExistsError()
 
             # Mount bk_mount, which is where the backup archive
@@ -91,10 +91,10 @@ class Backup(object):
                 ret = mount(self.cfg.bk_mount, self.tmp_mount_dir)
 
             if ret.returncode:
-                logging.error(f"Failed running {ret.args} due to the following. stderr:{ret.stderr.decode().strip()}")
+                self.log.error(f"Failed running {ret.args} due to the following. stderr:{ret.stderr.decode().strip()}")
                 raise MountError()
             else:
-                log(f"Successfully mounted {self.cfg.bk_mount} at {self.tmp_dir}/backup")
+                self.log.info(f"Successfully mounted {self.cfg.bk_mount} at {self.tmp_dir}/backup")
                 self.mounted = True
 
                 # Set the directory name of where the backup archive and iso will be copied to.
@@ -102,7 +102,7 @@ class Backup(object):
                 # Create backup dir based on the hostname on the mounted fs.
                 makedirs(self.tmp_bk_dir, exist_ok=True)
                 
-        logging.debug(f"backup: chk_bk_settings: tmp_bk_dir:{self.tmp_bk_dir}")
+        self.log.debug(f"backup: chk_bk_settings: tmp_bk_dir:{self.tmp_bk_dir}")
 
     def cleanup(self, error=0):
         """
@@ -113,7 +113,7 @@ class Backup(object):
         # Check if error is passed, so it's printed that the un-mount occurred
         # due to an error.
         if error:
-            log("An error was caught, cleaning up before exiting.")
+            self.log.info("An error was caught, cleaning up before exiting.")
 
         # Copying the log file to the tmp_bk_dir here so that it gets written
         # potentially before the mount is un-mounted.
@@ -121,12 +121,12 @@ class Backup(object):
             copyfile("/var/log/pbr.log", join(self.tmp_bk_dir, "pbr.log"))
 
         if self.mounted:
-            log(f"Un-mounting backup location {self.tmp_mount_dir}")
+            self.log.info(f"Un-mounting backup location {self.tmp_mount_dir}")
             umount(self.tmp_mount_dir, lazy=True)
 
         # If keep is passed, warn the user to remove the tmp dir.
         if self.opts.keep:
-            log(f"You should remove the temp directory {self.tmp_dir}")
+            self.log.info(f"You should remove the temp directory {self.tmp_dir}")
 
     def cleanup_bks(self):
         """
@@ -165,11 +165,11 @@ class Backup(object):
 
         # If lvm exist, loop the pvs, and determine which we're restoring.
         if self.facts.lvm.get('PVS', False):
-            logging.debug("backup: cleanup_disks: Checking for pvs to add to bk_disks.")
+            self.log.debug("backup: cleanup_disks: Checking for pvs to add to bk_disks.")
             for pv in self.facts.lvm['PVS']:
                 # If the vg isn't in bk_vgs, skip the pv.
                 if pv['vg_name'] not in bk_vgs:
-                    logging.debug(f"backup: cleanup_disks: Skipping {pv['vg_name']}, as it's not in bk_vgs.")
+                    self.log.debug(f"backup: cleanup_disks: Skipping {pv['vg_name']}, as it's not in bk_vgs.")
                     continue
 
                 pv_name = pv['pv_name']
@@ -178,36 +178,36 @@ class Backup(object):
                 if pv['md_dev']:
                     for d in self.facts.md_info[pv_name.split('/')[-1]]['devs']:
                         not_in_append(dev_from_name(self.facts.udev_ctx, d).find_parent('block').device_node, bk_disks)
-                        logging.debug(f"backup: cleanup_disks: Appending the parent of {d} to bk_disks.")
+                        self.log.debug(f"backup: cleanup_disks: Appending the parent of {d} to bk_disks.")
                 else:
                     if d_type == "disk" and pv_name not in bk_disks:
                         bk_disks.append(pv_name)
-                        logging.debug(f"backup: cleanup_disks: Appending {pv_name} to bk_disks.")
+                        self.log.debug(f"backup: cleanup_disks: Appending {pv_name} to bk_disks.")
                     elif d_type == "mpath" and pv_name not in bk_disks:
                         bk_disks.append(pv_name)
-                        logging.debug(f"backup: cleanup_disks: Appending {pv_name} to bk_disks.")
+                        self.log.debug(f"backup: cleanup_disks: Appending {pv_name} to bk_disks.")
                     elif d_type == "part":
                         not_in_append(dev_from_file(self.facts.udev_ctx, pv_name).find_parent('block').device_node,
                                       bk_disks)
-                        logging.debug(f"backup: cleanup_disks: Appending the parent of {pv_name} to bk_disks.")
+                        self.log.debug(f"backup: cleanup_disks: Appending the parent of {pv_name} to bk_disks.")
                     elif d_type == "part-mpath":
                         not_in_append(f"/dev/mapper/{dev_from_file(self.facts.udev_ctx, pv_name)['DM_MPATH']}",
                                       bk_disks)
-                        logging.debug(f"backup: cleanup_disks: Appending the parent of {pv_name} to bk_disks.")
+                        self.log.debug(f"backup: cleanup_disks: Appending the parent of {pv_name} to bk_disks.")
 
         # Loop through each mp, for any non lvm mp and determine which we're restoring.
-        logging.debug("backup: cleanup_disks: Looping through the mount points to check for non lvm mounts.")
+        self.log.debug("backup: cleanup_disks: Looping through the mount points to check for non lvm mounts.")
         mnts = self.facts.mnts.copy()
         for mp, info in mnts.items():
-            logging.debug(f"backup: cleanup_disks: Checking mp:{mp} info:{info}")
+            self.log.debug(f"backup: cleanup_disks: Checking mp:{mp} info:{info}")
             # We handle all lvm stuff above, so skip lvm mount points.
             if str(info['type']) == "lvm":
-                logging.debug("backup: cleanup_disks: Skipping due to being type lvm.")
+                self.log.debug("backup: cleanup_disks: Skipping due to being type lvm.")
                 continue
 
             # If using usb or local backup type, skip the mount point so the disk aren't captured.
             if mp.startswith(self.tmp_dir):
-                logging.debug("backup: cleanup_disks: Skipping due to being mounted in the tmp dir.")
+                self.log.debug("backup: cleanup_disks: Skipping due to being mounted in the tmp dir.")
                 continue
 
             # Check if it has a parent set, if it does check if it exist in bk_exclude_disks, if it doesn't
@@ -217,20 +217,21 @@ class Backup(object):
                 m_p = str(info['parent'])
 
                 if info['md_devname']:
-                    logging.debug(f"backup: cleanup_disks: Found md_devname, looping through md_info for the devs.")
+                    self.log.debug(f"backup: cleanup_disks: Found md_devname, looping through md_info for the devs.")
                     for d in self.facts.md_info[info['md_devname'].split('/')[-1]]['devs']:
-                        logging.debug(f"backup: cleanup_disks: Found d:{d}")
+                        self.log.debug(f"backup: cleanup_disks: Found d:{d}")
                         not_in_append(dev_from_name(self.facts.udev_ctx, d).find_parent('block').device_node, bk_disks)
                 else:
-                    logging.debug(f"backup: cleanup_disks: Appending m_p:{m_p} if not in bk_disk:{bk_disks}")
+                    self.log.debug(f"backup: cleanup_disks: Appending m_p:{m_p} if not in bk_disk:{bk_disks}")
                     not_in_append(m_p, bk_disks)
             else:
-                logging.debug(f"backup: cleanup_disks: skipping mp:{mp} due to it being in {self.cfg.bk_exclude_disks}")
+                self.log.debug(f"backup: cleanup_disks: skipping mp:{mp} due to it being "
+                               f"in {self.cfg.bk_exclude_disks}")
 
         # Capture a list of disk not used in mnts, or were skipped due to being excluded.
         for d in self.facts.disks.keys():
             if d not in bk_disks:
-                logging.debug(f"backup: cleanup_disks: {d} is not in bk_disks, adding to rm_disks.")
+                self.log.debug(f"backup: cleanup_disks: {d} is not in bk_disks, adding to rm_disks.")
                 rm_disks.append(d)
 
         # Remove the unused disks from the facts disks.
@@ -262,8 +263,8 @@ class Backup(object):
 
         # If there is anymore entries in mp, throw an error.
         if len(mp) > 0:
-            logging.error("""There is a discrepancy between the mount points and the fstab, please correct the fstab """
-                          """and try again. This is here to help prevent a can't boot after restoration.""")
+            self.log.error("""There is a discrepancy between the mount points and the fstab, please correct the """
+                           """fstab and try again. This is here to help prevent a can't boot after restoration.""")
             raise GeneralError()
 
     def create_tmp_dirs(self):
@@ -288,7 +289,7 @@ class Backup(object):
         the system. These will be included in the iso later on.
         :return:
         """
-        log("Dumping facts")
+        self.log.info("Dumping facts")
 
         # Determine which volume groups need to be restored.
         bk_vgs = self.get_bk_vgs()
@@ -312,16 +313,16 @@ class Backup(object):
         # Write out the facts to the tmp iso dir.
         with open(join(self.tmp_facts_dir, "disks.json"), 'w') as f:
             json.dump(self.facts.disks, f, indent=4)
-            logging.debug(f" backup: dump_facts: disks:\n{json.dumps(self.facts.disks, indent=4)}")
+            self.log.debug(f" backup: dump_facts: disks:\n{json.dumps(self.facts.disks, indent=4)}")
         with open(join(self.tmp_facts_dir, "lvm.json"), 'w') as f:
             json.dump(self.facts.lvm, f, indent=4)
-            logging.debug(f" backup: dump_facts: lvm:\n{json.dumps(self.facts.lvm, indent=4)}")
+            self.log.debug(f" backup: dump_facts: lvm:\n{json.dumps(self.facts.lvm, indent=4)}")
         with open(join(self.tmp_facts_dir, "mnts.json"), 'w') as f:
             json.dump(self.facts.mnts, f, indent=4)
-            logging.debug(f" backup: dump_facts: mnts:\n{json.dumps(self.facts.mnts, indent=4)}")
+            self.log.debug(f" backup: dump_facts: mnts:\n{json.dumps(self.facts.mnts, indent=4)}")
         with open(join(self.tmp_facts_dir, "misc.json"), 'w') as f:
             json.dump(misc, f, indent=4)
-            logging.debug(f" backup: dump_facts: misc:\n{json.dumps(misc, indent=4)}")
+            self.log.debug(f" backup: dump_facts: misc:\n{json.dumps(misc, indent=4)}")
 
         # If rootfs is on lvm, then dump the lvm metadata to /facts/vgcfg/."
         if self.facts.lvm_installed:
@@ -371,13 +372,13 @@ class Backup(object):
                 # Check if there are any bk_exlude_disks set, before running the below.
                 if self.cfg.bk_exclude_disks:
                     for pv in self.facts.lvm['PVS']:
-                        logging.debug(f"backup: get_bk_vgs: Checking if {pv} is in the excludes.")
+                        self.log.debug(f"backup: get_bk_vgs: Checking if {pv} is in the excludes.")
                         # Check for the mp's vg, and that the parent isn't null.
                         if pv['vg_name'] == vg and pv['parent']:
                             # Check if the parent is in the exclude list, if so remove the mp and continue.
                             # Also append the vg to the bk_exclude_vgs list, in case the vg has multiple pvs.
                             if pv['parent'] in self.cfg.bk_exclude_disks:
-                                logging.debug(f"backup: get_bk_vgs: Excluding {vg} it's parent is in the excludes.")
+                                self.log.debug(f"backup: get_bk_vgs: Excluding {vg} it's parent is in the excludes.")
                                 self.cfg.bk_exclude_vgs.append(vg)
                                 self.facts.mnts.pop(mnt)
                                 continue
@@ -386,7 +387,7 @@ class Backup(object):
                             # Check if the pv_name is in the exclude list, if so remove the mp and continue.
                             # Also append the vg to the bk_exclude_vgs list, in case the vg has multiple pvs.
                             if pv['pv_name'] in self.cfg.bk_exclude_disks:
-                                logging.debug(f"backup: get_bk_vgs: Excluding {vg} it's pv_name is in the excludes.")
+                                self.log.debug(f"backup: get_bk_vgs: Excluding {vg} it's pv_name is in the excludes.")
                                 self.cfg.bk_exclude_vgs.append(vg)
                                 self.facts.mnts.pop(mnt)
                                 continue
@@ -403,6 +404,7 @@ class Backup(object):
         """
         # Create the needed dirs in the tmp dir.
         self.create_tmp_dirs()
+        iso = None
 
         if not self.opts.backup_only:
             # Before dumping facts, compare the mnts and fstab.
@@ -412,7 +414,7 @@ class Backup(object):
             self.dump_facts()
 
             if self.opts.check_facts:
-                log("Checking if the facts have changed")
+                self.log.info("Checking if the facts have changed")
                 import filecmp
 
                 # Compare the 4 facts files to see if they're different.
@@ -424,7 +426,7 @@ class Backup(object):
                 if not mismatch and not errors:
                     self.matched = True
                 else:
-                    logging.debug(f"backup: start: check_facts: mismatched: {mismatch} errors: {errors}")
+                    self.log.debug(f"backup: start: check_facts: mismatched: {mismatch} errors: {errors}")
 
                 self.cleanup()
                 return
@@ -441,24 +443,24 @@ class Backup(object):
                 usb = USB(self.cfg, self.facts, self.tmp_dir)
                 usb.mkusb()
             else:
-                logging.error("Please set a valid boot_type in the cfg file.")
+                self.log.error("Please set a valid boot_type in the cfg file.")
                 raise ExistsError()
 
         if not self.opts.mkrescue:
             if self.cfg.bk_location_type == "rsync":
-                log("Creating backup using rsync, this could take a while, please be patient")
+                self.log.info("Creating backup using rsync, this could take a while, please be patient")
                 rsync(self.cfg, self.opts, self.facts, bk_excludes=self.bk_excludes)
             else:
                 if exists(join(self.tmp_bk_dir, f"{self.cfg.bk_archive_prefix}.tar.gz")):
                     self.cleanup_bks()
 
-                log("Creating backup archive, this could take a while, please be patient")
+                self.log.info("Creating backup archive, this could take a while, please be patient")
                 create_tar(self.cfg, self.bk_excludes, self.tmp_bk_dir)
 
         # Create the iso after the the backup archive is created
         # if the backup location is set to iso.
         if self.cfg.bk_location_type == "iso":
-            log("Creating the ISO file")
+            self.log.info("Creating the ISO file")
             iso.create_iso()
 
         self.cleanup()
@@ -475,7 +477,7 @@ class Backup(object):
         try:
             # Create a temporary working directory.
             self.tmp_dir = mkdtemp(prefix="pbr.")
-            log(f"Created temporary directory {self.tmp_dir}")
+            self.log.info(f"Created temporary directory {self.tmp_dir}")
 
             # Now add the temporary directory to the excludes.
             self.bk_excludes.append(self.tmp_dir)
@@ -495,18 +497,18 @@ class Backup(object):
             self.cleanup(error=1)
 
             # Log the full exception, then exit.
-            logging.exception("Caught an exception in the main handler.")
+            self.log.exception("Caught an exception in the main handler.")
             exit(1)
 
         # For check facts, we need to set the proper exit code.
         if self.opts.check_facts:
             if not self.matched:
-                log("Facts have changed.")
+                self.log.info("Facts have changed.")
                 exit(1)
             else:
-                log("Facts matched.")
+                self.log.info("Facts matched.")
                 exit(0)
         else:
-            log("Finished backing everything up")
+            self.log.info("Finished backing everything up")
 
 # vim:set ts=4 sw=4 et:

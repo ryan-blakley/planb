@@ -18,7 +18,6 @@ from os import listdir
 from os.path import exists
 from re import search
 
-from .logger import log
 from .utils import is_block, run_cmd
 
 
@@ -66,12 +65,14 @@ def md_check(udev_ctx, bk_md_info):
     :param bk_md_info: The loaded backup md_info output.
     :return:
     """
+    logger = logging.getLogger('pbr')
+
     # Run assemble in case disk had to be recovered earlier.
     ret = run_cmd(['/usr/sbin/mdadm', '--assemble', '--scan'], ret=True)
     if ret.returncode and not ret.returncode == 2:
-        logging.warning(f" The command {ret.args} returned in error, stderr: {ret.stderr.decode()}")
+        logger.warning(f" The command {ret.args} returned in error, stderr: {ret.stderr.decode()}")
 
-    logging.debug(f"bk_md_info: {bk_md_info}")
+    logger.debug(f"bk_md_info: {bk_md_info}")
 
     # Grab an updated md_info, in case reading the partitions was only needed.
     facts_md_info = get_md_info(udev_ctx)
@@ -84,8 +85,8 @@ def md_check(udev_ctx, bk_md_info):
             # Check the lens of the devs, if they don't match, then a dev
             # is missing, so we need to re-add it.
             if not len(devs1) == len(devs2):
-                logging.debug(f"md: md_check: dev1.difference:{devs1.difference(devs2)}")
-                log("Re-adding disk to md raid")
+                logger.debug(f"md: md_check: dev1.difference:{devs1.difference(devs2)}")
+                logger.info("Re-adding disk to md raid")
                 for d in devs1.difference(devs2):
                     md_re_add(name, d)
 
@@ -93,7 +94,7 @@ def md_check(udev_ctx, bk_md_info):
         # If the keys don't match, that means either the md device isn't available,
         # so it will need to be recreated.
         diff = set(bk_md_info.keys()).difference(set(facts_md_info.keys()))
-        logging.debug(f"md:md_check: diff:{diff}")
+        logger.debug(f"md:md_check: diff:{diff}")
 
         if diff:
             # Stop any mdraids before trying to recreate.
@@ -106,7 +107,7 @@ def md_check(udev_ctx, bk_md_info):
 
                 run_cmd(cmd)
 
-            log("Re-creating md raids")
+            logger.info("Re-creating md raids")
             for x in diff:
                 level = search("([0-9]+)", bk_md_info[x]['md_level']).group()
                 meta = bk_md_info[x]['md_metadata']
@@ -136,7 +137,7 @@ def md_create(name, level, meta, num, uuid, devs):
 
         cmd.append(f"/dev/{d}")
 
-    log(f"  Creating the /dev/md/{name} array")
+    logging.getLogger('pbr').info(f"  Creating the /dev/md/{name} array")
     run_cmd(cmd)
 
 
@@ -147,8 +148,10 @@ def md_re_add(name, dev):
     :param dev: Device to add to the array.
     :return:
     """
-    log(f"  Re-adding /dev/{dev} to the /dev/md/{name} array")
+    logger = logging.getLogger('pbr')
+
+    logger.info(f"  Re-adding /dev/{dev} to the /dev/md/{name} array")
     ret = run_cmd(['/usr/sbin/mdadm', '--manage', f"/dev/md/{name}", '--re-add', f"/dev/{dev}"], ret=True)
     if ret.returncode:
-        logging.debug(f" {ret.args} returned in error attempting to just add instead: {ret.stderr.decode()}")
+        logger.debug(f" {ret.args} returned in error attempting to just add instead: {ret.stderr.decode()}")
         run_cmd(['/usr/sbin/mdadm', '--manage', f"/dev/md/{name}", '--add', f"/dev/{dev}"])
