@@ -1,17 +1,13 @@
 # Plan (B)ackup Recovery
-
-![Linux](https://img.shields.io/badge/-Linux-grey?logo=linux)
-![Python](https://img.shields.io/badge/Python-v3.6%5E-orange?logo=python)
+![Linux](https://img.shields.io/badge/-Linux-grey?style=flat-square&logo=linux)
+![Python](https://img.shields.io/badge/Python-v3.6%5E-orange?style=flat-square&logo=python)
 
 ## Description
-Plan B Recovery is a full backup and recovery tool. My goal was to create a simple but stable backup and 
-recovery tool, but with a more limited configuration. That is well documented, and doesn't integrate other 
-third party backup tools, or other unsupported(in RHEL) options. Again my main goal was simplicity, and stability.
-I feel the more customization that's added, the more chances for issues to arise, and for a backup/recovery tool,
-the last thing you want are issues to arise.
+Plan B Recovery is a full server backup and recovery tool. Plan B Recovery is designed to be simple with few
+configuration options, this is to prevent complexity. The more complexity added, the potential for loss of 
+stability is added. Stability is the most important thing needed in a backup and recovery tool.
 
 ## Supported setups
-
 - Boot methods
   - ISO
   - USB
@@ -43,7 +39,6 @@ the last thing you want are issues to arise.
   - CentOS 8+
 
 ## TODO
-
 - [x] Add man page(s).
 - [x] Add arg for specifying the backup archive to use.
 - [x] Add in restore data only argument.
@@ -52,9 +47,9 @@ the last thing you want are issues to arise.
 - [x] Add a backup only option.
 - [x] Need to add checks for what's in the fstab and what's actually mounted.
 - [x] Need to figure out how to implement an option, that can be called from a cron job that rebuilds the iso on layout changes.
+- [x] Add option to name the backup archive, and iso files.
 - [ ] Potentially find a better way to do the pam files, instead of including them in the pkg.
 - [ ] Add option for secondary backup location for backup archive duplication.
-- [ ] Add option to name the backup archive, and iso files.
 - [ ] Add option for pre/post scripting.
 - [ ] Add support for stratis.
 - [ ] Add support for scp and lftp possibly.
