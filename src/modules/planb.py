@@ -94,9 +94,9 @@ class PBR(object):
         """
         Main class that handles executing everything.
         """
-        self.log = set_log_cfg(self.opts, self.cfg)
         self.opts = parse_args()
         self.cfg = LoadConfig()
+        self.log = set_log_cfg(self.opts, self.cfg)
         self.log.debug(f"planb: PBR: __int__: cfg: {dict(self.cfg.__dict__)}")
 
         if not getuid() == 0:
