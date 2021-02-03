@@ -1,14 +1,15 @@
 .\"    Title: pbr
 .\"   Auther: [see the "AUTHORS" section]
-.\"     Date: 10/12/2020
+.\"     Date: 02/03/2021
 .\" Language: English
 .\"
-.TH pbr 8 "10/12/2020" " " "Plan B Recovery"
+.TH pbr 8 "02/03/2021" " " "Plan B Recovery"
 .SH NAME
 pbr \- backup and recovery tool.
 .SH SYNOPSIS
-pbr [\-h|\-\-help] [\-b|\-\-backup] [\-f|\-\-facts] [\-\-format DEVICE] [\-k|\-\-keep] [\-m|\-\-mkrescue]
-[\-r|\-\-recover] [\-v|\-\-verbose] [\-ba|\-\-backup\-archive FILE] [\-ro|\-\-restore\-only]
+pbr [\-h|\-\-help] [\-c|\-\-check\-facts] [\-b|\-\-backup] [\-bo|\-\-backup\-only] [\-f|\-\-facts] [\-\-format DEVICE]
+[\-k|\-\-keep] [\-m|\-\-mkrescue] [\-r|\-\-recover] [\-v|\-\-verbose] [\-ba|\-\-backup\-archive FILE]
+[\-ro|\-\-restore\-only]
 .SH DESCRIPTION
 Plan B Recovery is a full Linux backup and recovery tool for when plan A doesn't work out.
 .sp
@@ -24,9 +25,19 @@ http://www.gnu.org/licenses/gpl.html for more details.
 show usage information
 .RE
 .PP
+\fB\-c \-\-check-facts\fR
+.RS 4
+check if the existing facts changed
+.RE
+.PP
 \fB\-b \-\-backup\fR
 .RS 4
 create the rescue media, and backup the system
+.RE
+.PP
+\fB\-bo \-\-backup-only\fR
+.RS 4
+create backup archive only
 .RE
 .PP
 \fB\-f \-\-facts\fR

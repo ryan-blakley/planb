@@ -1,9 +1,9 @@
 .\"    Title: pbr
 .\"   Auther: [see the "AUTHORS" section]
-.\"     Date: 10/12/2020
+.\"     Date: 02/03/2021
 .\" Language: English
 .\"
-.TH pbr.conf 5 "10/12/2020" " " "Plan B Recovery"
+.TH pbr.conf 5 "02/03/2021" " " "Plan B Recovery"
 .SH NAME
 pbr.conf \- configuration file for pbr
 .SH SYNOPSIS
@@ -12,6 +12,18 @@ pbr.conf \- configuration file for pbr
 \fIpbr.conf\fR is loaded during the initialization phase of pbr. Certain command line parameters will override
 values set here.
 .sp
+\fBlog_verbosity =\fR info
+.RS 4
+Set the logging level for the log file, the logging level of the console is controlled by the verbosity command
+line parameter. Valid values are \fIinfo\fR, \fIdebug\fR.
+.RE
+.PP
+\fBtmp_dir =\fR /tmp
+.RS 4
+This directory is where the temporary working folder will be created under, it needs to have enough free space to
+contain the files needed to create the bootable iso.
+.RE
+.PP
 \fBboot_type =\fR iso
 .RS 4
 Sets the boot media type. Valid values are \fIiso\fR and \fIusb\fR.
@@ -45,16 +57,9 @@ Mount options to use when mounting \fBbackup_mount\fR, this is useful for nfs an
 \fBExample:\fR quest vers=3
 .RE
 .PP
-\fBlog_verbosity =\fR info
+\fBbackup_archive_prefix =\fR backup
 .RS 4
-Set the logging level for the log file, the logging level of the console is controlled by the verbosity command
-line parameter. Valid values are \fIinfo\fR, \fIdebug\fR.
-.RE
-.PP
-\fBtmp_dir =\fR /tmp
-.RS 4
-This directory is where the temporary working folder will be created under, it needs to have enough free space to
-contain the files needed to create the bootable iso.
+Set the prefix name of the outputted backup archive file.
 .RE
 .PP
 \fBbackup_exclude_paths =\fR /var/crash /tmp/
@@ -63,12 +68,6 @@ Add any path that you would like excluded from the backup archive. Be mindful th
 directories will be excluded also. The format is /path space /path, don't add quotes or end with a slash please.
 Also this doesn't exclude the underlying lvm or disk, you will need to set those in \fBbackup_exclude_vgs\fR and
 \fBbackup_exclude_disks\fR.
-.RE
-.PP
-\fBbackup_include_pkgs =\fR strace iscsi\-initiator\-utils
-.RS 4
-List any additional packages that might be needed in the recover environment, so they be included in the bootable
-iso's rootfs.
 .RE
 .PP
 \fBnum_of_old_backups =\fR 3
@@ -89,6 +88,17 @@ Setting this will exclude the disk from the back up data meaning it will also be
 This will also add any vgs that this disk is a pv of to the exclude_vgs list above. So be warned, if the vg or disk
 are set to mount in the fstab file, setting this will cause the server not to boot if the fstab isn't corrected after
 recovery is finished.
+.RE
+.PP
+\fBrecover_iso_prefix =\fR recover
+.RS 4
+Set the prefix name of the outputted recover iso file.
+.RE
+.PP
+\fBrecover_include_pkgs =\fR strace iscsi\-initiator\-utils
+.RS 4
+List any additional packages that might be needed in the recover environment, so they be included in the bootable
+iso's rootfs.
 .RE
 .PP
 \fBrecover_exclude_vgs =\fR example_vg data_vg
