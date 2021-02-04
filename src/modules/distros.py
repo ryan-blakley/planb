@@ -28,6 +28,7 @@ fedora_pkgs = ['python3', 'fedora-release', 'fedora-release-common', 'fedora-rel
                'fedora-release-identity-server']
 rh_pkgs = ['dbus-daemon', 'platform-python', 'python36', 'redhat-release']
 cent_pkgs = ['dbus-daemon', 'platform-python', 'python36', 'centos-release']
+oel_pkgs = ['dbus-daemon', 'platform-python', 'python36', 'oraclelinux-release']
 
 
 class RHLiveOS(object):
@@ -366,5 +367,7 @@ def set_distro_pkgs(pkgs, facts):
         return pkgs + rh_pkgs
     elif "CentOS" in dis:
         return pkgs + cent_pkgs
+    elif "Oracle Linux" in dis:
+        return pkgs + oel_pkgs
 
 # vim:set ts=4 sw=4 et:

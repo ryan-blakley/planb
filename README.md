@@ -37,6 +37,7 @@ stability is added. Stability is the most important thing needed in a backup and
   - Fedora(whatever versions are currently being supported)
   - RHEL 8+
   - CentOS 8+
+  - Oracle Linux 8+
 
 ## TODO
 - [x] Add man page(s).
