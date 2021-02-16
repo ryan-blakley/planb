@@ -283,6 +283,17 @@ def run_cmd(cmd, ret=False, timeout=None, capture_output=True):
         raise RunCMDError()
 
 
+def udev_trigger():
+    """
+    Run udevadm trigger, to force udev reload.
+    :return:
+    """
+    from time import sleep
+
+    run_cmd(['udevadm', 'trigger'])
+    sleep(2)
+
+
 def mount(src, dest, fstype=None, opts=None):
     """
     Wrapper that calls the mount command.

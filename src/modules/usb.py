@@ -15,14 +15,14 @@
 import logging
 from glob import glob
 from jinja2 import Environment, FileSystemLoader
-from os import chdir, makedirs, rmdir, uname
+from os import makedirs, rmdir, uname
 from os.path import exists, join
 from shutil import copy2
 
-from .distros import rh_customize_rootfs, RHLiveOS
+from .distros import LiveOS, prep_rootfs, rh_customize_rootfs, suse_customize_rootfs
 from .exceptions import MountError, RunCMDError
-from .fs import fmt_fs
-from .utils import dev_from_file, is_block, mount, rand_str, run_cmd, umount
+from .fs import fmt_fs, grab_mnt_info
+from .utils import dev_from_file,  is_block, mount, rand_str, run_cmd, udev_trigger, umount
 
 
 def fmt_usb(device):
@@ -106,14 +106,39 @@ def fmt_usb(device):
             rmdir(tmp_dir)
             logger.info("Grub2 install complete")
         else:
+            from tempfile import mkdtemp
+
             fmt_fs(f"{device}1", uuid.lower(), "PLANBRECOVER-USB", "ext4")
             logger.info("Formatting complete")
 
-            # Write the mbr.bin to the beginning of the device.
-            with open(device, 'wb') as dev:
-                with open("/usr/share/syslinux/mbr.bin", 'rb', buffering=0) as f:
-                    dev.writelines(f.readlines())
-            logger.info("Writing mbr.bin complete")
+            # Create a tmp dir to mount the usb on, so grub2 can be installed.
+            tmp_dir = mkdtemp(prefix="usb.")
+            ret = mount(f"{device}1", tmp_dir)
+            if ret.returncode:
+                stderr = ret.stderr.decode()
+                if "already mounted" not in stderr:
+                    logger.error(f" Failed running {ret.args} due to {stderr}")
+                    raise MountError()
+
+            # Go ahead and install grub2 on the usb device, I don't think grub needs
+            # to be installed every time a backup is created, so it makes sense to
+            # just do it here once.
+            ret = run_cmd(['/usr/sbin/grub2-install', f"--boot-directory={tmp_dir}", f"{device}"], ret=True)
+            if ret.returncode:
+                logger.error(f" The command {ret.args} returned in error: {ret.stderr.decode()}")
+
+                # Clean up if there is an error running grub install.
+                ret2 = umount(tmp_dir)
+                rmdir(tmp_dir)
+                if ret2.returncode:
+                    logger.error(f" The command {ret2.args} returned in error: {ret2.stderr.decode()}")
+
+                raise RunCMDError()
+
+            # Clean everything up.
+            umount(tmp_dir)
+            rmdir(tmp_dir)
+            logger.info("Grub2 install complete")
     else:
         logger.error("Either device isn't a usb or you didn't type YES in all caps.")
         exit(1)
@@ -129,18 +154,20 @@ class USB(object):
         self.tmp_dir = tmp_dir
         self.tmp_rootfs_dir = join(tmp_dir, "rootfs")
         self.tmp_usbfs_dir = join(tmp_dir, "usbfs")
-        self.tmp_efi_dir = join(tmp_dir, "usbfs/EFI/BOOT")
-        self.tmp_syslinux_dir = join(tmp_dir, "backup/boot/syslinux")
+        self.tmp_usbfs_boot_dir = join(tmp_dir, "usbfs/boot")
+        self.tmp_efi_dir = join(tmp_dir, "usbfs/boot/EFI/BOOT")
+        self.tmp_syslinux_dir = join(tmp_dir, "usbfs/boot/syslinux")
         self.tmp_share_dir = join(tmp_dir, "/usr/share/planb")
 
-    def prep_uefi(self):
+        udev_trigger()
+
+    def prep_uefi(self, distro, shim, memtest):
         """
         Prep the usb to work for uefi.
         :return:
         """
         self.log.info("Mounting EFI directory")
-        makedirs(self.tmp_usbfs_dir)
-        ret = mount("/dev/disk/by-label/PBR-EFI", self.tmp_usbfs_dir)
+        ret = mount("/dev/disk/by-label/PBR-EFI", self.tmp_usbfs_boot_dir)
         if ret.returncode:
             self.log.error(f"{ret.args} returned the following error: {ret.stderr.decode()}")
             raise MountError()
@@ -149,23 +176,19 @@ class USB(object):
 
         if glob("/boot/efi/EFI/BOOT/BOOT*.EFI"):
             copy2(glob("/boot/efi/EFI/BOOT/BOOT*.EFI")[0], self.tmp_efi_dir)
+        elif glob("/boot/efi/EFI/boot/boot*.efi"):
+            copy2(glob("/boot/efi/EFI/boot/boot*.efi")[0], self.tmp_efi_dir)
 
         if glob("/boot/efi/EFI/[a-z]*/BOOT*.CSV"):
             copy2(glob("/boot/efi/EFI/[a-z]*/BOOT*.CSV")[0], self.tmp_efi_dir)
+        elif glob("/boot/efi/EFI/[a-z]*/boot*.csv"):
+            copy2(glob("/boot/efi/EFI/[a-z]*/boot*.csv")[0], self.tmp_efi_dir)
 
         # Loop through any efi file under /boot/efi/EFI/<distro>/, and copy.
         for efi in glob("/boot/efi/EFI/[a-z]*/*.efi"):
-            copy2(efi, self.tmp_efi_dir)
-
-        # Set the local distro variable for the grub.cfg file.
-        if "fedora" in self.facts.distro:
-            distro = "fedora"
-        elif "Red Hat" in self.facts.distro:
-            distro = "redhat"
-        elif "CentOS" in self.facts.distro:
-            distro = "centos"
-        else:
-            distro = None
+            # Don't copy the fallback efi files, because it will cause it not to boot.
+            if "fbx64" not in efi and "fallback" not in efi:
+                copy2(efi, self.tmp_efi_dir)
 
         env = Environment(loader=FileSystemLoader("/usr/share/planb/"))
         grub_cfg = env.get_template("grub.cfg")
@@ -176,91 +199,139 @@ class USB(object):
                     hostname=self.facts.hostname,
                     linux_cmd="linux",
                     initrd_cmd="initrd",
-                    location="boot/syslinux",
+                    location="/boot/syslinux/",
                     label_name=self.label_name,
                     boot_args=self.cfg.rc_kernel_args,
                     arch=self.facts.arch,
-                    iso=0
+                    distro=distro,
+                    iso=0,
+                    efi=1
                 ))
             else:
                 f.write(grub_cfg.render(
                     hostname=self.facts.hostname,
                     linux_cmd="linuxefi",
                     initrd_cmd="initrdefi",
-                    location="boot/syslinux",
+                    location="/boot/syslinux/",
                     label_name=self.label_name,
                     boot_args=self.cfg.rc_kernel_args,
                     arch=self.facts.arch,
+                    memtest=memtest,
+                    distro=distro,
+                    shim=shim,
+                    secure_boot=self.facts.secure_boot,
                     iso=0,
-                    distro=distro
+                    efi=1
                 ))
 
         self.log.info("Un-mounting EFI directory")
-        umount(self.tmp_usbfs_dir)
+        umount(self.tmp_usbfs_boot_dir)
 
     def prep_usb(self):
         """
         Copy the needed files for syslinux in the tmp working directory.
         :return:
         """
+        memtest = 0
+        self.log.info("Mounting USB boot directory")
+        makedirs(self.tmp_usbfs_dir)
+        ret = mount("/dev/disk/by-label/PLANBRECOVER-USB", self.tmp_usbfs_dir)
+        if ret.returncode:
+            self.log.error(f"{ret.args} returned the following error: {ret.stderr.decode()}")
+            raise MountError()
+
         # Make the needed temp directory.
         makedirs(self.tmp_syslinux_dir, exist_ok=True)
+
+        # Set the local distro and shim variable for the grub.cfg file.
+        if "Fedora" in self.facts.distro:
+            distro = "fedora"
+
+            if "aarch64" in self.facts.arch:
+                shim = "shimaa64.efi"
+            else:
+                shim = "shimx64.efi"
+        elif "Red Hat" in self.facts.distro or "Oracle" in self.facts.distro:
+            distro = "redhat"
+
+            if "aarch64" in self.facts.arch:
+                shim = "shimaa64.efi"
+            else:
+                shim = "shimx64.efi"
+        elif "CentOS" in self.facts.distro:
+            distro = "centos"
+
+            if "aarch64" in self.facts.arch:
+                shim = "shimaa64.efi"
+            else:
+                shim = "shimx64.efi"
+        elif "SUSE" in self.facts.distro:
+            distro = "opensuse"
+            shim = "shim.efi"
+        else:
+            distro = "redhat"
+
+            if "aarch64" in self.facts.arch:
+                shim = "shimaa64.efi"
+            else:
+                shim = "shimx64.efi"
+
+        # Grab the uuid of the fs that /boot is located on.
+        if grab_mnt_info(self.facts, "/boot"):
+            boot_uuid = grab_mnt_info(self.facts, "/boot")['fs_uuid']
+        else:
+            boot_uuid = grab_mnt_info(self.facts, "/")['fs_uuid']
 
         # Since syslinux is only available on x86_64, check the arch.
         # Then copy all of the needed syslinux files to the tmp dir.
         if self.facts.arch == "x86_64":
-            chdir("/usr/share/syslinux/")
-            copy2("chain.c32", self.tmp_syslinux_dir)
-            copy2("isolinux.bin", self.tmp_syslinux_dir)
-            copy2("ldlinux.c32", self.tmp_syslinux_dir)
-            copy2("libcom32.c32", self.tmp_syslinux_dir)
-            copy2("libmenu.c32", self.tmp_syslinux_dir)
-            copy2("libutil.c32", self.tmp_syslinux_dir)
-            copy2("menu.c32", self.tmp_syslinux_dir)
-            copy2("vesamenu.c32", self.tmp_syslinux_dir)
-
             # If the memtest86+ pkg isn't installed, skip adding that boot option.
-            memtest = 0
-            if glob("/boot/memtest86+-*"):
-                copy2(glob("/boot/memtest86*")[0], join(self.tmp_syslinux_dir, "memtest"))
+            if glob("/boot/memtest*"):
+                copy2(glob("/boot/memtest*")[0], join(self.tmp_syslinux_dir, "memtest.bin"))
                 memtest = 1
 
-            # Write out the extlinux.conf based on the isolinux.cfg template file.
-            env = Environment(loader=FileSystemLoader("/usr/share/planb/"))
-            isolinux_cfg = env.get_template("isolinux.cfg")
-            with open(join(self.tmp_syslinux_dir, "extlinux.conf"), "w+") as f:
-                f.write(isolinux_cfg.render(
-                    hostname=self.facts.hostname,
-                    label_name=self.label_name,
-                    boot_args=self.cfg.rc_kernel_args,
-                    memtest=memtest
-                ))
-
-            # Copy the splash image over.
-            copy2(join(self.tmp_share_dir, "splash.png"), self.tmp_syslinux_dir)
+            if not self.facts.uefi:
+                # Generate a grub.cfg.
+                env = Environment(loader=FileSystemLoader("/usr/share/planb/"))
+                grub_cfg = env.get_template("grub.cfg")
+                with open(join(self.tmp_dir, "usbfs/grub2/grub.cfg"), "w+") as f:
+                    f.write(grub_cfg.render(
+                        hostname=self.facts.hostname,
+                        linux_cmd="linux",
+                        initrd_cmd="initrd",
+                        location="/boot/syslinux/",
+                        label_name=self.label_name,
+                        boot_args=self.cfg.rc_kernel_args,
+                        arch=self.facts.arch,
+                        distro=distro,
+                        memtest=memtest,
+                        boot_uuid=boot_uuid,
+                        iso=0,
+                        efi=0
+                    ))
         elif self.facts.arch == "ppc64le":
             # Generate a grub.cfg.
             env = Environment(loader=FileSystemLoader("/usr/share/planb/"))
             grub_cfg = env.get_template("grub.cfg")
-            with open(join(self.tmp_dir, "backup/grub2/grub.cfg"), "w+") as f:
+            with open(join(self.tmp_dir, "usbfs/grub2/grub.cfg"), "w+") as f:
                 f.write(grub_cfg.render(
                     hostname=self.facts.hostname,
                     linux_cmd="linux",
                     initrd_cmd="initrd",
-                    location="boot/syslinux",
+                    location="/boot/syslinux/",
                     label_name=self.label_name,
                     boot_args=self.cfg.rc_kernel_args,
                     arch=self.facts.arch,
-                    iso=0
+                    distro=distro,
+                    iso=0,
+                    efi=0
                 ))
 
         # Copy the current running kernel's vmlinuz file to the tmp dir.
         copy2(f"/boot/vmlinuz-{uname().release}", join(self.tmp_syslinux_dir, "vmlinuz"))
 
         if self.facts.uefi:
-            self.prep_uefi()
-        elif self.facts.arch == "x86_64":
-            run_cmd(['/usr/sbin/extlinux', '-i', self.tmp_syslinux_dir], capture_output=False)
+            self.prep_uefi(distro, shim, memtest)
 
     def mkusb(self):
         """
@@ -270,13 +341,22 @@ class USB(object):
         self.log.info("Prepping the USB")
         self.prep_usb()
 
-        liveos = RHLiveOS(self.cfg, self.facts, self.tmp_dir)
+        liveos = LiveOS(self.cfg, self.facts, self.tmp_dir)
         liveos.create()
 
         self.log.info("Customizing the copied files to work in the USB environment")
-        rh_customize_rootfs(self.cfg, self.tmp_dir, self.tmp_rootfs_dir)
+        prep_rootfs(self.cfg, self.tmp_dir, self.tmp_rootfs_dir)
+
+        # Set OS specific customizations.
+        if "openSUSE" in self.facts.distro:
+            suse_customize_rootfs(self.tmp_rootfs_dir)
+        else:
+            rh_customize_rootfs(self.tmp_rootfs_dir)
 
         self.log.info("Creating the USB's LiveOS IMG")
         liveos.create_squashfs()
+
+        self.log.info("Un-mounting USB directory")
+        umount(self.tmp_usbfs_dir)
 
 # vim:set ts=4 sw=4 et:

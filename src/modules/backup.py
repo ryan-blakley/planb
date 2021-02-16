@@ -80,8 +80,11 @@ class Backup(object):
                 raise GeneralError()
         else:
             if (t == "nfs" or t == "cifs") and not rpmq(f"{t}-utils"):
-                self.log.error(f" Backup location type is set to {t}, but {t}-utils isn't installed, please install.")
-                raise ExistsError()
+                # On suse the pkg name is nfs-client.
+                if not rpmq(f"{t}-client"):
+                    self.log.error(f" Backup location type is set to {t}, but {t}-utils isn't installed, "
+                                   "please install.")
+                    raise ExistsError()
 
             # Mount bk_mount, which is where the backup archive
             # will be stored later on.
@@ -117,7 +120,7 @@ class Backup(object):
 
         # Copying the log file to the tmp_bk_dir here so that it gets written
         # potentially before the mount is un-mounted.
-        if self.tmp_bk_dir:
+        if self.tmp_bk_dir and exists("/var/log/pbr.log"):
             copyfile("/var/log/pbr.log", join(self.tmp_bk_dir, "pbr.log"))
 
         if self.mounted:

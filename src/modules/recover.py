@@ -14,8 +14,9 @@
 
 import json
 import logging
-import os
-from os import environ, chdir, chmod, chroot, makedirs, sync
+from glob import glob
+from os import environ, chdir, chmod, chroot, makedirs, sync, O_RDONLY
+from os import open as o_open
 from os.path import exists, isdir, isfile, join
 from re import search
 from selinux import chcon
@@ -272,14 +273,15 @@ class Recover(object):
         else:
             return False
 
-    def grab_bootloader_disk(self):
+    def grab_bootloader_disk(self, mp):
         """
         Figure out what disk /boot is mounted on in the tmp dir,
         and return tha disk's path.
         :return:
         """
         for mnt, info in get_mnts(self.facts.udev_ctx).items():
-            if mnt == f"{self.tmp_rootfs_dir}/boot":
+            self.log.debug(f"recover: grab_bootloader_disk: cmp_mp: {self.tmp_rootfs_dir}{mp} mnt: {mnt}")
+            if mnt == f"{self.tmp_rootfs_dir}{mp}":
                 dev_info = dev_from_file(self.facts.udev_ctx, info['path'])
                 if info['type'] == "part":
                     return dev_info.find_parent('block').device_node
@@ -287,6 +289,9 @@ class Recover(object):
                     return f"/dev/mapper/{dev_info['DM_MPATH']}"
                 elif info['type'] == "disk" or info['type'] == "mpath":
                     return info['path']
+                elif info['type'] == "lvm":
+                    d = glob(f"/sys/block/{info['kname'].split('/')[-1]}/slaves/*")[0].split("/")[-1]
+                    return dev_from_name(self.facts.udev_ctx, d).find_parent('block').device_node
                 else:
                     p = None
 
@@ -542,24 +547,46 @@ class Recover(object):
         :return:
         """
         # Store the iso's root fd, so it can exit the chroot.
-        rroot = os.open("/", os.O_RDONLY)
+        rroot = o_open("/", O_RDONLY)
+
+        tmpfs_mnts = ['dev', 'sys', 'proc', 'sys/firmware/efi/efivars']
+        # Mount self.tmpfs mount points needed by grub2-install inside the chroot directory.
+        for m in tmpfs_mnts:
+            if "efi" in m and not self.bk_misc['uefi']:
+                continue
+
+            ret = mount(f"/{m}", f"{self.tmp_rootfs_dir}/{m}", opts="bind")
+            if ret.returncode:
+                self.log.error(f" Failed running {ret.args}, stderr: {ret.stderr.decode()}")
+                raise MountError()
+
+        # Chroot into the restored rootfs to reinstall grub2.
+        chroot(self.tmp_rootfs_dir)
 
         if self.bk_misc['uefi']:
-            run_cmd(['/usr/sbin/efibootmgr', '-c', '-d', bootloader_disk, '-p', '1', '-l',
-                    f"\\EFI\\{self.bk_misc['distro'].lower()}\\shimx64.efi",
-                     '-L', self.bk_misc['distro_pretty']])
-        else:
-            tmpfs_mnts = ['dev', 'sys', 'proc']
-            # Mount self.tmpfs mount points needed by grub2-install inside the chroot directory.
-            for m in tmpfs_mnts:
-                ret = mount(f"/{m}", f"{self.tmp_rootfs_dir}/{m}", opts="bind")
-                if ret.returncode:
-                    self.log.error(f" Failed running {ret.args}, stderr: {ret.stderr.decode()}")
-                    raise MountError()
+            if "Fedora" in self.bk_misc['distro']:
+                distro = "fedora"
+            elif "CentOS" in self.bk_misc['distro']:
+                distro = "centos"
+            elif "openSUSE" in self.bk_misc['distro']:
+                distro = "opensuse"
+            elif "Red Hat" in self.bk_misc['distro'] or "Oracle" in self.bk_misc['distro']:
+                distro = "redhat"
+            else:
+                distro = self.bk_misc['distro'].lower()
 
-            # Chroot into the restored rootfs to reinstall grub2.
-            chroot(self.tmp_rootfs_dir)
-          
+            if "suse" in distro:
+                shim = "shim.efi"
+            else:
+                if "aarch64" in self.bk_misc['arch']:
+                    shim = "shimaa64.efi"
+                else:
+                    shim = "shimx64.efi"
+
+            run_cmd(['/usr/sbin/efibootmgr', '-c', '-d', bootloader_disk, '-p', '1', '-l',
+                     f"\\EFI\\{distro}\\{shim}", '-L', self.bk_misc['distro_pretty']])
+
+        else:
             # Reinstall the bootloader on the recovered disk.
             if "ppc64le" in self.bk_misc['arch']:
                 run_cmd(['/usr/sbin/grub2-install', f"{bootloader_disk}1"])
@@ -568,13 +595,16 @@ class Recover(object):
             else:
                 run_cmd(['/usr/sbin/grub2-install', bootloader_disk])
 
-            # Cd back to the rroot fd, then chroot back out.
-            chdir(rroot)
-            chroot('.')
+        # Cd back to the rroot fd, then chroot back out.
+        chdir(rroot)
+        chroot('.')
 
-            # Clean up tmpfs mounts from earlier.
-            for m in tmpfs_mnts:
-                umount(f"{self.tmp_rootfs_dir}/{m}")
+        # Clean up tmpfs mounts from earlier.
+        for m in tmpfs_mnts:
+            if "efi" in m and not self.bk_misc['uefi']:
+                continue
+
+            umount(f"{self.tmp_rootfs_dir}/{m}")
 
     def selinux_check(self):
         """
@@ -695,6 +725,7 @@ class Recover(object):
                 self.cmp_disks()
                 self.log.info("Starting to mount the filesystems")
 
+            # Mount the restored rootfs to /mnt/rootfs, to restore backup on.
             self.mnt_restored_rootfs()
 
             if self.cfg.bk_location_type == "rsync":
@@ -717,12 +748,26 @@ class Recover(object):
                 restore_tar(self.tmp_rootfs_dir, backup_archive)
 
             self.log.info("Restoring the bootloader")
-            self.restore_bootloader(self.grab_bootloader_disk())
+            if self.bk_misc['uefi']:
+                bl_disk = self.grab_bootloader_disk("/boot/efi")
+            else:
+                bl_disk = self.grab_bootloader_disk("/boot")
+
+            # If there isn't a /boot or /boot/efi, then search for /.
+            if not bl_disk:
+                bl_disk = self.grab_bootloader_disk("")
+
+            self.log.debug(f"recover: main: bl_disk: {bl_disk}")
+            self.restore_bootloader(bl_disk)
 
             self.selinux_check()
 
-            # Set the permission on the restored / to 555 after everything is done.
-            chmod(self.tmp_rootfs_dir, 0o555)
+            # Set the permission on the restored / depending
+            # on the distro after everything is done.
+            if "openSUSE" in self.bk_misc['distro']:
+                chmod(self.tmp_rootfs_dir, 0o755)
+            else:
+                chmod(self.tmp_rootfs_dir, 0o555)
 
         except (Exception, KeyboardInterrupt, RunCMDError):
             # Call cleanup before exiting.

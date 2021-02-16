@@ -38,6 +38,7 @@ stability is added. Stability is the most important thing needed in a backup and
   - RHEL 8+
   - CentOS 8+
   - Oracle Linux 8+
+  - openSUSE Leap 15+
 
 ## TODO
 - [x] Add man page(s).
@@ -49,12 +50,10 @@ stability is added. Stability is the most important thing needed in a backup and
 - [x] Need to add checks for what's in the fstab and what's actually mounted.
 - [x] Need to figure out how to implement an option, that can be called from a cron job that rebuilds the iso on layout changes.
 - [x] Add option to name the backup archive, and iso files.
-- [ ] Potentially find a better way to do the pam files, instead of including them in the pkg.
+- [x] Potentially find a better way to do the pam files, instead of including them in the pkg.
 - [ ] Add option for secondary backup location for backup archive duplication.
 - [ ] Add option for pre/post scripting.
 - [ ] Add support for stratis.
 - [ ] Add support for scp and lftp possibly.
 - [ ] Would like to add an option to create pxe boot entries.
-- [ ] Possibly add support for btrfs, granted it shouldn't be needed.
-- [ ] Possibly add in hooks to cockpit or ansible way down the line.
 - [ ] Possibly add other distros, this is a maybe since all I run is Fedora/RHEL based.

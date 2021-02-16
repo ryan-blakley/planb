@@ -16,10 +16,10 @@ import logging
 from glob import glob
 from jinja2 import Environment, FileSystemLoader
 from os import chdir, makedirs, stat, uname
-from os.path import join
+from os.path import exists, join
 from shutil import copy2
 
-from .distros import rh_customize_rootfs, RHLiveOS
+from .distros import LiveOS, prep_rootfs, rh_customize_rootfs, suse_customize_rootfs
 from .exceptions import MountError
 from .fs import fmt_fs
 from .utils import mk_cdboot, mount, rand_str, run_cmd, umount
@@ -59,24 +59,33 @@ class ISO(object):
         bk_dir = join(join(self.tmp_dir, "backup"), uname().nodename.split('.')[0])
         makedirs(bk_dir, exist_ok=True)
 
+        if exists('/usr/bin/genisoimage'):
+            cmd = "/usr/bin/genisoimage"
+        else:
+            cmd = "/usr/bin/mkisofs"
+
         if self.facts.uefi and self.facts.arch == "x86_64":
-            cmd_mkisofs = ['/usr/bin/genisoimage', '-o',
-                           join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-b', 'isolinux/isolinux.bin', '-J', '-R',
-                           '-l', '-c', 'isolinux/boot.cat', '-no-emul-boot', '-boot-load-size', '4', '-boot-info-table',
-                           '-eltorito-alt-boot', '-e', 'images/efiboot.img', '-no-emul-boot', '-graft-points',
-                           '-V', self.label_name, '.']
+            if "SUSE" in self.facts.distro:
+                cmd_mkisofs = [cmd, '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-b', 'isolinux/isolinux.bin',
+                               '-J', '-R', '-l', '-c', 'isolinux/boot.cat', '-no-emul-boot', '-boot-load-size', '4',
+                               '-boot-info-table', '-eltorito-alt-boot', '-eltorito-platform', 'efi', '-eltorito-boot',
+                               'images/efiboot.img', '-no-emul-boot', '-graft-points', '-V', self.label_name, '.']
+            else:
+                cmd_mkisofs = [cmd, '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-b', 'isolinux/isolinux.bin',
+                               '-J', '-R', '-l', '-c', 'isolinux/boot.cat', '-no-emul-boot', '-boot-load-size', '4',
+                               '-boot-info-table', '-eltorito-alt-boot', '-e', 'images/efiboot.img', '-no-emul-boot',
+                               '-graft-points', '-V', self.label_name, '.']
 
             cmd_isohybrid = ['/usr/bin/isohybrid', '-u', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso")]
         elif self.facts.arch == "aarch64":
-            cmd_mkisofs = ['/usr/bin/genisoimage', '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-J', '-r',
-                           '-eltorito-alt-boot', '-e', 'images/efiboot.img', '-no-emul-boot', '-V', self.label_name,
-                           '.']
+            cmd_mkisofs = [cmd, '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-J', '-r', '-eltorito-alt-boot',
+                           '-e', 'images/efiboot.img', '-no-emul-boot', '-V', self.label_name, '.']
 
             # isohybrid isn't available on aarch64, so set to none.
             cmd_isohybrid = None
         elif self.facts.arch == "ppc64le":
-            cmd_mkisofs = ['/usr/bin/genisoimage', '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-U',
-                           '-chrp-boot', '-J', '-R', '-iso-level', '3', '-graft-points', '-V', self.label_name, '.']
+            cmd_mkisofs = [cmd, '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-U', '-chrp-boot', '-J', '-R',
+                           '-iso-level', '3', '-graft-points', '-V', self.label_name, '.']
 
             # isohybrid isn't available on ppc64le, so set to none.
             cmd_isohybrid = None
@@ -90,16 +99,16 @@ class ISO(object):
 
             mk_cdboot("isolinux/vmlinuz", "isolinux/initramfs.img", "images/cdboot.prm", "images/cdboot.img")
 
-            cmd_mkisofs = ['/usr/bin/genisoimage', '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-b',
-                           'images/cdboot.img', '-J', '-R', '-l', '-c', 'isolinux/boot.cat', '-no-emul-boot',
-                           '-boot-load-size', '4', '-V', self.label_name, '-graft-points', '.']
+            cmd_mkisofs = [cmd, '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-b', 'images/cdboot.img', '-J',
+                           '-R', '-l', '-c', 'isolinux/boot.cat', '-no-emul-boot', '-boot-load-size', '4', '-V',
+                           self.label_name, '-graft-points', '.']
 
             # isohybrid isn't available on s390x, so set to none.
             cmd_isohybrid = None
         else:
-            cmd_mkisofs = ['/usr/bin/genisoimage', '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-b',
-                           'isolinux/isolinux.bin', '-J', '-R', '-l', '-c', 'isolinux/boot.cat', '-no-emul-boot',
-                           '-boot-load-size', '4', '-boot-info-table', '-V', self.label_name, '-graft-points', '.']
+            cmd_mkisofs = [cmd, '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-b', 'isolinux/isolinux.bin',
+                           '-J', '-R', '-l', '-c', 'isolinux/boot.cat', '-no-emul-boot', '-boot-load-size', '4',
+                           '-boot-info-table', '-V', self.label_name, '-graft-points', '.']
 
             cmd_isohybrid = ['/usr/bin/isohybrid', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso")]
 
@@ -114,7 +123,7 @@ class ISO(object):
         makedirs(join("/var/lib/pbr", "output"), exist_ok=True)
         copy2(join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), f"/var/lib/pbr/output/{self.cfg.rc_iso_prefix}.iso")
 
-    def prep_uefi(self):
+    def prep_uefi(self, memtest):
         """
         Prep the isofs working directory to work for uefi.
         :return:
@@ -126,23 +135,52 @@ class ISO(object):
             """
             if glob("/boot/efi/EFI/BOOT/BOOT*.EFI"):
                 copy2(glob("/boot/efi/EFI/BOOT/BOOT*.EFI")[0], self.tmp_efi_dir)
-                
+            elif glob("/boot/efi/EFI/boot/boot*.efi"):
+                copy2(glob("/boot/efi/EFI/boot/boot*.efi")[0], self.tmp_efi_dir)
+
             if glob("/boot/efi/EFI/[a-z]*/BOOT*.CSV"):
                 copy2(glob("/boot/efi/EFI/[a-z]*/BOOT*.CSV")[0], self.tmp_efi_dir)
+            elif glob("/boot/efi/EFI/[a-z]*/boot*.csv"):
+                copy2(glob("/boot/efi/EFI/[a-z]*/boot*.csv")[0], self.tmp_efi_dir)
 
             # Loop through any efi file under /boot/efi/EFI/<distro>/, and copy.
             for efi in glob("/boot/efi/EFI/[a-z]*/*.efi"):
-                copy2(efi, self.tmp_efi_dir)
+                # Don't copy the fallback efi files, because it will cause it not to boot.
+                if "fbx64" not in efi and "fallback" not in efi:
+                    copy2(efi, self.tmp_efi_dir)
 
-            # Set the local distro variable for the grub.cfg file.
-            if "fedora" in self.facts.distro:
+            # Set the local distro and shim variable for the grub.cfg file.
+            if "Fedora" in self.facts.distro:
                 distro = "fedora"
-            elif "Red Hat" in self.facts.distro:
+
+                if "aarch64" in self.facts.arch:
+                    shim = "shimaa64.efi"
+                else:
+                    shim = "shimx64.efi"
+            elif "Red Hat" in self.facts.distro or "Oracle" in self.facts.distro:
                 distro = "redhat"
+
+                if "aarch64" in self.facts.arch:
+                    shim = "shimaa64.efi"
+                else:
+                    shim = "shimx64.efi"
             elif "CentOS" in self.facts.distro:
                 distro = "centos"
+
+                if "aarch64" in self.facts.arch:
+                    shim = "shimaa64.efi"
+                else:
+                    shim = "shimx64.efi"
+            elif "SUSE" in self.facts.distro:
+                distro = "opensuse"
+                shim = "shim.efi"
             else:
-                distro = None
+                distro = "redhat"
+
+                if "aarch64" in self.facts.arch:
+                    shim = "shimaa64.efi"
+                else:
+                    shim = "shimx64.efi"
 
             env = Environment(loader=FileSystemLoader("/usr/share/planb/"))
             grub_cfg = env.get_template("grub.cfg")
@@ -153,21 +191,28 @@ class ISO(object):
                         hostname=self.facts.hostname,
                         linux_cmd="linux",
                         initrd_cmd="initrd",
-                        location="isolinux",
+                        location="/isolinux/",
                         label_name=self.label_name,
                         boot_args=self.cfg.rc_kernel_args,
-                        arch=self.facts.arch
+                        arch=self.facts.arch,
+                        iso=1,
+                        efi=1
                     ))
                 else:
                     cfg.write(grub_cfg.render(
                         hostname=self.facts.hostname,
                         linux_cmd="linuxefi",
                         initrd_cmd="initrdefi",
-                        location="isolinux",
+                        location="/isolinux/",
                         label_name=self.label_name,
                         boot_args=self.cfg.rc_kernel_args,
                         arch=self.facts.arch,
-                        distro=distro
+                        distro=distro,
+                        shim=shim,
+                        secure_boot=self.facts.secure_boot,
+                        memtest=memtest,
+                        iso=1,
+                        efi=1
                     ))
 
         makedirs(self.tmp_efi_dir)
@@ -201,6 +246,7 @@ class ISO(object):
         Copy the needed files to create the iso in the tmp working directory.
         :return:
         """
+        memtest = 0
         # Make the needed temp directory.
         makedirs(self.tmp_isolinux_dir)
 
@@ -210,25 +256,32 @@ class ISO(object):
             chdir("/usr/share/syslinux/")
             copy2("chain.c32", self.tmp_isolinux_dir)
             copy2("isolinux.bin", self.tmp_isolinux_dir)
-            copy2("ldlinux.c32", self.tmp_isolinux_dir)
-            copy2("libcom32.c32", self.tmp_isolinux_dir)
-            copy2("libmenu.c32", self.tmp_isolinux_dir)
-            copy2("libutil.c32", self.tmp_isolinux_dir)
             copy2("menu.c32", self.tmp_isolinux_dir)
             copy2("vesamenu.c32", self.tmp_isolinux_dir)
 
+            # The below files are only needed for syslinux v5+ so if the
+            # files don't exist don't attempt to copy them.
+            if exists("ldlinux.c32"):
+                copy2("ldlinux.c32", self.tmp_isolinux_dir)
+            if exists("libcom32.c32"):
+                copy2("libcom32.c32", self.tmp_isolinux_dir)
+            if exists("libmenu.c32"):
+                copy2("libmenu.c32", self.tmp_isolinux_dir)
+            if exists("libutil.c32"):
+                copy2("libutil.c32", self.tmp_isolinux_dir)
+
             # If the memtest86+ pkg isn't installed, skip adding that boot option.
-            memtest = 0
-            if glob("/boot/memtest86+-*"):
-                copy2(glob("/boot/memtest86*")[0], join(self.tmp_isolinux_dir, "memtest"))
+            if glob("/boot/memtest*"):
+                copy2(glob("/boot/memtest*")[0], join(self.tmp_isolinux_dir, "memtest.bin"))
                 memtest = 1
 
             # Write out the isolinux.cfg based on the template file.
             env = Environment(loader=FileSystemLoader("/usr/share/planb/"))
             isolinux_cfg = env.get_template("isolinux.cfg")
-            with open(join(self.tmp_isolinux_dir, "isolinux.cfg"), "w+") as f:
+            with open(join(join(self.tmp_dir, "isofs"), "isolinux.cfg"), "w+") as f:
                 f.write(isolinux_cfg.render(
                     hostname=self.facts.hostname,
+                    location="/isolinux/",
                     label_name=self.label_name,
                     boot_args=self.cfg.rc_kernel_args,
                     memtest=memtest
@@ -260,11 +313,12 @@ class ISO(object):
                     hostname=self.facts.hostname,
                     linux_cmd="linux",
                     initrd_cmd="initrd",
-                    location="isolinux",
+                    location="/isolinux/",
                     label_name=self.label_name,
                     boot_args=self.cfg.rc_kernel_args,
                     arch=self.facts.arch,
-                    iso=1
+                    iso=1,
+                    efi=0
                 ))
         elif self.facts.arch == "s390x":
             makedirs(self.tmp_images_dir)
@@ -303,7 +357,7 @@ class ISO(object):
         copy2(f"/boot/vmlinuz-{uname().release}", join(self.tmp_isolinux_dir, "vmlinuz"))
 
         if self.facts.uefi:
-            self.prep_uefi()
+            self.prep_uefi(memtest)
 
     def mkiso(self):
         """
@@ -313,11 +367,17 @@ class ISO(object):
         self.log.info("Prepping isolinux")
         self.prep_iso()
 
-        liveos = RHLiveOS(self.cfg, self.facts, self.tmp_dir)
+        liveos = LiveOS(self.cfg, self.facts, self.tmp_dir)
         liveos.create()
 
         self.log.info("Customizing the copied files to work in the ISO environment")
-        rh_customize_rootfs(self.cfg, self.tmp_dir, self.tmp_rootfs_dir)
+        prep_rootfs(self.cfg, self.tmp_dir, self.tmp_rootfs_dir)
+
+        # Set OS specific customizations.
+        if "openSUSE" in self.facts.distro:
+            suse_customize_rootfs(self.tmp_rootfs_dir)
+        else:
+            rh_customize_rootfs(self.tmp_rootfs_dir)
 
         self.log.info("Creating the ISO's LiveOS IMG")
         liveos.create_squashfs()

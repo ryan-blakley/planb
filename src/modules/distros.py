@@ -16,22 +16,18 @@ import fileinput
 import logging
 import magic
 from contextlib import suppress
-from os import chdir, listdir, makedirs, remove, symlink, uname
+from glob import glob
+from os import chdir, chroot, listdir, makedirs, remove, symlink, uname, O_RDONLY
+from os import open as o_open
 from os.path import exists, dirname, isdir, isfile, islink, join
 from re import search
-from shutil import copy2, copyfile, copystat, copytree, SameFileError
+from shutil import copy2, copystat, copytree, SameFileError
 
 from .exceptions import RunCMDError
-from .utils import rpmql, rpmqf, run_cmd
-
-fedora_pkgs = ['python3', 'fedora-release', 'fedora-release-common', 'fedora-release-server',
-               'fedora-release-identity-server']
-rh_pkgs = ['dbus-daemon', 'platform-python', 'python36', 'redhat-release']
-cent_pkgs = ['dbus-daemon', 'platform-python', 'python36', 'centos-release']
-oel_pkgs = ['dbus-daemon', 'platform-python', 'python36', 'oraclelinux-release']
+from .utils import rpmq, rpmql, rpmqf, run_cmd
 
 
-class RHLiveOS(object):
+class LiveOS(object):
     def __init__(self, cfg, facts, tmp_dir):
         self.log = logging.getLogger('pbr')
         self.cfg = cfg
@@ -39,20 +35,10 @@ class RHLiveOS(object):
         self.tmp_dir = tmp_dir
         self.tmp_rootfs_dir = join(tmp_dir, "rootfs")
         self.tmp_isolinux_dir = join(tmp_dir, "isofs/isolinux")
-        self.tmp_syslinux_dir = join(tmp_dir, "backup/boot/syslinux")
+        self.tmp_syslinux_dir = join(tmp_dir, "usbfs/boot/syslinux")
         self.exclude_files = ['build-id', '/usr/share/man']
         self.libs = []
         self.lib_pkgs = []
-
-        # List of base packages that need to be installed, WARNING the order of this array does matter.
-        self.base_pkgs = ['filesystem', 'glibc', 'glibc-common', 'setup', 'systemd', 'systemd-udev', 'bash',
-                          'bash-completion', 'initscripts', 'coreutils', 'coreutils-common', 'pam', 'util-linux',
-                          'dbus', 'dbus-broker', 'dbus-common', 'polkit', 'python3-libs', 'alternatives',
-                          'NetworkManager', 'binutils', 'crypto-policies', 'device-mapper-multipath',
-                          'dosfstools', 'e2fsprogs', 'gawk', 'grep', 'gzip', 'iproute', 'iputils', 'kbd', 'kbd-misc',
-                          'kmod', 'kpartx', 'less', 'libpwquality', 'lsof', 'mdadm', 'ncurses-base', 'openssh',
-                          'openssh-clients', 'openssh-server', 'parted', 'passwd', 'plymouth', 'procps-ng', 'rng-tools',
-                          'rootfiles', 'rpm', 'sed', 'vim-minimal', 'xfsprogs']
 
         self.pkgs = self.set_pkgs()
 
@@ -127,13 +113,19 @@ class RHLiveOS(object):
         """
         # Create the output directory.
         if self.cfg.boot_type == "usb":
-            liveos_dir = join(self.tmp_dir, "backup/LiveOS")
+            liveos_dir = join(self.tmp_dir, "usbfs/LiveOS")
         else:
             liveos_dir = join(self.tmp_dir, "isofs/LiveOS")
+
         makedirs(liveos_dir, exist_ok=True)
 
         # Create the squashfs img file.
-        run_cmd(['/usr/sbin/mksquashfs', self.tmp_rootfs_dir, join(liveos_dir, "squashfs.img")])
+        if "openSUSE" in self.facts.distro:
+            cmd = "/usr/bin/mksquashfs"
+        else:
+            cmd = "/usr/sbin/mksquashfs"
+
+        run_cmd([cmd, self.tmp_rootfs_dir, join(liveos_dir, "squashfs.img"), '-noappend'])
 
     def find_libs(self, pkgs):
         """
@@ -178,7 +170,7 @@ class RHLiveOS(object):
         :return:
         """
         # Set distro specific pkgs.
-        pkgs = set_distro_pkgs(self.base_pkgs, self.facts)
+        pkgs = set_distro_pkgs(self.facts)
 
         # Check if lvm is installed, if so add lvm pkgs.
         if self.facts.lvm_installed:
@@ -195,11 +187,6 @@ class RHLiveOS(object):
                      'grub2-tools', 'grub2-tools-minimal', 'grub2-tools-extra', 's390utils-base']
         pkgs.extend(grub_pkgs)
 
-        # Set any pkgs needed by pbr, and pbr itself.
-        pbr_pkgs = ['pbr', 'python3-distro', 'python3-libselinux', 'python3-netifaces', 'python3-pyparted',
-                    'python3-pyroute2', 'python3-pyudev', 'python3-rpm', 'python3-six', 'python3-tqdm']
-        pkgs.extend(pbr_pkgs)
-
         # If there are additional pkgs set in the cfg, include them in the list.
         if self.cfg.rc_include_pkgs:
             for x in self.cfg.rc_include_pkgs:
@@ -212,7 +199,11 @@ class RHLiveOS(object):
 
         # Include the specific pkgs for the bk_location_types.
         if self.cfg.bk_location_type == "nfs":
-            pkgs.append('nfs-utils')
+            # On opensuse the pkg name is nfs-client not nfs-utils.
+            if not rpmq("nfs-utils"):
+                pkgs.append('nfs-client')
+            else:
+                pkgs.append('nfs-utils')
         elif self.cfg.bk_location_type == "cifs":
             pkgs.append('cifs-utils')
         elif self.cfg.bk_location_type == "rsync":
@@ -221,10 +212,9 @@ class RHLiveOS(object):
         return pkgs
 
 
-def rh_customize_rootfs(cfg, tmp_dir, tmp_rootfs_dir):
+def prep_rootfs(cfg, tmp_dir, tmp_rootfs_dir):
     """
-    Copy the needed systemd files to the tmp rootfs,
-    along with setting the root password to empty.
+    Prep the rootfs with the app specific customization.
     :param cfg: App cfg file.
     :param tmp_dir: The generated tmp working directory.
     :param tmp_rootfs_dir: The tmp rootfs directory for the iso.
@@ -242,17 +232,9 @@ def rh_customize_rootfs(cfg, tmp_dir, tmp_rootfs_dir):
         # Copy the kernel module dir, so modules can be loaded.
         copytree(f"/lib/modules/{uname().release}", join(tmp_rootfs_dir, f"lib/modules/{uname().release}"),
                  ignore_dangling_symlinks=True)
-        # Copy the facts directory to the ISO for use in recovery mode.
-        copytree(join(tmp_dir, "facts"), join(tmp_rootfs_dir, "facts"))
 
-    # Remove any existing pam files, then copy basic pam files over to the iso environment.
-    with suppress(FileNotFoundError):
-        remove(join(tmp_rootfs_dir, "etc/pam.d/system-auth"))
-        remove(join(tmp_rootfs_dir, "etc/pam.d/password-auth"))
-        remove(join(tmp_rootfs_dir, "etc/pam.d/postlogin"))
-    copyfile("/usr/share/planb/system-auth", join(tmp_rootfs_dir, "etc/pam.d/system-auth"))
-    copyfile("/usr/share/planb/password-auth", join(tmp_rootfs_dir, "etc/pam.d/password-auth"))
-    copyfile("/usr/share/planb/postlogin", join(tmp_rootfs_dir, "etc/pam.d/postlogin"))
+    # Copy the facts directory to the ISO for use in recovery mode.
+    copytree(join(tmp_dir, "facts"), join(tmp_rootfs_dir, "facts"))
 
     # Copy our custom pbr service and target file.
     copy2("/usr/share/planb/pbr.target", join(tmp_rootfs_dir, "usr/lib/systemd/system"))
@@ -271,43 +253,30 @@ def rh_customize_rootfs(cfg, tmp_dir, tmp_rootfs_dir):
     # Create the custom target wants dir, and lnk the needed service and target files.
     makedirs(join(tmp_rootfs_dir, "usr/lib/systemd/system/pbr.target.wants"))
     chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/pbr.target.wants"))
+    symlink("../dbus.service", "dbus.service")
     symlink("../getty.target", "getty.target")
-    symlink("../NetworkManager.service", "NetworkManager.service")
-    symlink("../rngd.service", "rngd.service")
     symlink("../systemd-logind.service", "systemd-logind.service")
     symlink("../plymouth-quit.service", "plymouth-quit.service")
     symlink("../plymouth-quit-wait.service", "plymouth-quit-wait.service")
 
-    # Enable sshd to start by default or not, depening on cfg setting.
-    if cfg.rc_enable_sshd:
-        symlink("../sshd.service", "sshd.service")
-
-    # Enable dbus and NetworkManager.
+    # Enable dbus socket.
     chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/sockets.target.wants"))
     # In r8 the dbus-daemon pkg contains the symlink, so if it exists skip it.
     if not exists("dbus.socket"):
         symlink("../dbus.socket", "dbus.socket")
     symlink("../dm-event.socket", "dm-event.socket")
 
-    chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/"))
-    # Fedora renamed dbus to dbus-broker, and symlinks dbus and messsagebus from
-    # the /etc/systemd/system directory for some reason. So only create the symlinks
-    # if dbus-broker exist.
-    if exists("dbus-broker.service"):
-        symlink("dbus-broker.service", "dbus.service")
-        symlink("dbus.service", "messagebus.service")
-
-    symlink("NetworkManager-dispatcher.service", "dbus-org.freedesktop.nm-dispatcher.service")
-
-    makedirs(join(tmp_rootfs_dir, "usr/lib/systemd/system/network-online.target.wants"))
-    chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/network-online.target.wants"))
-    symlink("../NetworkManager-wait-online.service", "NetworkManager-wait-online.service")
+    # Enable sshd to start by default or not, depending on cfg setting.
+    if cfg.rc_enable_sshd:
+        symlink("../sshd.service", "sshd.service")
 
     # Remove the fstab so nothing tries to mount on boot.
-    remove(join(tmp_rootfs_dir, "etc/fstab"))
+    if exists(join(tmp_rootfs_dir, "etc/fstab")):
+        remove(join(tmp_rootfs_dir, "etc/fstab"))
 
     # Remove the crypttab so the luks generator doesn't start on boot.
-    remove(join(tmp_rootfs_dir, "etc/crypttab"))
+    if exists(join(tmp_rootfs_dir, "etc/crypttab")):
+        remove(join(tmp_rootfs_dir, "etc/crypttab"))
 
     # Check if the mdadm.conf file exist if it does copy it.
     if exists("/etc/mdadm.conf"):
@@ -322,6 +291,15 @@ def rh_customize_rootfs(cfg, tmp_dir, tmp_rootfs_dir):
             for f in listdir("/etc/multipath"):
                 copy2(join("/etc/multipath", f), join(tmp_rootfs_dir, "etc/multipath"))
 
+    if not exists(join(tmp_rootfs_dir, "etc/group")):
+        copy2("/etc/group", join(tmp_rootfs_dir, "etc/group"))
+
+    if not exists(join(tmp_rootfs_dir, "etc/passwd")):
+        copy2("/etc/passwd", join(tmp_rootfs_dir, "etc/passwd"))
+
+    if not exists(join(tmp_rootfs_dir, "etc/shadow")):
+        copy2("/etc/shadow", join(tmp_rootfs_dir, "etc/shadow"))
+
     # Set the root password to empty for the iso environment, unless set not to in the cfg.
     if not cfg.rc_keep_root_password:
         for line in fileinput.input(join(tmp_rootfs_dir, "etc/shadow"), inplace=True):
@@ -329,13 +307,6 @@ def rh_customize_rootfs(cfg, tmp_dir, tmp_rootfs_dir):
                 print("root:::0:99999:7:::")
             else:
                 print(line, end='')
-
-    # Replace the execstart of rngd so enough urandom is generated.
-    for line in fileinput.input(join(tmp_rootfs_dir, "usr/lib/systemd/system/rngd.service"), inplace=True):
-        if search("^ExecStart", line):
-            print("ExecStart=/sbin/rngd -f -r /dev/urandom")
-        else:
-            print(line, end='')
 
     # Create a profile script that creates an env var,
     # in order to tell if we're booted into the ISO.
@@ -351,23 +322,144 @@ def rh_customize_rootfs(cfg, tmp_dir, tmp_rootfs_dir):
     # Create mnt directories on the ISO.
     makedirs(join(tmp_rootfs_dir, "mnt/backup"))
     makedirs(join(tmp_rootfs_dir, "mnt/rootfs"))
+    
+
+def rh_customize_rootfs(tmp_rootfs_dir):
+    """
+    Copy the needed systemd files to the tmp rootfs.
+    :param tmp_rootfs_dir: The tmp rootfs directory for the iso.
+    :return:
+    """
+    # Store the tmp rootfs dir fd, so it can exit the chroot.
+    rroot = o_open("/", O_RDONLY)
+
+    # Chroot into the tmp_rootfs_dir.
+    chroot(tmp_rootfs_dir)
+
+    run_cmd(['/usr/bin/authselect', 'select', 'minimal', '--force'])
+
+    # Cd back to the rroot fd, then chroot back out.
+    chdir(rroot)
+    chroot('.')
+
+    # Enable the needed services.
+    chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/pbr.target.wants"))
+    symlink("../NetworkManager.service", "NetworkManager.service")
+    symlink("../rngd.service", "rngd.service")
+
+    # Replace the execstart of rngd so enough urandom is generated.
+    for line in fileinput.input(join(tmp_rootfs_dir, "usr/lib/systemd/system/rngd.service"), inplace=True):
+        if search("^ExecStart", line):
+            print("ExecStart=/usr/sbin/rngd -f -r /dev/urandom")
+        else:
+            print(line, end='')
+
+    chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/"))
+    # Fedora renamed dbus to dbus-broker, and symlinks dbus and messsagebus from
+    # the /etc/systemd/system directory for some reason. So only create the symlinks
+    # if dbus-broker exist.
+    if exists("dbus-broker.service"):
+        symlink("dbus-broker.service", "dbus.service")
+        symlink("dbus.service", "messagebus.service")
+
+    if exists("NetworkManager-dispatcher.service"):
+        symlink("NetworkManager-dispatcher.service", "dbus-org.freedesktop.nm-dispatcher.service")
+
+    makedirs(join(tmp_rootfs_dir, "usr/lib/systemd/system/network-online.target.wants"))
+    chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/network-online.target.wants"))
+    symlink("../NetworkManager-wait-online.service", "NetworkManager-wait-online.service")
 
 
-def set_distro_pkgs(pkgs, facts):
+def set_distro_pkgs(facts):
     """
     Append distro specific pkgs to the pkgs array.
-    :param pkgs: Array of pkg names.
     :param facts: facts object to pull the distro name from.
     :return:
     """
-    dis = facts.distro
-    if "Fedora" in dis:
-        return pkgs + fedora_pkgs
-    elif "Red Hat" in dis:
-        return pkgs + rh_pkgs
-    elif "CentOS" in dis:
-        return pkgs + cent_pkgs
-    elif "Oracle Linux" in dis:
-        return pkgs + oel_pkgs
+    # List of base packages that need to be installed, WARNING the order of this array does matter.
+    rh_base_pkgs = ['filesystem', 'glibc', 'glibc-common', 'setup', 'systemd', 'systemd-udev', 'bash',
+                    'bash-completion', 'initscripts', 'coreutils', 'coreutils-common', 'pam', 'authselect',
+                    'authselect-libs', 'util-linux', 'dbus', 'dbus-broker', 'dbus-common', 'dbus-daemon', 'polkit',
+                    'python3-libs', 'alternatives', 'NetworkManager', 'binutils', 'crypto-policies',
+                    'device-mapper-multipath', 'dosfstools', 'e2fsprogs', 'gawk', 'grep', 'gzip', 'iproute', 'iputils',
+                    'kbd', 'kbd-misc', 'kmod', 'kpartx', 'less', 'libpwquality', 'lsof', 'mdadm', 'ncurses',
+                    'ncurses-base', 'openssh', 'openssh-clients', 'openssh-server', 'parted', 'passwd', 'pbr', 
+                    'plymouth', 'procps-ng', 'python3-distro', 'python3-libselinux', 'python3-pyparted',
+                    'python3-pyroute2', 'python3-pyudev', 'python3-rpm', 'python3-six', 'python3-tqdm', 'rng-tools',
+                    'rootfiles', 'rpm', 'sed', 'vim-enhanced', 'vim-minimal', 'xfsprogs']
+
+    suse_base_pkgs = ['filesystem', 'glibc', 'glibc-common', 'glibc-locale-base', 'systemd', 'systemd-sysvinit', 'udev',
+                      'bash', 'bash-completion', 'aaa_base', 'aaa_base-extras', 'coreutils', 'pam', 'pam-config',
+                      'util-linux', 'util-linux-systemd', 'dbus-1', 'polkit', 'python3', 'python3-base',
+                      'update-alternatives', 'binutils', 'dosfstools', 'e2fsprogs', 'gawk', 'grep', 'gzip', 'iproute2',
+                      'iputils', 'kbd', 'kmod', 'kmod-compat', 'kpartx', 'less', 'libpwquality1', 'lsof', 'mdadm',
+                      'ncurses-utils', 'openssh', 'openssh-clients', 'openssh-server', 'openSUSE-release', 'parted',
+                      'pbr', 'plymouth', 'procps', 'python3-distro', 'python3-parted', 'python3-pyroute2',
+                      'python3-pyudev', 'python3-rpm', 'python3-selinux', 'python3-six', 'python3-tqdm', 'rng-tools',
+                      'rootfiles', 'rpm', 'sed', 'shadow', 'sysconfig', 'terminfo-base', 'vim', 'vim-data-common',
+                      'wicked', 'wicked-service', 'xfsprogs']
+
+    fedora_pkgs = ['python3', 'fedora-release', 'fedora-release-common', 'fedora-release-server',
+                   'fedora-release-identity-server']
+    rhel_pkgs = ['platform-python', 'python36', 'redhat-release']
+    cent_pkgs = ['platform-python', 'python36', 'centos-release']
+    oel_pkgs = ['platform-python', 'python36', 'oraclelinux-release']
+
+    if "Fedora" in facts.distro:
+        return rh_base_pkgs + fedora_pkgs
+    elif "Red Hat" in facts.distro:
+        return rh_base_pkgs + rhel_pkgs
+    elif "CentOS" in facts.distro:
+        return rh_base_pkgs + cent_pkgs
+    elif "Oracle Linux" in facts.distro:
+        return rh_base_pkgs + oel_pkgs
+    elif "openSUSE" in facts.distro:
+        return suse_base_pkgs
+
+
+def suse_customize_rootfs(tmp_rootfs_dir):
+    """
+    Copy the needed systemd files to the tmp rootfs.
+    :param tmp_rootfs_dir: The tmp rootfs directory for the iso.
+    :return:
+    """
+    # Store the tmp rootfs dir fd, so it can exit the chroot.
+    rroot = o_open("/", O_RDONLY)
+
+    # Chroot into the tmp_rootfs_dir.
+    chroot(tmp_rootfs_dir)
+
+    run_cmd(['/usr/sbin/pam-config', '-a', '--unix-nullok'])
+
+    # Cd back to the rroot fd, then chroot back out.
+    chdir(rroot)
+    chroot('.')
+
+    # Enable the needed services.
+    chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/pbr.target.wants"))
+    symlink("../rng-tools.service", "rng-tools.service")
+    symlink("../wicked.service", "wicked.service")
+
+    # Replace the execstart of rngd so enough urandom is generated.
+    for line in fileinput.input(join(tmp_rootfs_dir, "usr/lib/systemd/system/rng-tools.service"), inplace=True):
+        if search("^ExecStart", line):
+            print("ExecStart=/usr/sbin/rngd -f -r /dev/urandom")
+        else:
+            print(line, end='')
+
+    makedirs(join(tmp_rootfs_dir, "usr/lib/systemd/system/network-online.target.wants"))
+    chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/network-online.target.wants"))
+    symlink("../wicked.service", "wicked.service")
+
+    chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/"))
+    symlink("wicked.service", "network.service")
+    symlink("wickedd-auto4.service", "dbus-org.opensuse.Network.AUTO4.service")
+    symlink("wickedd-dhcp4.service", "dbus-org.opensuse.Network.DHCP4.service")
+    symlink("wickedd-dhcp6.service", "dbus-org.opensuse.Network.DHCP6.service")
+    symlink("wickedd-nanny.service", "dbus-org.opensuse.Network.Nanny.service")
+
+    for cfg in glob("/etc/sysconfig/network/ifcfg-*"):
+        if not exists(join(tmp_rootfs_dir, cfg[1:])):
+            copy2(cfg, join(tmp_rootfs_dir, cfg[1:]))
 
 # vim:set ts=4 sw=4 et:

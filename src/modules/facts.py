@@ -12,6 +12,7 @@
 # See the GNU General Public License for more details go to
 # <http://www.gnu.org/licenses/>.
 
+import distro
 import json
 from os import environ, uname
 from os.path import exists
@@ -23,7 +24,7 @@ from .luks import get_luks_devs
 from .lvm import get_lvm_report
 from .parted import get_part_layout
 from .md import get_md_info
-from .utils import get_modules, rpmq
+from .utils import get_modules, rpmq, run_cmd
 
 
 class Facts(object):
@@ -38,18 +39,17 @@ class Facts(object):
         # Some of these need to be called in order.
         self.recovery_mode = environ.get('RECOVERY_MODE', False)
         self.hostname = uname().nodename
+        self.distro = distro.name()
+        self.distro_pretty = distro.name(pretty=True)
+        self.uname = uname().release
         self.udev_ctx = Context()
         self.mnts = get_mnts(self.udev_ctx)
         self.disks = get_part_layout(self.udev_ctx)
         self.lvm_installed = rpmq("lvm2")
 
         if not self.recovery_mode:
-            import distro
-            self.distro = distro.name()
-            self.distro_pretty = distro.name(pretty=True)
             self.modules = get_modules()
             self.uefi = exists("/sys/firmware/efi")
-            self.uname = uname().release
             self.arch = machine()
 
             from selinux import is_selinux_enabled, security_getenforce
@@ -60,6 +60,11 @@ class Facts(object):
                 self.selinux_enabled = 0
                 self.selinux_enforcing = 0
 
+            if rpmq("mokutil") and "enabled" in run_cmd(['mokutil', '--sb-state'], ret=True).stdout.decode():
+                self.secure_boot = 1
+            else:
+                self.secure_boot = 0
+
         # Confirm the lvm2 pkg is installed before querying lvm.
         if self.lvm_installed:
             self.lvm = get_lvm_report(self.udev_ctx)
@@ -68,13 +73,20 @@ class Facts(object):
         self.luks = get_luks_devs(self.udev_ctx)
 
     def print_facts(self):
-        print("General Facts")
-        print(f"  Hostname: {self.hostname}")
-        print(f"  Distro: {self.distro}")
-        print(f"  UEFI: {self.uefi}")
-        print(f"  Uname: {self.uname}")
-        print(f"  Arch: {self.arch}")
-        print(f"  Selinux Enabled: {self.selinux_enabled}\n")
+        if not self.recovery_mode:
+            print("General Facts")
+            print(f"  Hostname: {self.hostname}")
+            print(f"  Distro: {self.distro}")
+            print(f"  UEFI: {self.uefi}")
+            print(f"  SecureBoot: {self.secure_boot}")
+            print(f"  Uname: {self.uname}")
+            print(f"  Arch: {self.arch}")
+            print(f"  Selinux Enabled: {self.selinux_enabled}\n")
+        else:
+            print("General Facts")
+            print(f"  Hostname: {self.hostname}")
+            print(f"  Distro: {self.distro}")
+            print(f"  Uname: {self.uname}")
 
         if self.lvm:
             print("LVM Facts")

@@ -3,29 +3,45 @@ Version:        0.4
 Release:        1%{?dist}
 Summary:        Plan B Recovery is a backup and recovery utility.
 
-License:        GPLv3
+License:        GPL-3.0
 URL:            https://github.com/ryan-blakley/pbr
 Source0:        %{name}-%{version}.tar.gz
 
 BuildRequires:  python3-devel
 BuildRequires:  python3-setuptools
 
-Requires: dracut-live
-Requires: genisoimage
+Requires: dracut
 Requires: python3
 Requires: python3-distro
-Requires: python3-jinja2
-Requires: python3-libselinux
 Requires: python3-magic
-Requires: python3-pyparted
 Requires: python3-pyudev
 Requires: python3-rpm
 Requires: python3-six
 Requires: python3-tqdm
+
+%if 0%{?is_opensuse}
+Requires: mkisofs
+Requires: python3-Jinja2
+Requires: python3-selinux
+Requires: python3-parted
+Requires: squashfs
+# The syslinux pkg is only available for x86_64.
+%ifarch x86_64
+Requires: syslinux
+%endif
+%else
+Requires: authselect-libs >= 1.2
+Requires: dracut-live
+Requires: genisoimage
+Requires: python3-jinja2
+Requires: python3-libselinux
+Requires: python3-pyparted
+Requires: squashfs-tools
 # The syslinux pkg is only available for x86_64.
 %ifarch x86_64
 Requires: syslinux
 Requires: syslinux-extlinux
+%endif
 %endif
 
 %description
@@ -66,9 +82,9 @@ rm -rf $RPM_BUILD_ROOT
 - Update the README. (rblakley@redhat.com)
 - Remove version number from isolinux.cfg. (rblakley@redhat.com)
 - Fix issue when multiple swap devices, also ignore zram devices.
-  kley@redhat.com)
+  (rblakley@redhat.com)
 - Fix a can't boot when on F33, and add build options.
-  kley@redhat.com)
+  (rblakley@redhat.com)
 - Add in inital LUKS support. (rblakley@redhat.com)
 - Move static functions out of the Facts class. (rblakley@redhat.com)
 - Removed the un-needed passing of sys.argv to main. (rblakley@redhat.com)

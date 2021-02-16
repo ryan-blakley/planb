@@ -171,3 +171,19 @@ def get_mnts(udev_ctx):
         loop += 1
 
     return mnts
+
+
+def grab_mnt_info(facts, mp):
+    """
+    Return info dict for each mount point.
+    :param facts: Facts object to access the udev ctx.
+    :param mp: Mount point to search for and return info for.
+    :return:
+    """
+    for mnt, info in get_mnts(facts.udev_ctx).items():
+        if mnt == f"{mp}":
+            return info
+        else:
+            return False
+
+# vim:set ts=4 sw=4 et:
