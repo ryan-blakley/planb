@@ -298,12 +298,13 @@ class Recover(object):
                     # Just grab the first disk in the list of devs, they should be sorted to have the top device.
                     # Probably need to print something to warn that the devices might enumerate different on reboot.
                     if info['type'] == "part-raid":
-                        p = dev_info.find_parent('block').device_node.split('/')[-1]
+                        return dev_info.find_parent('block').device_node
                     elif info['md_devname']:
                         p = info['md_devname'].split('/')[-1]
                         
                     # Since this is in an else statement, make sure p isn't None.
                     if p:
+                        self.log.debug(f"recover: grab_bootloader_disk: p: {p}")
                         md_info_dev = get_md_info(self.facts.udev_ctx)[p]['devs'][0]
                         d_info = dev_from_name(self.facts.udev_ctx, md_info_dev)
                         if d_info['DEVTYPE'] == "partition":
