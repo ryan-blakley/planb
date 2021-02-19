@@ -386,7 +386,8 @@ def set_distro_pkgs(facts):
                     'ncurses-base', 'openssh', 'openssh-clients', 'openssh-server', 'parted', 'passwd', 'pbr', 
                     'plymouth', 'procps-ng', 'python3-distro', 'python3-libselinux', 'python3-pyparted',
                     'python3-pyroute2', 'python3-pyudev', 'python3-rpm', 'python3-six', 'python3-tqdm', 'rng-tools',
-                    'rootfiles', 'rpm', 'sed', 'vim-enhanced', 'vim-minimal', 'xfsprogs']
+                    'rootfiles', 'rpm', 'sed', 'vim-common', 'vim-enhanced', 'vim-filesystem', 'vim-minimal',
+                    'xfsprogs']
 
     suse_base_pkgs = ['filesystem', 'glibc', 'glibc-common', 'glibc-locale-base', 'systemd', 'systemd-sysvinit', 'udev',
                       'bash', 'bash-completion', 'aaa_base', 'aaa_base-extras', 'coreutils', 'pam', 'pam-config',
