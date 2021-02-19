@@ -100,10 +100,10 @@ class LiveOS(object):
         :return:
         """
         if self.cfg.boot_type == "iso":
-            run_cmd(['/usr/bin/dracut', '-f', '-N', '-a', 'dmsquash-live', '-a', 'rescue', '--no-early-microcode',
+            run_cmd(['/usr/bin/dracut', '-v', '-f', '-N', '-a', 'dmsquash-live', '-a', 'rescue', '--no-early-microcode',
                      '--tmpdir', self.tmp_dir, join(self.tmp_isolinux_dir, "initramfs.img")])
         elif self.cfg.boot_type == "usb":
-            run_cmd(['/usr/bin/dracut', '-f', '-N', '-a', 'dmsquash-live', '-a', 'rescue', '--no-early-microcode',
+            run_cmd(['/usr/bin/dracut', '-v', '-f', '-N', '-a', 'dmsquash-live', '-a', 'rescue', '--no-early-microcode',
                      '--tmpdir', self.tmp_dir, join(self.tmp_syslinux_dir, "initramfs.img")])
 
     def create_squashfs(self):
@@ -146,7 +146,7 @@ class LiveOS(object):
 
                     # If the file type is ELF, then run ldd against it.
                     if search("ELF", mg):
-                        ret = run_cmd(['/usr/bin/ldd', fname], ret=True)
+                        ret = run_cmd(['/usr/bin/ldd', '-v', fname], ret=True)
                         if ret.returncode > 1:
                             self.log.error(f" This command {ret.args} returned in error: {ret.stderr.decode()}")
                             raise RunCMDError()

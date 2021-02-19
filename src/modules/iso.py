@@ -66,26 +66,28 @@ class ISO(object):
 
         if self.facts.uefi and self.facts.arch == "x86_64":
             if "SUSE" in self.facts.distro:
-                cmd_mkisofs = [cmd, '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-b', 'isolinux/isolinux.bin',
-                               '-J', '-R', '-l', '-c', 'isolinux/boot.cat', '-no-emul-boot', '-boot-load-size', '4',
-                               '-boot-info-table', '-eltorito-alt-boot', '-eltorito-platform', 'efi', '-eltorito-boot',
-                               'images/efiboot.img', '-no-emul-boot', '-graft-points', '-V', self.label_name, '.']
+                cmd_mkisofs = [cmd, '-vv', '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-b',
+                               'isolinux/isolinux.bin', '-J', '-R', '-l', '-c', 'isolinux/boot.cat', '-no-emul-boot',
+                               '-boot-load-size', '4', '-boot-info-table', '-eltorito-alt-boot', '-eltorito-platform',
+                               'efi', '-eltorito-boot', 'images/efiboot.img', '-no-emul-boot', '-graft-points', '-V',
+                               self.label_name, '.']
             else:
-                cmd_mkisofs = [cmd, '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-b', 'isolinux/isolinux.bin',
-                               '-J', '-R', '-l', '-c', 'isolinux/boot.cat', '-no-emul-boot', '-boot-load-size', '4',
-                               '-boot-info-table', '-eltorito-alt-boot', '-e', 'images/efiboot.img', '-no-emul-boot',
-                               '-graft-points', '-V', self.label_name, '.']
+                cmd_mkisofs = [cmd, '-vv', '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-b',
+                               'isolinux/isolinux.bin', '-J', '-R', '-l', '-c', 'isolinux/boot.cat', '-no-emul-boot',
+                               '-boot-load-size', '4', '-boot-info-table', '-eltorito-alt-boot', '-e',
+                               'images/efiboot.img', '-no-emul-boot', '-graft-points', '-V', self.label_name, '.']
 
-            cmd_isohybrid = ['/usr/bin/isohybrid', '-u', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso")]
+            cmd_isohybrid = ['/usr/bin/isohybrid', '-v', '-u', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso")]
         elif self.facts.arch == "aarch64":
-            cmd_mkisofs = [cmd, '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-J', '-r', '-eltorito-alt-boot',
-                           '-e', 'images/efiboot.img', '-no-emul-boot', '-V', self.label_name, '.']
+            cmd_mkisofs = [cmd, '-vv', '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-J', '-r',
+                           '-eltorito-alt-boot', '-e', 'images/efiboot.img', '-no-emul-boot', '-V', self.label_name,
+                           '.']
 
             # isohybrid isn't available on aarch64, so set to none.
             cmd_isohybrid = None
         elif self.facts.arch == "ppc64le":
-            cmd_mkisofs = [cmd, '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-U', '-chrp-boot', '-J', '-R',
-                           '-iso-level', '3', '-graft-points', '-V', self.label_name, '.']
+            cmd_mkisofs = [cmd, '-vv', '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-U', '-chrp-boot', '-J',
+                           '-R', '-iso-level', '3', '-graft-points', '-V', self.label_name, '.']
 
             # isohybrid isn't available on ppc64le, so set to none.
             cmd_isohybrid = None
@@ -99,24 +101,22 @@ class ISO(object):
 
             mk_cdboot("isolinux/vmlinuz", "isolinux/initramfs.img", "images/cdboot.prm", "images/cdboot.img")
 
-            cmd_mkisofs = [cmd, '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-b', 'images/cdboot.img', '-J',
-                           '-R', '-l', '-c', 'isolinux/boot.cat', '-no-emul-boot', '-boot-load-size', '4', '-V',
+            cmd_mkisofs = [cmd, '-vv', '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-b', 'images/cdboot.img',
+                           '-J', '-R', '-l', '-c', 'isolinux/boot.cat', '-no-emul-boot', '-boot-load-size', '4', '-V',
                            self.label_name, '-graft-points', '.']
 
             # isohybrid isn't available on s390x, so set to none.
             cmd_isohybrid = None
         else:
-            cmd_mkisofs = [cmd, '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-b', 'isolinux/isolinux.bin',
-                           '-J', '-R', '-l', '-c', 'isolinux/boot.cat', '-no-emul-boot', '-boot-load-size', '4',
-                           '-boot-info-table', '-V', self.label_name, '-graft-points', '.']
+            cmd_mkisofs = [cmd, '-vv', '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-b',
+                           'isolinux/isolinux.bin', '-J', '-R', '-l', '-c', 'isolinux/boot.cat', '-no-emul-boot',
+                           '-boot-load-size', '4', '-boot-info-table', '-V', self.label_name, '-graft-points', '.']
 
-            cmd_isohybrid = ['/usr/bin/isohybrid', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso")]
+            cmd_isohybrid = ['/usr/bin/isohybrid', '-v', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso")]
 
-        self.log.debug(f"iso: make_iso: cmd_mkisofs: {cmd_mkisofs}")
         run_cmd(cmd_mkisofs)
         
         if cmd_isohybrid:
-            self.log.debug(f"iso: make_iso: cmd_isohybrid: {cmd_isohybrid}")
             run_cmd(cmd_isohybrid)
 
         # Copy the iso locally under /var/lib/pbr.
@@ -302,7 +302,7 @@ class ISO(object):
                 f.writelines("</chrp-boot>\n")
 
             # Generate a custom grub image file for booting iso's.
-            run_cmd(['/usr/bin/grub2-mkimage', '-O', 'powerpc-ieee1275', '-p', '()/boot/grub', '-o',
+            run_cmd(['/usr/bin/grub2-mkimage', '--verbose', '-O', 'powerpc-ieee1275', '-p', '()/boot/grub', '-o',
                      join(self.tmp_boot_dir, "core.elf"), 'linux', 'normal', 'iso9660'])
 
             # Generate a grub.cfg.

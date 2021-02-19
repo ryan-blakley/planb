@@ -68,7 +68,7 @@ def md_check(udev_ctx, bk_md_info):
     logger = logging.getLogger('pbr')
 
     # Run assemble in case disk had to be recovered earlier.
-    ret = run_cmd(['/usr/sbin/mdadm', '--assemble', '--scan'], ret=True)
+    ret = run_cmd(['/usr/sbin/mdadm', '-v', '--assemble', '--scan'], ret=True)
     if ret.returncode and not ret.returncode == 2:
         logger.warning(f" The command {ret.args} returned in error, stderr: {ret.stderr.decode()}")
 
@@ -100,7 +100,7 @@ def md_check(udev_ctx, bk_md_info):
             # Stop any mdraids before trying to recreate.
             globs = glob("/dev/md*")
             if globs:
-                cmd = ['/usr/sbin/mdadm', '--stop']
+                cmd = ['/usr/sbin/mdadm', '-v', '--stop']
                 for d in globs:
                     if is_block(d):
                         cmd.append(d)
@@ -129,11 +129,11 @@ def md_create(name, level, meta, num, uuid, devs):
     :return:
     """
     # Set the create command, and zero the superblocks.
-    cmd = ['mdadm', '--create', '-R', f"/dev/md/{name}", f"--metadata={meta}", f"--level={level}",
+    cmd = ['mdadm', '-v', '--create', '-R', f"/dev/md/{name}", f"--metadata={meta}", f"--level={level}",
            f"--raid-devices={num}", f"--uuid={uuid}", '--force']
     for d in devs:
         if exists(d):
-            run_cmd(['/usr/sbin/mdadm', '--zero-superblock', '--force', f"/dev/{d}"])
+            run_cmd(['/usr/sbin/mdadm', '-v', '--zero-superblock', '--force', f"/dev/{d}"])
 
         cmd.append(f"/dev/{d}")
 
@@ -151,7 +151,7 @@ def md_re_add(name, dev):
     logger = logging.getLogger('pbr')
 
     logger.info(f"  Re-adding /dev/{dev} to the /dev/md/{name} array")
-    ret = run_cmd(['/usr/sbin/mdadm', '--manage', f"/dev/md/{name}", '--re-add', f"/dev/{dev}"], ret=True)
+    ret = run_cmd(['/usr/sbin/mdadm', '-v', '--manage', f"/dev/md/{name}", '--re-add', f"/dev/{dev}"], ret=True)
     if ret.returncode:
         logger.debug(f" {ret.args} returned in error attempting to just add instead: {ret.stderr.decode()}")
-        run_cmd(['/usr/sbin/mdadm', '--manage', f"/dev/md/{name}", '--add', f"/dev/{dev}"])
+        run_cmd(['/usr/sbin/mdadm', '-v', '--manage', f"/dev/md/{name}", '--add', f"/dev/{dev}"])

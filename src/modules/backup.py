@@ -151,7 +151,9 @@ class Backup(object):
 
             times.sort(reverse=True)
             if len(times) >= self.cfg.num_of_old_backups:
-                remove(join(self.tmp_bk_dir, f"{self.cfg.bk_archive_prefix}-{times.pop()}.tar.gz"))
+                f = join(self.tmp_bk_dir, f"{self.cfg.bk_archive_prefix}-{times.pop()}.tar.gz")
+                self.log.debug(f"backup: cleanup_bks: remove_old_bak: {f}")
+                remove(f)
 
             rename(join(self.tmp_bk_dir, f"{self.cfg.bk_archive_prefix}.tar.gz"),
                    join(self.tmp_bk_dir, f"{self.cfg.bk_archive_prefix}-{strftime('%Y%m%d-%H%M%S')}.tar.gz"))
@@ -330,7 +332,7 @@ class Backup(object):
         # If rootfs is on lvm, then dump the lvm metadata to /facts/vgcfg/."
         if self.facts.lvm_installed:
             makedirs(join(self.tmp_facts_dir, "vgcfg"))
-            run_cmd(['/usr/sbin/vgcfgbackup', '-f', f"{join(self.tmp_facts_dir, 'vgcfg')}/%s"])
+            run_cmd(['/usr/sbin/vgcfgbackup', '-v', '-f', f"{join(self.tmp_facts_dir, 'vgcfg')}/%s"])
 
         if not self.opts.check_facts:
             # Copy the facts to /var/lib/pbr/facts/ used for checking for layout changes.
@@ -344,7 +346,7 @@ class Backup(object):
         if self.facts.luks:
             makedirs(join(self.tmp_facts_dir, "luks"))
             for dev in self.facts.luks:
-                run_cmd(['/usr/sbin/cryptsetup', 'luksHeaderBackup', dev, '--header-backup-file',
+                run_cmd(['/usr/sbin/cryptsetup', '-v', 'luksHeaderBackup', dev, '--header-backup-file',
                          f"{join(join(self.tmp_facts_dir, 'luks'), dev.split('/')[-1])}.backup"])
 
     def get_bk_vgs(self):

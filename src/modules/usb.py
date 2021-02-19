@@ -88,7 +88,7 @@ def fmt_usb(device):
             # Go ahead and install grub2 on the usb device, I don't think grub needs
             # to be installed every time a backup is created, so it makes sense to
             # just do it here once.
-            ret = run_cmd(['/usr/sbin/grub2-install', '--target=powerpc-ieee1275', f"--boot-directory={tmp_dir}",
+            ret = run_cmd(['/usr/sbin/grub2-install', '-v', '--target=powerpc-ieee1275', f"--boot-directory={tmp_dir}",
                            f"{device}1"], ret=True)
             if ret.returncode:
                 logger.error(f" The command {ret.args} returned in error: {ret.stderr.decode()}")
@@ -123,7 +123,7 @@ def fmt_usb(device):
             # Go ahead and install grub2 on the usb device, I don't think grub needs
             # to be installed every time a backup is created, so it makes sense to
             # just do it here once.
-            ret = run_cmd(['/usr/sbin/grub2-install', f"--boot-directory={tmp_dir}", f"{device}"], ret=True)
+            ret = run_cmd(['/usr/sbin/grub2-install', '-v', f"--boot-directory={tmp_dir}", f"{device}"], ret=True)
             if ret.returncode:
                 logger.error(f" The command {ret.args} returned in error: {ret.stderr.decode()}")
 

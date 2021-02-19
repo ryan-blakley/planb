@@ -242,8 +242,6 @@ def rsync(cfg, opts, facts, bk_excludes=None):
         cmd.append('/')
         cmd.append(f"{cfg.bk_mount}/{facts.hostname.split('.')[0]}/")
 
-    logger.debug(f"utils: rsync: cmd:{cmd}")
-
     ret = run_cmd(cmd, ret=True)
     if ret.returncode:
         logger.error(f" The command {ret.args} returned in error: {ret.stderr.decode()}")
@@ -262,6 +260,7 @@ def run_cmd(cmd, ret=False, timeout=None, capture_output=True):
     :return: The output/return code.
     """
     logger = logging.getLogger('pbr')
+    logger.debug(f"utils: run_cmd: cmd: {cmd}")
 
     try:
         if capture_output:
@@ -269,6 +268,7 @@ def run_cmd(cmd, ret=False, timeout=None, capture_output=True):
                 return run(cmd, timeout=timeout, stdout=PIPE, stderr=PIPE)
             else:
                 _ret = run(cmd, timeout=timeout, stdout=PIPE, stderr=PIPE)
+                logger.debug(f"utils: run_cmd: stdout: {_ret.stdout.decode()}")
         else:
             if ret:
                 return run(cmd, timeout=timeout, stderr=PIPE)
@@ -307,9 +307,9 @@ def mount(src, dest, fstype=None, opts=None):
         opts = "defaults"
 
     if fstype:
-        cmd = ['/usr/bin/mount', '-o', opts, '-t', fstype, src, dest]
+        cmd = ['/usr/bin/mount', '-v', '-o', opts, '-t', fstype, src, dest]
     else:
-        cmd = ['/usr/bin/mount', '-o', opts, src, dest]
+        cmd = ['/usr/bin/mount', '-v', '-o', opts, src, dest]
 
     return run_cmd(cmd, ret=True, timeout=10)
 

@@ -584,17 +584,17 @@ class Recover(object):
                 else:
                     shim = "shimx64.efi"
 
-            run_cmd(['/usr/sbin/efibootmgr', '-c', '-d', bootloader_disk, '-p', '1', '-l',
+            run_cmd(['/usr/sbin/efibootmgr', '-v', '-c', '-d', bootloader_disk, '-p', '1', '-l',
                      f"\\EFI\\{distro}\\{shim}", '-L', self.bk_misc['distro_pretty']])
 
         else:
             # Reinstall the bootloader on the recovered disk.
             if "ppc64le" in self.bk_misc['arch']:
-                run_cmd(['/usr/sbin/grub2-install', f"{bootloader_disk}1"])
+                run_cmd(['/usr/sbin/grub2-install', '-v', f"{bootloader_disk}1"])
             elif "s390x" in self.bk_misc['arch']:
-                run_cmd(['/usr/sbin/zipl'])
+                run_cmd(['/usr/sbin/zipl', '-V'])
             else:
-                run_cmd(['/usr/sbin/grub2-install', bootloader_disk])
+                run_cmd(['/usr/sbin/grub2-install', '-v', bootloader_disk])
 
         # Cd back to the rroot fd, then chroot back out.
         chdir(rroot)
