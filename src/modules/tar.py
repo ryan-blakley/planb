@@ -17,7 +17,7 @@ import tarfile
 from contextlib import suppress
 from os import chdir, listdir
 from os.path import join, lexists
-from tqdm import tqdm
+from shutil import get_terminal_size
 
 
 def create_tar(cfg, bk_excludes, tmp_dir):
@@ -47,22 +47,25 @@ def create_tar(cfg, bk_excludes, tmp_dir):
         dirs = listdir("/")
         dirs.sort()
 
-        # Create a tqdm progress bar, so we can monitor the tar process.
-        with tqdm(total=len(dirs), leave=False) as pbar:
-            for d in dirs:
-                # Set the bar's description to the current directory.
-                pbar.set_description(f"Adding {d} to archive.")
+        i = 1
+        width = get_terminal_size().columns - 8
+        total_percentage = len(dirs) / width
 
-                exclude = [x for x in bk_excludes if x[1:] == d]
+        for d in dirs:
+            exclude = [x for x in bk_excludes if x[1:] == d]
 
-                if exclude:
-                    logger.debug(f"tar: create_tar: excluding {d} from backup.")
-                    tar.add(d, recursive=False)
-                else:
-                    logger.debug(f"tar: create_tar: including {d} in the backup.")
-                    tar.add(d, filter=tar_filter)
+            if exclude:
+                logger.debug(f"tar: create_tar: excluding {d} from backup.")
+                tar.add(d, recursive=False)
+            else:
+                logger.debug(f"tar: create_tar: including {d} in the backup.")
+                tar.add(d, filter=tar_filter)
 
-                pbar.update()
+            print("[{:{}}] {:}%".format("=" * int(i / total_percentage), width,
+                                        int((100 / width) * (i / total_percentage))), end='\r')
+            i += 1
+
+        print("")
 
 
 def restore_tar(rootfs_dir, archive):
@@ -72,22 +75,29 @@ def restore_tar(rootfs_dir, archive):
     # Cd to the mounted disk, where the data will be restored to.
     chdir(rootfs_dir)
 
+    i = 1
+    width = get_terminal_size().columns - 8
+
     # Extract the backup archive.
     with tarfile.open(archive) as tar:
-        # Create progress bar and set the description.
-        with tqdm(total=len(tar.getmembers()), leave=False, desc=archive) as pbar:
-            # Loop through the files and extract.
-            for member_info in tar.getmembers():
-                # If the member is a symlink, check to make sure the link doesn't exist,
-                # if the symlink exist, it will causes a massive performance hit on
-                # extraction. So skip it if it exist, and move on.
-                if member_info.issym() and lexists(member_info.name):
-                    continue
-                else:
-                    with suppress(FileExistsError):
-                        tar.extract(member_info)
+        total_percentage = len(tar.getmembers()) / width
 
-                # Update the progress.
-                pbar.update()
+        # Loop through the files and extract.
+        for member_info in tar.getmembers():
+            print("[{:{}}] {:}%".format("=" * int(i / total_percentage), width,
+                                        int((100 / width) * (i / total_percentage))), end='\r')
+
+            # If the member is a symlink, check to make sure the link doesn't exist,
+            # if the symlink exist, it will causes a massive performance hit on
+            # extraction. So skip it if it exist, and move on.
+            if member_info.issym() and lexists(member_info.name):
+                i += 1
+                continue
+            else:
+                with suppress(FileExistsError):
+                    tar.extract(member_info)
+                i += 1
+
+        print("")
 
 # vim:set ts=4 sw=4 et:

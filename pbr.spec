@@ -17,7 +17,6 @@ Requires: python3-magic
 Requires: python3-pyudev
 Requires: python3-rpm
 Requires: python3-six
-Requires: python3-tqdm
 
 %if 0%{?is_opensuse}
 Requires: mkisofs
