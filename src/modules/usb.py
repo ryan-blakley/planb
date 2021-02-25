@@ -161,7 +161,7 @@ class USB(object):
 
         udev_trigger()
 
-    def prep_uefi(self, distro, shim, memtest):
+    def prep_uefi(self, distro, efi_file, memtest):
         """
         Prep the usb to work for uefi.
         :return:
@@ -218,7 +218,7 @@ class USB(object):
                     arch=self.facts.arch,
                     memtest=memtest,
                     distro=distro,
-                    shim=shim,
+                    efi_file=efi_file,
                     secure_boot=self.facts.secure_boot,
                     iso=0,
                     efi=1
@@ -243,38 +243,38 @@ class USB(object):
         # Make the needed temp directory.
         makedirs(self.tmp_syslinux_dir, exist_ok=True)
 
-        # Set the local distro and shim variable for the grub.cfg file.
+        # Set the local distro and efi_file variable for the grub.cfg file.
         if "Fedora" in self.facts.distro:
             distro = "fedora"
 
             if "aarch64" in self.facts.arch:
-                shim = "shimaa64.efi"
+                efi_file = "shimaa64.efi"
             else:
-                shim = "shimx64.efi"
+                efi_file = "shimx64.efi"
         elif "Red Hat" in self.facts.distro or "Oracle" in self.facts.distro:
             distro = "redhat"
 
             if "aarch64" in self.facts.arch:
-                shim = "shimaa64.efi"
+                efi_file = "shimaa64.efi"
             else:
-                shim = "shimx64.efi"
+                efi_file = "shimx64.efi"
         elif "CentOS" in self.facts.distro:
             distro = "centos"
 
             if "aarch64" in self.facts.arch:
-                shim = "shimaa64.efi"
+                efi_file = "shimaa64.efi"
             else:
-                shim = "shimx64.efi"
+                efi_file = "shimx64.efi"
         elif "SUSE" in self.facts.distro:
             distro = "opensuse"
-            shim = "shim.efi"
+            efi_file = "shim.efi"
         else:
             distro = "redhat"
 
             if "aarch64" in self.facts.arch:
-                shim = "shimaa64.efi"
+                efi_file = "shimaa64.efi"
             else:
-                shim = "shimx64.efi"
+                efi_file = "shimx64.efi"
 
         # Grab the uuid of the fs that /boot is located on.
         if grab_mnt_info(self.facts, "/boot"):
@@ -328,10 +328,13 @@ class USB(object):
                 ))
 
         # Copy the current running kernel's vmlinuz file to the tmp dir.
-        copy2(f"/boot/vmlinuz-{uname().release}", join(self.tmp_syslinux_dir, "vmlinuz"))
+        if glob(f"/boot/Image-{uname().release}"):
+            copy2(glob(f"/boot/Image-{uname().release}*")[0], join(self.tmp_syslinux_dir, "vmlinuz"))
+        elif glob(f"/boot/vmlinu*-{uname().release}*"):
+            copy2(glob(f"/boot/vmlinu*-{uname().release}*")[0], join(self.tmp_syslinux_dir, "vmlinuz"))
 
         if self.facts.uefi:
-            self.prep_uefi(distro, shim, memtest)
+            self.prep_uefi(distro, efi_file, memtest)
 
     def mkusb(self):
         """

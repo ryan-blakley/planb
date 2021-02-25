@@ -64,6 +64,9 @@ class ISO(object):
         else:
             cmd = "/usr/bin/mkisofs"
 
+        # isohybrid is only available on x86_64, so set to none to begin with.
+        cmd_isohybrid = None
+
         if self.facts.uefi and self.facts.arch == "x86_64":
             if "SUSE" in self.facts.distro:
                 cmd_mkisofs = [cmd, '-vv', '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-b',
@@ -79,18 +82,17 @@ class ISO(object):
 
             cmd_isohybrid = ['/usr/bin/isohybrid', '-v', '-u', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso")]
         elif self.facts.arch == "aarch64":
-            cmd_mkisofs = [cmd, '-vv', '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-J', '-r',
-                           '-eltorito-alt-boot', '-e', 'images/efiboot.img', '-no-emul-boot', '-V', self.label_name,
-                           '.']
-
-            # isohybrid isn't available on aarch64, so set to none.
-            cmd_isohybrid = None
+            if "SUSE" in self.facts.distro:
+                cmd_mkisofs = [cmd, '-vv', '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-J', '-r', '-l',
+                               '-eltorito-alt-boot', '-eltorito-platform', 'efi', '-eltorito-boot',
+                               'images/efiboot.img', '-no-emul-boot', '-graft-points', '-V', self.label_name, '.']
+            else:
+                cmd_mkisofs = [cmd, '-vv', '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-J', '-r', '-l',
+                               '-eltorito-alt-boot', '-e', 'images/efiboot.img', '-no-emul-boot', '-graft-points',
+                               '-V', self.label_name, '.']
         elif self.facts.arch == "ppc64le":
             cmd_mkisofs = [cmd, '-vv', '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-U', '-chrp-boot', '-J',
                            '-R', '-iso-level', '3', '-graft-points', '-V', self.label_name, '.']
-
-            # isohybrid isn't available on ppc64le, so set to none.
-            cmd_isohybrid = None
         elif self.facts.arch == "s390x":
             with open(join(self.tmp_images_dir, "initrd.addrsize"), "wb") as f:
                 from struct import pack
@@ -104,9 +106,6 @@ class ISO(object):
             cmd_mkisofs = [cmd, '-vv', '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-b', 'images/cdboot.img',
                            '-J', '-R', '-l', '-c', 'isolinux/boot.cat', '-no-emul-boot', '-boot-load-size', '4', '-V',
                            self.label_name, '-graft-points', '.']
-
-            # isohybrid isn't available on s390x, so set to none.
-            cmd_isohybrid = None
         else:
             cmd_mkisofs = [cmd, '-vv', '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-b',
                            'isolinux/isolinux.bin', '-J', '-R', '-l', '-c', 'isolinux/boot.cat', '-no-emul-boot',
@@ -114,8 +113,8 @@ class ISO(object):
 
             cmd_isohybrid = ['/usr/bin/isohybrid', '-v', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso")]
 
+        # Execute the mkisofs/genisoimage, and isohybrid command if set.
         run_cmd(cmd_mkisofs)
-        
         if cmd_isohybrid:
             run_cmd(cmd_isohybrid)
 
@@ -149,38 +148,38 @@ class ISO(object):
                 if "fbx64" not in efi and "fallback" not in efi:
                     copy2(efi, self.tmp_efi_dir)
 
-            # Set the local distro and shim variable for the grub.cfg file.
+            # Set the local distro and efi_file variable for the grub.cfg file.
             if "Fedora" in self.facts.distro:
                 distro = "fedora"
 
                 if "aarch64" in self.facts.arch:
-                    shim = "shimaa64.efi"
+                    efi_file = "shimaa64.efi"
                 else:
-                    shim = "shimx64.efi"
+                    efi_file = "shimx64.efi"
             elif "Red Hat" in self.facts.distro or "Oracle" in self.facts.distro:
                 distro = "redhat"
 
                 if "aarch64" in self.facts.arch:
-                    shim = "shimaa64.efi"
+                    efi_file = "shimaa64.efi"
                 else:
-                    shim = "shimx64.efi"
+                    efi_file = "shimx64.efi"
             elif "CentOS" in self.facts.distro:
                 distro = "centos"
 
                 if "aarch64" in self.facts.arch:
-                    shim = "shimaa64.efi"
+                    efi_file = "shimaa64.efi"
                 else:
-                    shim = "shimx64.efi"
+                    efi_file = "shimx64.efi"
             elif "SUSE" in self.facts.distro:
                 distro = "opensuse"
-                shim = "shim.efi"
+                efi_file = "shim.efi"
             else:
                 distro = "redhat"
 
                 if "aarch64" in self.facts.arch:
-                    shim = "shimaa64.efi"
+                    efi_file = "shimaa64.efi"
                 else:
-                    shim = "shimx64.efi"
+                    efi_file = "shimx64.efi"
 
             env = Environment(loader=FileSystemLoader("/usr/share/planb/"))
             grub_cfg = env.get_template("grub.cfg")
@@ -195,6 +194,7 @@ class ISO(object):
                         label_name=self.label_name,
                         boot_args=self.cfg.rc_kernel_args,
                         arch=self.facts.arch,
+                        distro=distro,
                         iso=1,
                         efi=1
                     ))
@@ -208,7 +208,7 @@ class ISO(object):
                         boot_args=self.cfg.rc_kernel_args,
                         arch=self.facts.arch,
                         distro=distro,
-                        shim=shim,
+                        efi_file=efi_file,
                         secure_boot=self.facts.secure_boot,
                         memtest=memtest,
                         iso=1,
@@ -354,7 +354,10 @@ class ISO(object):
                 f.writelines("images/initrd.addrsize 0x00010408\n")
 
         # Copy the current running kernel's vmlinuz file to the tmp dir.
-        copy2(f"/boot/vmlinuz-{uname().release}", join(self.tmp_isolinux_dir, "vmlinuz"))
+        if glob(f"/boot/Image-{uname().release}"):
+            copy2(glob(f"/boot/Image-{uname().release}*")[0], join(self.tmp_isolinux_dir, "vmlinuz"))
+        elif glob(f"/boot/vmlinu*-{uname().release}*"):
+            copy2(glob(f"/boot/vmlinu*-{uname().release}*")[0], join(self.tmp_isolinux_dir, "vmlinuz"))
 
         if self.facts.uefi:
             self.prep_uefi(memtest)
