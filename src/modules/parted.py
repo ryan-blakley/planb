@@ -14,8 +14,6 @@
 
 import logging
 import parted
-from glob import glob
-from re import search
 from _ped import DeviceException, DiskException, IOException, PartitionException
 
 from .utils import dev_from_file, is_block
@@ -28,6 +26,9 @@ def get_part_layout(udev_ctx):
     future for servers with a ton of disk.
     :return:
     """
+    from glob import glob
+    from re import search
+
     # Define dict to store disk info.
     disks_dict = dict()
 

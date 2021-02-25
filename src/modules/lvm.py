@@ -12,9 +12,7 @@
 # See the GNU General Public License for more details go to
 # <http://www.gnu.org/licenses/>.
 
-import json
 import logging
-from os.path import exists
 
 from .exceptions import RunCMDError
 from .utils import dev_from_file, get_dev_type, run_cmd
@@ -53,6 +51,8 @@ def get_lvm_report(udev_ctx):
     :param udev_ctx: The udev ctx to use for querying.
     :return: The lvm dictionary.
     """
+    import json
+
     lvm = dict()
 
     cmds = ['pvs', 'vgs', 'lvs']
@@ -144,6 +144,8 @@ class RecoveryLVM(object):
         :param bk_vgs: The list of volume groups needing to be checked.
         :return:
         """
+        from os.path import exists
+
         rc_vgs = []
 
         for vg in bk_vgs:

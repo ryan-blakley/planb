@@ -13,10 +13,6 @@
 # <http://www.gnu.org/licenses/>.
 
 import logging
-from glob import glob
-from os import listdir
-from os.path import exists
-from re import search
 
 from .utils import is_block, run_cmd
 
@@ -27,6 +23,8 @@ def get_md_info(udev_ctx):
     :param udev_ctx: The udev ctx to use for querying.
     :return:
     """
+    from os import listdir
+
     md_info = dict()
 
     # Loop through disk pulled from udev.
@@ -65,6 +63,9 @@ def md_check(udev_ctx, bk_md_info):
     :param bk_md_info: The loaded backup md_info output.
     :return:
     """
+    from glob import glob
+    from re import search
+
     logger = logging.getLogger('pbr')
 
     # Run assemble in case disk had to be recovered earlier.
@@ -128,6 +129,8 @@ def md_create(name, level, meta, num, uuid, devs):
     :param devs: The device names to use in the array.
     :return:
     """
+    from os.path import exists
+
     # Set the create command, and zero the superblocks.
     cmd = ['mdadm', '-v', '--create', '-R', f"/dev/md/{name}", f"--metadata={meta}", f"--level={level}",
            f"--raid-devices={num}", f"--uuid={uuid}", '--force']

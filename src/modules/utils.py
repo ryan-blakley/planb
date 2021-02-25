@@ -12,19 +12,6 @@
 # See the GNU General Public License for more details go to
 # <http://www.gnu.org/licenses/>.
 
-import logging
-import random
-import string
-from os import stat
-from os.path import exists
-from pyudev.device import Devices
-from rpm import RPMTAG_BASENAMES, RPMTAG_NAME, files, TransactionSet
-from shutil import copy2
-from stat import S_ISBLK
-from subprocess import PIPE, run, TimeoutExpired
-
-from .exceptions import RunCMDError
-
 
 def dev_from_file(udev_ctx, dev):
     """
@@ -34,6 +21,7 @@ def dev_from_file(udev_ctx, dev):
     :param dev: The device file path ex. /dev/sda.
     :return: Udev device object.
     """
+    from pyudev.device import Devices
     return Devices.from_device_file(udev_ctx, dev)
 
 
@@ -45,6 +33,7 @@ def dev_from_name(udev_ctx, name):
     :param name: Device name ex. sda1
     :return: Udev device object
     """
+    from pyudev.device import Devices
     return Devices.from_name(udev_ctx, 'block', name)
 
 
@@ -99,6 +88,10 @@ def is_block(dev):
     :param dev: Device path to check.
     :return:
     """
+    from os import stat
+    from os.path import exists
+    from stat import S_ISBLK
+
     if exists(dev) and S_ISBLK(stat(dev).st_mode):
         return True
     else:
@@ -116,6 +109,8 @@ def mk_cdboot(kernel, initrd, parmfile, outfile):
     :param outfile: The outputted file.
     :return:
     """
+    from os import stat
+    from shutil import copy2
     from struct import pack
 
     copy2(kernel, outfile)
@@ -165,11 +160,14 @@ def rand_str(length, hexa):
     :param hexa: Bool if hexa, return only hexadecimals.
     :return: String
     """
+    import random
+    import string
+
     if not hexa:
         letters = string.ascii_uppercase + string.digits
     else:
         letters = "abcdef" + string.digits
-    return ''.join(random.choice(letters) for i in range(length))
+    return ''.join(random.choices(letters, k=length))
 
 
 def rpmq(pkg):
@@ -178,6 +176,8 @@ def rpmq(pkg):
     :param pkg: pkg name
     :return: True/False
     """
+    from rpm import RPMTAG_NAME, TransactionSet
+
     ts = TransactionSet()
 
     if ts.dbMatch(RPMTAG_NAME, pkg):
@@ -192,6 +192,8 @@ def rpmql(pkg):
     :param pkg: pkg name
     :return: List of files.
     """
+    from rpm import RPMTAG_NAME, files, TransactionSet
+
     ts = TransactionSet()
     for h in ts.dbMatch(RPMTAG_NAME, pkg):
         return files(h)
@@ -203,6 +205,8 @@ def rpmqf(path):
     :param path: File to check.
     :return: RPM that owns the file.
     """
+    from rpm import RPMTAG_BASENAMES, TransactionSet
+
     ts = TransactionSet()
     for h in ts.dbMatch(RPMTAG_BASENAMES, path):
         return h['name']
@@ -217,6 +221,9 @@ def rsync(cfg, opts, facts, bk_excludes=None):
     :param bk_excludes: A list of paths to exclude from the backup.
     :return:
     """
+    import logging
+    from .exceptions import RunCMDError
+
     logger = logging.getLogger('pbr')
 
     if opts.verbose:
@@ -259,6 +266,10 @@ def run_cmd(cmd, ret=False, timeout=None, capture_output=True):
     :param capture_output: Bool, on weather to capture the output or not.
     :return: The output/return code.
     """
+    import logging
+    from subprocess import PIPE, run, TimeoutExpired
+    from .exceptions import RunCMDError
+
     logger = logging.getLogger('pbr')
     logger.debug(f"utils: run_cmd: cmd: {cmd}")
 

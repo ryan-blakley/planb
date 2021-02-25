@@ -13,9 +13,6 @@
 # <http://www.gnu.org/licenses/>.
 
 import logging
-from glob import glob
-from os.path import exists
-from re import search
 
 from .exceptions import ExistsError, GeneralError, RunCMDError
 from .utils import dev_from_file, get_dev_type, run_cmd
@@ -30,6 +27,9 @@ def fmt_fs(dev, fs_uuid, fs_label, fs_type):
     :param fs_type: The type of filesystem to format the device.
     :return:
     """
+    from os.path import exists
+    from re import search
+
     logger = logging.getLogger('pbr')
 
     # Check to make sure the path is actually device before continuing.
@@ -97,6 +97,8 @@ def get_mnts(udev_ctx):
     Query and store information about anything that's mounted.
     :return:
     """
+    from glob import glob
+
     mnts = dict()
 
     def add_entries(dev, mp):
