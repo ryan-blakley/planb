@@ -79,31 +79,33 @@ class Backup(object):
                 self.log.error("Can't run with --backup-only if the backup_location_type is set to iso.")
                 raise GeneralError()
         else:
-            if (t == "nfs" or t == "cifs") and not rpmq(f"{t}-utils"):
-                # On suse the pkg name is nfs-client.
-                if not rpmq(f"{t}-client"):
-                    self.log.error(f" Backup location type is set to {t}, but {t}-utils isn't installed, "
-                                   "please install.")
-                    raise ExistsError()
+            # Check if boot type is usb and mkrescue was passed, before mounting.
+            if not ("usb" in self.cfg.boot_type.lower() and self.opts.mkrescue):
+                if (t == "nfs" or t == "cifs") and not rpmq(f"{t}-utils"):
+                    # On suse the pkg name is nfs-client.
+                    if not rpmq(f"{t}-client"):
+                        self.log.error(f" Backup location type is set to {t}, but {t}-utils isn't installed, "
+                                       "please install.")
+                        raise ExistsError()
 
-            # Mount bk_mount, which is where the backup archive
-            # will be stored later on.
-            if self.cfg.bk_mount_opts:
-                ret = mount(self.cfg.bk_mount, self.tmp_mount_dir, opts=self.cfg.bk_mount_opts)
-            else:
-                ret = mount(self.cfg.bk_mount, self.tmp_mount_dir)
+                # Mount bk_mount, which is where the backup archive
+                # will be stored later on.
+                if self.cfg.bk_mount_opts:
+                    ret = mount(self.cfg.bk_mount, self.tmp_mount_dir, opts=self.cfg.bk_mount_opts)
+                else:
+                    ret = mount(self.cfg.bk_mount, self.tmp_mount_dir)
 
-            if ret.returncode:
-                self.log.error(f"Failed running {ret.args} due to the following. stderr:{ret.stderr.decode().strip()}")
-                raise MountError()
-            else:
-                self.log.info(f"Successfully mounted {self.cfg.bk_mount} at {self.tmp_dir}/backup")
-                self.mounted = True
+                if ret.returncode:
+                    self.log.error(f"Failed running {ret.args} due to the following. stderr:{ret.stderr.decode().strip()}")
+                    raise MountError()
+                else:
+                    self.log.info(f"Successfully mounted {self.cfg.bk_mount} at {self.tmp_dir}/backup")
+                    self.mounted = True
 
-                # Set the directory name of where the backup archive and iso will be copied to.
-                self.tmp_bk_dir = join(self.tmp_mount_dir, self.facts.hostname.split('.')[0])
-                # Create backup dir based on the hostname on the mounted fs.
-                makedirs(self.tmp_bk_dir, exist_ok=True)
+                    # Set the directory name of where the backup archive and iso will be copied to.
+                    self.tmp_bk_dir = join(self.tmp_mount_dir, self.facts.hostname.split('.')[0])
+                    # Create backup dir based on the hostname on the mounted fs.
+                    makedirs(self.tmp_bk_dir, exist_ok=True)
                 
         self.log.debug(f"backup: chk_bk_settings: tmp_bk_dir:{self.tmp_bk_dir}")
 
