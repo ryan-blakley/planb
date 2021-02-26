@@ -122,7 +122,7 @@ class ISO(object):
         makedirs(join("/var/lib/pbr", "output"), exist_ok=True)
         copy2(join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), f"/var/lib/pbr/output/{self.cfg.rc_iso_prefix}.iso")
 
-    def prep_uefi(self, memtest):
+    def prep_uefi(self, memtest, distro, efi_file):
         """
         Prep the isofs working directory to work for uefi.
         :return:
@@ -147,39 +147,6 @@ class ISO(object):
                 # Don't copy the fallback efi files, because it will cause it not to boot.
                 if "fbx64" not in efi and "fallback" not in efi:
                     copy2(efi, self.tmp_efi_dir)
-
-            # Set the local distro and efi_file variable for the grub.cfg file.
-            if "Fedora" in self.facts.distro:
-                distro = "fedora"
-
-                if "aarch64" in self.facts.arch:
-                    efi_file = "shimaa64.efi"
-                else:
-                    efi_file = "shimx64.efi"
-            elif "Red Hat" in self.facts.distro or "Oracle" in self.facts.distro:
-                distro = "redhat"
-
-                if "aarch64" in self.facts.arch:
-                    efi_file = "shimaa64.efi"
-                else:
-                    efi_file = "shimx64.efi"
-            elif "CentOS" in self.facts.distro:
-                distro = "centos"
-
-                if "aarch64" in self.facts.arch:
-                    efi_file = "shimaa64.efi"
-                else:
-                    efi_file = "shimx64.efi"
-            elif "SUSE" in self.facts.distro:
-                distro = "opensuse"
-                efi_file = "shim.efi"
-            else:
-                distro = "redhat"
-
-                if "aarch64" in self.facts.arch:
-                    efi_file = "shimaa64.efi"
-                else:
-                    efi_file = "shimx64.efi"
 
             env = Environment(loader=FileSystemLoader("/usr/share/planb/"))
             grub_cfg = env.get_template("grub.cfg")
@@ -250,6 +217,39 @@ class ISO(object):
         # Make the needed temp directory.
         makedirs(self.tmp_isolinux_dir)
 
+        # Set the local distro and efi_file variable for the grub.cfg file.
+        if "Fedora" in self.facts.distro:
+            distro = "fedora"
+
+            if "aarch64" in self.facts.arch:
+                efi_file = "shimaa64.efi"
+            else:
+                efi_file = "shimx64.efi"
+        elif "Red Hat" in self.facts.distro or "Oracle" in self.facts.distro:
+            distro = "redhat"
+
+            if "aarch64" in self.facts.arch:
+                efi_file = "shimaa64.efi"
+            else:
+                efi_file = "shimx64.efi"
+        elif "CentOS" in self.facts.distro:
+            distro = "centos"
+
+            if "aarch64" in self.facts.arch:
+                efi_file = "shimaa64.efi"
+            else:
+                efi_file = "shimx64.efi"
+        elif "SUSE" in self.facts.distro:
+            distro = "opensuse"
+            efi_file = "shim.efi"
+        else:
+            distro = "redhat"
+
+            if "aarch64" in self.facts.arch:
+                efi_file = "shimaa64.efi"
+            else:
+                efi_file = "shimx64.efi"
+
         # Since syslinux is only available on x86_64, check the arch.
         # Then copy all of the needed isolinux files to the tmp dir.
         if self.facts.arch == "x86_64":
@@ -317,6 +317,7 @@ class ISO(object):
                     label_name=self.label_name,
                     boot_args=self.cfg.rc_kernel_args,
                     arch=self.facts.arch,
+                    distro=distro,
                     iso=1,
                     efi=0
                 ))
@@ -360,7 +361,7 @@ class ISO(object):
             copy2(glob(f"/boot/vmlinu*-{uname().release}*")[0], join(self.tmp_isolinux_dir, "vmlinuz"))
 
         if self.facts.uefi:
-            self.prep_uefi(memtest)
+            self.prep_uefi(memtest, distro, efi_file)
 
     def mkiso(self):
         """
