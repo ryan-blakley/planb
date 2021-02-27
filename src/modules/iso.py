@@ -52,12 +52,17 @@ class ISO(object):
         Generate a bootable live ISO.
         :return:
         """
+        # Change the isofs directory, and create the output directory.
         chdir(join(self.tmp_dir, "isofs"))
+        makedirs(join("/var/lib/pbr", "output"), exist_ok=True)
 
         # Set the bk_dir and create it if it's doesn't exist, it should only need to
         # be created when the backup is being included on the iso itself.
         bk_dir = join(join(self.tmp_dir, "backup"), uname().nodename.split('.')[0])
         makedirs(bk_dir, exist_ok=True)
+
+        # Set the outputted iso filename.
+        iso_file = f"/var/lib/pbr/output/{self.cfg.rc_iso_prefix}.iso"
 
         if exists('/usr/bin/genisoimage'):
             cmd = "/usr/bin/genisoimage"
@@ -69,30 +74,28 @@ class ISO(object):
 
         if self.facts.uefi and self.facts.arch == "x86_64":
             if "SUSE" in self.facts.distro:
-                cmd_mkisofs = [cmd, '-vv', '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-b',
-                               'isolinux/isolinux.bin', '-J', '-R', '-l', '-c', 'isolinux/boot.cat', '-no-emul-boot',
-                               '-boot-load-size', '4', '-boot-info-table', '-eltorito-alt-boot', '-eltorito-platform',
-                               'efi', '-eltorito-boot', 'images/efiboot.img', '-no-emul-boot', '-graft-points', '-V',
-                               self.label_name, '.']
-            else:
-                cmd_mkisofs = [cmd, '-vv', '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-b',
-                               'isolinux/isolinux.bin', '-J', '-R', '-l', '-c', 'isolinux/boot.cat', '-no-emul-boot',
-                               '-boot-load-size', '4', '-boot-info-table', '-eltorito-alt-boot', '-e',
-                               'images/efiboot.img', '-no-emul-boot', '-graft-points', '-V', self.label_name, '.']
-
-            cmd_isohybrid = ['/usr/bin/isohybrid', '-v', '-u', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso")]
-        elif self.facts.arch == "aarch64":
-            if "SUSE" in self.facts.distro:
-                cmd_mkisofs = [cmd, '-vv', '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-J', '-r', '-l',
+                cmd_mkisofs = [cmd, '-vv', '-o', iso_file, '-b', 'isolinux/isolinux.bin', '-J', '-R', '-l', '-c',
+                               'isolinux/boot.cat', '-no-emul-boot', '-boot-load-size', '4', '-boot-info-table',
                                '-eltorito-alt-boot', '-eltorito-platform', 'efi', '-eltorito-boot',
                                'images/efiboot.img', '-no-emul-boot', '-graft-points', '-V', self.label_name, '.']
             else:
-                cmd_mkisofs = [cmd, '-vv', '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-J', '-r', '-l',
+                cmd_mkisofs = [cmd, '-vv', '-o', iso_file, '-b', 'isolinux/isolinux.bin', '-J', '-R', '-l', '-c',
+                               'isolinux/boot.cat', '-no-emul-boot', '-boot-load-size', '4', '-boot-info-table',
                                '-eltorito-alt-boot', '-e', 'images/efiboot.img', '-no-emul-boot', '-graft-points',
                                '-V', self.label_name, '.']
+
+            cmd_isohybrid = ['/usr/bin/isohybrid', '-v', '-u', iso_file]
+        elif self.facts.arch == "aarch64":
+            if "SUSE" in self.facts.distro:
+                cmd_mkisofs = [cmd, '-vv', '-o', iso_file, '-J', '-r', '-l', '-eltorito-alt-boot', '-eltorito-platform',
+                               'efi', '-eltorito-boot', 'images/efiboot.img', '-no-emul-boot', '-graft-points', '-V',
+                               self.label_name, '.']
+            else:
+                cmd_mkisofs = [cmd, '-vv', '-o', iso_file, '-J', '-r', '-l', '-eltorito-alt-boot', '-e',
+                               'images/efiboot.img', '-no-emul-boot', '-graft-points', '-V', self.label_name, '.']
         elif self.facts.arch == "ppc64le":
-            cmd_mkisofs = [cmd, '-vv', '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-U', '-chrp-boot', '-J',
-                           '-R', '-iso-level', '3', '-graft-points', '-V', self.label_name, '.']
+            cmd_mkisofs = [cmd, '-vv', '-o', iso_file, '-U', '-chrp-boot', '-J', '-R', '-iso-level', '3',
+                           '-graft-points', '-V', self.label_name, '.']
         elif self.facts.arch == "s390x":
             with open(join(self.tmp_images_dir, "initrd.addrsize"), "wb") as f:
                 from struct import pack
@@ -103,15 +106,15 @@ class ISO(object):
 
             mk_cdboot("isolinux/vmlinuz", "isolinux/initramfs.img", "images/cdboot.prm", "images/cdboot.img")
 
-            cmd_mkisofs = [cmd, '-vv', '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-b', 'images/cdboot.img',
-                           '-J', '-R', '-l', '-c', 'isolinux/boot.cat', '-no-emul-boot', '-boot-load-size', '4', '-V',
-                           self.label_name, '-graft-points', '.']
+            cmd_mkisofs = [cmd, '-vv', '-o', iso_file, '-b', 'images/cdboot.img', '-J', '-R', '-l', '-c',
+                           'isolinux/boot.cat', '-no-emul-boot', '-boot-load-size', '4', '-V', self.label_name,
+                           '-graft-points', '.']
         else:
-            cmd_mkisofs = [cmd, '-vv', '-o', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), '-b',
-                           'isolinux/isolinux.bin', '-J', '-R', '-l', '-c', 'isolinux/boot.cat', '-no-emul-boot',
-                           '-boot-load-size', '4', '-boot-info-table', '-V', self.label_name, '-graft-points', '.']
+            cmd_mkisofs = [cmd, '-vv', '-o', iso_file, '-b', 'isolinux/isolinux.bin', '-J', '-R', '-l', '-c',
+                           'isolinux/boot.cat', '-no-emul-boot', '-boot-load-size', '4', '-boot-info-table', '-V',
+                           self.label_name, '-graft-points', '.']
 
-            cmd_isohybrid = ['/usr/bin/isohybrid', '-v', join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso")]
+            cmd_isohybrid = ['/usr/bin/isohybrid', '-v', iso_file]
 
         # Execute the mkisofs/genisoimage, and isohybrid command if set.
         run_cmd(cmd_mkisofs)
@@ -119,8 +122,7 @@ class ISO(object):
             run_cmd(cmd_isohybrid)
 
         # Copy the iso locally under /var/lib/pbr.
-        makedirs(join("/var/lib/pbr", "output"), exist_ok=True)
-        copy2(join(bk_dir, f"{self.cfg.rc_iso_prefix}.iso"), f"/var/lib/pbr/output/{self.cfg.rc_iso_prefix}.iso")
+        copy2(f"/var/lib/pbr/output/{self.cfg.rc_iso_prefix}.iso", bk_dir)
 
     def prep_uefi(self, memtest, distro, efi_file):
         """

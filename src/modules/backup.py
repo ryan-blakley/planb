@@ -84,7 +84,7 @@ class Backup(object):
                 if (t == "nfs" or t == "cifs") and not rpmq(f"{t}-utils"):
                     # On suse the pkg name is nfs-client.
                     if not rpmq(f"{t}-client"):
-                        self.log.error(f" Backup location type is set to {t}, but {t}-utils isn't installed, "
+                        self.log.error(f"Backup location type is set to {t}, but {t}-utils isn't installed, "
                                        "please install.")
                         raise ExistsError()
 
@@ -96,7 +96,8 @@ class Backup(object):
                     ret = mount(self.cfg.bk_mount, self.tmp_mount_dir)
 
                 if ret.returncode:
-                    self.log.error(f"Failed running {ret.args} due to the following. stderr:{ret.stderr.decode().strip()}")
+                    self.log.error(f"Failed running {ret.args} due to the following. "
+                                   f"stderr:{ret.stderr.decode().strip()}")
                     raise MountError()
                 else:
                     self.log.info(f"Successfully mounted {self.cfg.bk_mount} at {self.tmp_dir}/backup")
