@@ -1,5 +1,5 @@
 Name:           pbr
-Version:        0.4
+Version:        0.5
 Release:        1%{?dist}
 Summary:        Plan B Recovery is a backup and recovery utility.
 
@@ -77,6 +77,44 @@ rm -rf $RPM_BUILD_ROOT
 %doc %{_mandir}/man5/pbr.conf.5*
 
 %changelog
+* Sat Feb 27 2021 Ryan Blakley <rblakley@redhat.com> 0.5-1
+- pbr: Add arguments to the Makefile. (rblakley@redhat.com)
+- pbr: Switch to outputting the iso file locally first. (rblakley@redhat.com)
+- pbr: Fix iso booting for ppc64le. (rblakley@redhat.com)
+- pbr: Add a check before mounting backup mount. (rblakley@redhat.com)
+- pbr: Change up how some of the imports are defined. (rblakley@redhat.com)
+- pbr: Fix various aarch64 issues. (rblakley@redhat.com)
+- pbr: Remove dependency on tqdm for tar progress bar. (rblakley@redhat.com)
+- pbr: Add more verbose output. (rblakley@redhat.com)
+- pbr: Misc fixes (rblakley@redhat.com)
+- pbr: Fix key error for partitioned md raided disk. (rblakley@redhat.com)
+- pbr: grub.cfg tweaks (rblakley@redhat.com)
+- pbr: Remove included pam files since they're no longer needed.
+  (rblakley@redhat.com)
+- pbr: Add openSUSE Leap support (rblakley@redhat.com)
+- pbr: Add support for OEL (rblakley@redhat.com)
+- pbr: Update the man pages with the new params, and cfg options.
+  (rblakley@redhat.com)
+- pbr: Fix an ordering issue, self.opts was called after defined.
+  (rblakley@redhat.com)
+- pbr: Rename cfg backup_include_pkgs to recover_include_pkgs since it more
+  aligns. (rblakley@redhat.com)
+- pbr: Update the README. (rblakley@redhat.com)
+- pbr: Fix the logging. (rblakley@redhat.com)
+- pbr: Added cfg option to name the recovery iso. (rblakley@redhat.com)
+- pbr: Add cfg option to name the backup archive. (rblakley@redhat.com)
+- pbr: Update todo and misc pep issues. (rblakley@redhat.com)
+- pbr: Add in cron job to rebuild the iso on fact changes.
+  (rblakley@redhat.com)
+- pbr: Add a check facts cmdline option. (rblakley@redhat.com)
+- pbr: Copy the outputted iso locally. (rblakley@redhat.com)
+- pbr: Output facts to /var/lib/pbr for future layout checking.
+  (rblakley@redhat.com)
+- pbr: Compare current mounts to fstab to help prevent can't boots.
+  (rblakley@redhat.com)
+- pbr: Add a backup only option. (rblakley@redhat.com)
+- pbr: Update the todos. (rblakley@redhat.com)
+
 * Tue Dec 01 2020 Ryan Blakley <rblakley@redhat.com> 0.4-1
 - Update the README. (rblakley@redhat.com)
 - Remove version number from isolinux.cfg. (rblakley@redhat.com)
