@@ -14,7 +14,7 @@
 
 import logging
 from configparser import BasicInterpolation, ConfigParser
-from os.path import expandvars
+from os.path import exists, expandvars
 from platform import machine
 
 
@@ -87,7 +87,12 @@ class LoadConfig(object):
             self.rc_keep_root_password = int(cfg['Recover'].get('recovery_keep_root_password', "0"))
 
         except KeyError:
-            logger.exception(" Parsing the cfg file produced a KeyError.")
+            if exists("/etc/planb/pbr.conf.rpmnew"):
+                logger.exception("Parsing the cfg file produced a KeyError, there is an rpmnew file present in "
+                                 "the config directory. Please review the rpmnew config file, and migrate any new "
+                                 "config options.")
+            else:
+                logger.exception("Parsing the cfg file produced a KeyError.")
             exit(1)
 
 # vim:set ts=4 sw=4 et:
