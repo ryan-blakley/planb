@@ -780,6 +780,12 @@ class Recover(object):
 
         self.cleanup()
 
+        # If post scripts are configured, execute them now.
+        if self.cfg.rc_post_script:
+            self.log.info("Executing configured post script(s)")
+            for script in self.cfg.rc_post_script:
+                run_cmd(script)
+
         self.log.info("Restoration Finished, the restored system is mounted under /mnt/rootfs!")
 
         exit(0)

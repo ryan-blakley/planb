@@ -101,6 +101,11 @@ List any additional packages that might be needed in the recover environment, so
 iso's rootfs.
 .RE
 .PP
+\fBrecover_include_files =\fR /etc/example/example.conf /usr/local/bin/example.sh
+.RS 4
+Add additional file(s) to the recovery environment.
+.RE
+.PP
 \fBrecover_exclude_vgs =\fR example_vg data_vg
 .RS 4
 List of volume groups to exclude from the recovery, this will also remove any mount points set to use the volume group.
@@ -113,6 +118,14 @@ Setting this will exclude any disk that were captured in the backup, but you don
 The disk below should be the disk name mentioned in /facts/disk.json, not a name of of a disk in the recovery
 environment. Also this will only remove entries from the stored backup disks and the backup mounts, it will not exclude
 any vgs. You will need to add the vg to the \fBexclude_vgs\fR also, you've been warned!
+.RE
+.PP
+\fBrecover_post_script =\fR /usr/local/bin/example.sh
+.RS 4
+Specify any script(s) that will execute after the recovery has finished, the recovered system will be mounted on
+/mnt/rootfs. Unless the script is part of a package, it will need to be added to the recover_include_files option to
+add the script to the recovery environment. This option isn't for individual commands, this is a space separated list
+of scripts not commands.
 .RE
 .PP
 \fBrecovery_kernel_args =\fR console=tty0 console=ttyS0,115200 systemd.debug-shell=1

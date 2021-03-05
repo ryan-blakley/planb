@@ -80,11 +80,13 @@ class LoadConfig(object):
             self.bk_exclude_disks = list(cfg['Backup'].get('backup_exclude_disks', '').split())
             self.rc_iso_prefix = cfg['Recover'].get('recover_iso_prefix', 'recover')
             self.rc_include_pkgs = list(cfg['Recover'].get('recover_include_pkgs', '').split())
+            self.rc_include_files = list(cfg['Recover'].get('recover_include_files', '').split())
             self.rc_exclude_vgs = list(cfg['Recover'].get('recover_exclude_vgs', '').split())
             self.rc_exclude_disks = list(cfg['Recover'].get('recover_exclude_disks', '').split())
             self.rc_kernel_args = list(cfg['Recover'].get('recovery_kernel_args', '').split())
             self.rc_enable_sshd = int(cfg['Recover'].get('recovery_enable_sshd', "0"))
             self.rc_keep_root_password = int(cfg['Recover'].get('recovery_keep_root_password', "0"))
+            self.rc_post_script = list(cfg['Recover'].get('recover_post_script', '').split())
 
         except KeyError:
             if exists("/etc/planb/pbr.conf.rpmnew"):

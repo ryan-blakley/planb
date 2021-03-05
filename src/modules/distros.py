@@ -42,6 +42,18 @@ class LiveOS(object):
 
         self.pkgs = self.set_pkgs()
 
+    def copy_include_files(self):
+        """
+        If include files is configured copy them to the recovery environment.
+        :return:
+        """
+        for src in self.cfg.rc_include_files:
+            if exists(src):
+                dest = join(self.tmp_rootfs_dir, src[1:])
+                self.log.debug(f"distros: liveos: copy_include_files: rc_include_files: src: {src} dst: {dest}")
+                makedirs(dirname(dest), exist_ok=True)
+                copy2(src, dest)
+
     def copy_pkg_files(self, pkgs):
         """
         Loop through the array of pkgs, then list all the files
@@ -93,6 +105,10 @@ class LiveOS(object):
         self.find_libs(self.pkgs)
         self.copy_pkg_files(self.pkgs)
         self.copy_pkg_files(self.lib_pkgs)
+
+        if self.cfg.rc_include_files:
+            self.log.info("Copy configured files to include in the LiveOS's rootfs")
+            self.copy_include_files()
 
     def create_initramfs(self):
         """

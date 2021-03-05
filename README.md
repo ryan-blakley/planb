@@ -51,8 +51,7 @@ stability is added. Stability is the most important thing needed in a backup and
 - [x] Need to figure out how to implement an option, that can be called from a cron job that rebuilds the iso on layout changes.
 - [x] Add option to name the backup archive, and iso files.
 - [x] Potentially find a better way to do the pam files, instead of including them in the pkg.
-- [ ] Add option for secondary backup location for backup archive duplication.
-- [ ] Add option for pre/post scripting.
+- [x] Add option for post scripting.
 - [ ] Add support for stratis.
 - [ ] Add support for scp and lftp possibly.
 - [ ] Would like to add an option to create pxe boot entries.
