@@ -19,7 +19,7 @@ from os import chdir, makedirs, stat, uname
 from os.path import exists, join
 from shutil import copy2
 
-from .distros import LiveOS, prep_rootfs, rh_customize_rootfs, suse_customize_rootfs
+from .distros import LiveOS, prep_rootfs, debian_customize_rootfs, rh_customize_rootfs, suse_customize_rootfs
 from .exceptions import MountError
 from .fs import fmt_fs
 from .utils import mk_cdboot, mount, rand_str, run_cmd, umount
@@ -255,9 +255,15 @@ class ISO(object):
         # Since syslinux is only available on x86_64, check the arch.
         # Then copy all of the needed isolinux files to the tmp dir.
         if self.facts.arch == "x86_64":
-            chdir("/usr/share/syslinux/")
+            if "debian" in self.facts.distro.lower():
+                chdir("/usr/lib/ISOLINUX/")
+                copy2("isolinux.bin", self.tmp_isolinux_dir)
+                chdir("/usr/lib/syslinux/modules/bios/")
+            else:
+                chdir("/usr/share/syslinux/")
+                copy2("isolinux.bin", self.tmp_isolinux_dir)
+
             copy2("chain.c32", self.tmp_isolinux_dir)
-            copy2("isolinux.bin", self.tmp_isolinux_dir)
             copy2("menu.c32", self.tmp_isolinux_dir)
             copy2("vesamenu.c32", self.tmp_isolinux_dir)
 
@@ -382,6 +388,8 @@ class ISO(object):
         # Set OS specific customizations.
         if "openSUSE" in self.facts.distro:
             suse_customize_rootfs(self.tmp_rootfs_dir)
+        elif "Debian" in self.facts.distro:
+            debian_customize_rootfs(self.tmp_rootfs_dir)
         else:
             rh_customize_rootfs(self.tmp_rootfs_dir)
 

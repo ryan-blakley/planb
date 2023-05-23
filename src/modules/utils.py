@@ -13,6 +13,17 @@
 # <http://www.gnu.org/licenses/>.
 
 
+def apt_query(pkg_name):
+    import apt
+
+    cache = apt.cache.Cache()
+    cache.open()
+
+    pkg = cache[pkg_name]
+
+    return pkg.is_installed
+
+
 def dev_from_file(udev_ctx, dev):
     """
     Queries udev based on the device path, this is so I don't have to import pyudev everywhere,
@@ -35,6 +46,12 @@ def dev_from_name(udev_ctx, name):
     """
     from pyudev.device import Devices
     return Devices.from_name(udev_ctx, 'block', name)
+
+
+def dpkgL(pkg):
+    ret = run_cmd(['/usr/bin/dpkg', '-L', pkg], ret=True)
+    if not ret.returncode:
+        return ret.stdout.decode().split()
 
 
 def get_dev_type(udev_info):
@@ -96,6 +113,56 @@ def is_block(dev):
         return True
     else:
         return False
+    
+
+def is_installed(pkg):
+    from os.path import exists
+
+    if exists("/usr/bin/rpm"):
+        from rpm import RPMTAG_NAME, TransactionSet
+
+        ts = TransactionSet()
+
+        if ts.dbMatch(RPMTAG_NAME, pkg):
+            return True
+        else:
+            return False
+    elif exists("/usr/bin/dpkg"):
+        ret = run_cmd(['/usr/bin/dpkg', '-s', pkg], ret=True)
+        if ret.returncode:
+            return False
+        else:
+            return True
+
+
+def pkg_files(pkg):
+    from os.path import exists
+
+    if exists("/usr/bin/rpm"):
+        from rpm import RPMTAG_NAME, files, TransactionSet
+
+        ts = TransactionSet()
+        for h in ts.dbMatch(RPMTAG_NAME, pkg):
+            return files(h)
+    elif exists("/usr/bin/dpkg"):
+        ret = run_cmd(['/usr/bin/dpkg', '-L', pkg], ret=True)
+        if not ret.returncode:
+            return ret.stdout.decode().split()
+
+
+def pkg_query_file(file_name):
+    from os.path import exists
+
+    if exists("/usr/bin/rpm"):
+        from rpm import RPMTAG_BASENAMES, TransactionSet
+
+        ts = TransactionSet()
+        for h in ts.dbMatch(RPMTAG_BASENAMES, file_name):
+            return h['name']
+    elif exists("/usr/bin/dpkg"):
+        ret = run_cmd(['/usr/bin/dpkg', '-S', file_name], ret=True)
+        if not ret.returncode:
+            return ret.stdout.decode().split(':')[0]
 
 
 def mk_cdboot(kernel, initrd, parmfile, outfile):
@@ -168,22 +235,6 @@ def rand_str(length, hexa):
     else:
         letters = "abcdef" + string.digits
     return ''.join(random.choices(letters, k=length))
-
-
-def rpmq(pkg):
-    """
-    Check if a pkg is installed on the system.
-    :param pkg: pkg name
-    :return: True/False
-    """
-    from rpm import RPMTAG_NAME, TransactionSet
-
-    ts = TransactionSet()
-
-    if ts.dbMatch(RPMTAG_NAME, pkg):
-        return True
-    else:
-        return False
 
 
 def rpmql(pkg):

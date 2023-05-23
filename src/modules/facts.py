@@ -24,7 +24,7 @@ from .luks import get_luks_devs
 from .lvm import get_lvm_report
 from .parted import get_part_layout
 from .md import get_md_info
-from .utils import get_modules, rpmq, run_cmd
+from .utils import get_modules, is_installed, run_cmd
 
 
 class Facts(object):
@@ -45,7 +45,7 @@ class Facts(object):
         self.udev_ctx = Context()
         self.mnts = get_mnts(self.udev_ctx)
         self.disks = get_part_layout(self.udev_ctx)
-        self.lvm_installed = rpmq("lvm2")
+        self.lvm_installed = is_installed("lvm2")
 
         if not self.recovery_mode:
             self.modules = get_modules()
@@ -60,7 +60,7 @@ class Facts(object):
                 self.selinux_enabled = 0
                 self.selinux_enforcing = 0
 
-            if rpmq("mokutil") and "enabled" in run_cmd(['mokutil', '--sb-state'], ret=True).stdout.decode():
+            if is_installed("mokutil") and "enabled" in run_cmd(['mokutil', '--sb-state'], ret=True).stdout.decode():
                 self.secure_boot = 1
             else:
                 self.secure_boot = 0

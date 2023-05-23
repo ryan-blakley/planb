@@ -24,7 +24,7 @@ from re import search
 from shutil import copy2, copystat, copytree, SameFileError
 
 from .exceptions import RunCMDError
-from .utils import rpmq, rpmql, rpmqf, run_cmd
+from .utils import is_installed, pkg_files, pkg_query_file, run_cmd
 
 
 class LiveOS(object):
@@ -65,7 +65,7 @@ class LiveOS(object):
             # Suppress the following exceptions, normally they're caused by symlinks, or multiple
             # pkgs that state they own the same file/dir.
             with suppress(TypeError, FileExistsError, SameFileError):
-                for f in rpmql(pkg):
+                for f in pkg_files(pkg):
                     fname = f"{f}"
                     for exclude in self.exclude_files:
                         if exclude in fname:
@@ -81,7 +81,7 @@ class LiveOS(object):
                                     # If exception, try making the dir of the path, then copy, if still
                                     # the file isn't found there is probably a dead symlink in the path.
                                     with suppress(FileNotFoundError):
-                                        makedirs(dirname(dst))
+                                        makedirs(dirname(dst), exist_ok=True)
                                         copystat(dirname(fname), dirname(dst))
                                         copy2(fname, dst, follow_symlinks=False)
 
@@ -90,7 +90,7 @@ class LiveOS(object):
                             elif isdir(fname) and not exists(dst):
                                 # If not found suppress it, there is probably a dead symlink in the path.
                                 with suppress(FileNotFoundError):
-                                    makedirs(dst)
+                                    makedirs(dst, exist_ok=True)
                                     copystat(fname, dst)
 
     def create(self):
@@ -116,11 +116,19 @@ class LiveOS(object):
         :return:
         """
         if self.cfg.boot_type == "iso":
-            run_cmd(['/usr/bin/dracut', '-v', '-f', '-N', '-a', 'dmsquash-live', '-a', 'rescue', '--no-early-microcode',
-                     '--tmpdir', self.tmp_dir, join(self.tmp_isolinux_dir, "initramfs.img")])
+            if "Debian" in self.facts.distro:
+                run_cmd(['/usr/sbin/mkinitramfs', '-o', join(self.tmp_isolinux_dir, "initramfs.img")])
+            else:
+                run_cmd(['/usr/bin/dracut', '-v', '-f', '-N', '-a', 'dmsquash-live', '-a', 'rescue', 
+                         '--no-early-microcode', '--tmpdir', self.tmp_dir, 
+                         join(self.tmp_isolinux_dir, "initramfs.img")])
         elif self.cfg.boot_type == "usb":
-            run_cmd(['/usr/bin/dracut', '-v', '-f', '-N', '-a', 'dmsquash-live', '-a', 'rescue', '--no-early-microcode',
-                     '--tmpdir', self.tmp_dir, join(self.tmp_syslinux_dir, "initramfs.img")])
+            if "Debian" in self.facts.distro:
+                run_cmd(['/usr/sbin/mkinitramfs', '-o', join(self.tmp_syslinux_dir, "initramfs.img")])
+            else:
+                run_cmd(['/usr/bin/dracut', '-v', '-f', '-N', '-a', 'dmsquash-live', '-a', 'rescue',
+                         '--no-early-microcode', '--tmpdir', self.tmp_dir,
+                         join(self.tmp_syslinux_dir, "initramfs.img")])
 
     def create_squashfs(self):
         """
@@ -129,19 +137,31 @@ class LiveOS(object):
         """
         # Create the output directory.
         if self.cfg.boot_type == "usb":
-            liveos_dir = join(self.tmp_dir, "usbfs/LiveOS")
+            if "Debian" in self.facts.distro:
+                liveos_dir = join(self.tmp_dir, "usbfs/live")
+            else:
+                liveos_dir = join(self.tmp_dir, "usbfs/LiveOS")
         else:
-            liveos_dir = join(self.tmp_dir, "isofs/LiveOS")
+            if "Debian" in self.facts.distro:
+                liveos_dir = join(self.tmp_dir, "isofs/live")
+            else:
+                liveos_dir = join(self.tmp_dir, "isofs/LiveOS")
 
         makedirs(liveos_dir, exist_ok=True)
 
         # Create the squashfs img file.
-        if "openSUSE" in self.facts.distro:
+        if "openSUSE" in self.facts.distro or "Debian" in self.facts.distro:
             cmd = "/usr/bin/mksquashfs"
+
+            if "Debian" in self.facts.distro:
+                out_file = "filesystem.squashfs"
+            else:
+                out_file = "squashfs.img"
         else:
             cmd = "/usr/sbin/mksquashfs"
+            out_file = "squashfs.img"
 
-        run_cmd([cmd, self.tmp_rootfs_dir, join(liveos_dir, "squashfs.img"), '-noappend'])
+        run_cmd([cmd, self.tmp_rootfs_dir, join(liveos_dir, out_file), '-noappend'])
 
     def find_libs(self, pkgs):
         """
@@ -152,7 +172,7 @@ class LiveOS(object):
         for pkg in pkgs:
             with suppress(TypeError):
                 # Loop through all the files in the pkg.
-                for f in rpmql(pkg):
+                for f in pkg_files(pkg):
                     fname = f"{f}"
 
                     # Check the magic of the file.
@@ -176,7 +196,7 @@ class LiveOS(object):
         # Loop through the lib files, and find the pkgs they belong to,
         # then append those pkg names to the lib_pkgs list.
         for x in self.libs:
-            pkg = rpmqf(x)
+            pkg = pkg_query_file(x)
             if pkg not in self.lib_pkgs:
                 self.lib_pkgs.append(pkg)
 
@@ -216,7 +236,7 @@ class LiveOS(object):
         # Include the specific pkgs for the bk_location_types.
         if self.cfg.bk_location_type == "nfs":
             # On opensuse the pkg name is nfs-client not nfs-utils.
-            if not rpmq("nfs-utils"):
+            if not is_installed("nfs-utils"):
                 pkgs.append('nfs-client')
             else:
                 pkgs.append('nfs-utils')
@@ -262,12 +282,12 @@ def prep_rootfs(cfg, tmp_dir, tmp_rootfs_dir):
     symlink("pbr.target", "default.target")
 
     # Create the needed getty wants dir and lnk the service files.
-    makedirs(join(tmp_rootfs_dir, "usr/lib/systemd/system/getty.target.wants"))
+    makedirs(join(tmp_rootfs_dir, "usr/lib/systemd/system/getty.target.wants"), exist_ok=True)
     chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/getty.target.wants"))
     symlink("../getty@.service", "getty@tty1.service")
 
     # Create the custom target wants dir, and lnk the needed service and target files.
-    makedirs(join(tmp_rootfs_dir, "usr/lib/systemd/system/pbr.target.wants"))
+    makedirs(join(tmp_rootfs_dir, "usr/lib/systemd/system/pbr.target.wants"), exist_ok=True)
     chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/pbr.target.wants"))
     symlink("../dbus.service", "dbus.service")
     symlink("../getty.target", "getty.target")
@@ -338,7 +358,24 @@ def prep_rootfs(cfg, tmp_dir, tmp_rootfs_dir):
     # Create mnt directories on the ISO.
     makedirs(join(tmp_rootfs_dir, "mnt/backup"))
     makedirs(join(tmp_rootfs_dir, "mnt/rootfs"))
-    
+
+
+def debian_customize_rootfs(tmp_rootfs_dir):
+    """
+    Copy the needed systemd files to the tmp rootfs.
+    :param tmp_rootfs_dir: The tmp rootfs directory for the iso.
+    :return:
+    """
+    # Enable the needed services.
+    chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/pbr.target.wants"))
+    symlink("../networking.service", "networking.service")
+
+    if not exists(join(tmp_rootfs_dir, "etc/network/interfaces")):
+        copy2("/etc/network/interfaces", join(tmp_rootfs_dir, "etc/network/interfaces"))
+
+    chdir(join(tmp_rootfs_dir, "sbin"))
+    symlink("/lib/systemd/systemd", "init")
+
 
 def rh_customize_rootfs(tmp_rootfs_dir):
     """
@@ -381,7 +418,7 @@ def rh_customize_rootfs(tmp_rootfs_dir):
     if exists("NetworkManager-dispatcher.service"):
         symlink("NetworkManager-dispatcher.service", "dbus-org.freedesktop.nm-dispatcher.service")
 
-    makedirs(join(tmp_rootfs_dir, "usr/lib/systemd/system/network-online.target.wants"))
+    makedirs(join(tmp_rootfs_dir, "usr/lib/systemd/system/network-online.target.wants"), exist_ok=True)
     chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/network-online.target.wants"))
     symlink("../NetworkManager-wait-online.service", "NetworkManager-wait-online.service")
 
@@ -392,7 +429,16 @@ def set_distro_pkgs(facts):
     :param facts: facts object to pull the distro name from.
     :return:
     """
-    # List of base packages that need to be installed, WARNING the order of this array does matter.
+    # List of base packages that need to be installed, WARNING the order of these arrays do matter.
+    debian_pkgs = ['base-files', 'libc-bin', 'libc-l10n', 'systemd', 'systemd-sysv', 'udev', 'bash', 'bash-completion',
+                   'init-system-helpers', 'coreutils', 'libpam-modules', 'libpam-modules-bin', 'libpam-runtime',
+                   'libpam0g', 'util-linux', 'dbus', 'python3', 'python3.7', 'libpython3.7-minimal', 'dmsetup',
+                   'dmeventd', 'multipath-tools', 'binutils', 'dosfstools', 'e2fsprogs', 'gawk', 'grep', 'gzip',
+                   'ifupdown', 'iproute2', 'iputils-ping', 'kbd', 'kmod', 'kpartx', 'less', 'lsof', 'mdadm', 'mount',
+                   'ncurses-base', 'ncurses-bin', 'ncurses-term', 'openssh-client', 'openssh-server', 'parted',
+                   'passwd', 'pbr', 'procps', 'python3-distro', 'python3-selinux', 'python3-parted', 'python3-pyudev',
+                   'python3-six', 'dpkg', 'sed', 'vim', 'vim-common', 'vim-runtime', 'xfsprogs']
+
     rh_base_pkgs = ['filesystem', 'glibc', 'glibc-common', 'setup', 'systemd', 'systemd-udev', 'bash',
                     'bash-completion', 'initscripts', 'coreutils', 'coreutils-common', 'pam', 'authselect',
                     'authselect-libs', 'util-linux', 'dbus', 'dbus-broker', 'dbus-common', 'dbus-daemon', 'polkit',
@@ -401,9 +447,8 @@ def set_distro_pkgs(facts):
                     'kbd', 'kbd-misc', 'kmod', 'kpartx', 'less', 'libpwquality', 'lsof', 'mdadm', 'ncurses',
                     'ncurses-base', 'openssh', 'openssh-clients', 'openssh-server', 'parted', 'passwd', 'pbr', 
                     'plymouth', 'procps-ng', 'python3-distro', 'python3-libselinux', 'python3-pyparted',
-                    'python3-pyroute2', 'python3-pyudev', 'python3-rpm', 'python3-six', 'python3-tqdm', 'rng-tools',
-                    'rootfiles', 'rpm', 'sed', 'vim-common', 'vim-enhanced', 'vim-filesystem', 'vim-minimal',
-                    'xfsprogs']
+                    'python3-pyroute2', 'python3-pyudev', 'python3-rpm', 'python3-six', 'rng-tools', 'rootfiles',
+                    'rpm', 'sed', 'vim-common', 'vim-enhanced', 'vim-filesystem', 'vim-minimal', 'xfsprogs']
 
     suse_base_pkgs = ['filesystem', 'glibc', 'glibc-common', 'glibc-locale-base', 'systemd', 'systemd-sysvinit', 'udev',
                       'bash', 'bash-completion', 'aaa_base', 'aaa_base-extras', 'coreutils', 'pam', 'pam-config',
@@ -412,9 +457,9 @@ def set_distro_pkgs(facts):
                       'iputils', 'kbd', 'kmod', 'kmod-compat', 'kpartx', 'less', 'libpwquality1', 'lsof', 'mdadm',
                       'ncurses-utils', 'openssh', 'openssh-clients', 'openssh-server', 'openSUSE-release', 'parted',
                       'pbr', 'plymouth', 'procps', 'python3-distro', 'python3-parted', 'python3-pyroute2',
-                      'python3-pyudev', 'python3-rpm', 'python3-selinux', 'python3-six', 'python3-tqdm', 'rng-tools',
-                      'rootfiles', 'rpm', 'sed', 'shadow', 'sysconfig', 'terminfo-base', 'vim', 'vim-data-common',
-                      'wicked', 'wicked-service', 'xfsprogs']
+                      'python3-pyudev', 'python3-rpm', 'python3-selinux', 'python3-six', 'rng-tools', 'rootfiles',
+                      'rpm', 'sed', 'shadow', 'sysconfig', 'terminfo-base', 'vim', 'vim-data-common', 'wicked',
+                      'wicked-service', 'xfsprogs']
 
     fedora_pkgs = ['python3', 'fedora-release', 'fedora-release-common', 'fedora-release-server',
                    'fedora-release-identity-server']
@@ -432,6 +477,8 @@ def set_distro_pkgs(facts):
         return rh_base_pkgs + oel_pkgs
     elif "openSUSE" in facts.distro:
         return suse_base_pkgs
+    elif "Debian" in facts.distro:
+        return debian_pkgs
 
 
 def suse_customize_rootfs(tmp_rootfs_dir):
@@ -464,7 +511,7 @@ def suse_customize_rootfs(tmp_rootfs_dir):
         else:
             print(line, end='')
 
-    makedirs(join(tmp_rootfs_dir, "usr/lib/systemd/system/network-online.target.wants"))
+    makedirs(join(tmp_rootfs_dir, "usr/lib/systemd/system/network-online.target.wants"), exist_ok=True)
     chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/network-online.target.wants"))
     symlink("../wicked.service", "wicked.service")
 
