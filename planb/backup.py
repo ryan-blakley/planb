@@ -21,12 +21,12 @@ from shutil import copyfile, copytree, rmtree
 from tempfile import mkdtemp
 from time import strftime
 
-from .exceptions import ExistsError, GeneralError, MountError, RunCMDError
-from .facts import Facts
-from .iso import ISO
-from .tar import create_tar
-from .usb import USB
-from .utils import dev_from_file, dev_from_name, is_installed, not_in_append, rsync, run_cmd, mount, umount
+from planb.exceptions import ExistsError, GeneralError, MountError, RunCMDError
+from planb.facts import Facts
+from planb.iso import ISO
+from planb.tar import create_tar
+from planb.usb import USB
+from planb.utils import dev_from_file, dev_from_name, is_installed, not_in_append, rsync, run_cmd, mount, umount
 
 
 class Backup(object):

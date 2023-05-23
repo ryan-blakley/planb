@@ -14,7 +14,7 @@
 
 import logging
 
-from .utils import is_block, run_cmd
+from planb.utils import is_block, run_cmd
 
 
 def get_md_info(udev_ctx):

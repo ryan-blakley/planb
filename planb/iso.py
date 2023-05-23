@@ -13,16 +13,18 @@
 # <http://www.gnu.org/licenses/>.
 
 import logging
+
 from glob import glob
-from jinja2 import Environment, FileSystemLoader
 from os import chdir, makedirs, stat, uname
 from os.path import exists, join
 from shutil import copy2
 
-from .distros import LiveOS, prep_rootfs, rh_customize_rootfs, suse_customize_rootfs
-from .exceptions import MountError
-from .fs import fmt_fs
-from .utils import mk_cdboot, mount, rand_str, run_cmd, umount
+from jinja2 import Environment, FileSystemLoader
+
+from planb.distros import LiveOS, prep_rootfs, rh_customize_rootfs, suse_customize_rootfs
+from planb.exceptions import MountError
+from planb.fs import fmt_fs
+from planb.utils import mk_cdboot, mount, rand_str, run_cmd, umount
 
 
 class ISO(object):

@@ -13,7 +13,8 @@
 # <http://www.gnu.org/licenses/>.
 
 import logging
-from .utils import run_cmd
+
+from planb.utils import run_cmd
 
 
 def get_luks_devs(udev_ctx):

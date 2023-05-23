@@ -14,6 +14,7 @@
 
 import logging
 import tarfile
+
 from contextlib import suppress
 from os import chdir, listdir
 from os.path import join, lexists

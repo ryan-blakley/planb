@@ -14,23 +14,25 @@
 
 import json
 import logging
+
 from glob import glob
 from os import environ, chdir, chmod, chroot, makedirs, sync, O_RDONLY
 from os import open as o_open
 from os.path import exists, isdir, isfile, join
 from re import search
-from selinux import chcon
 from shutil import move
 
-from .exceptions import ExistsError, GeneralError, MountError, RunCMDError
-from .facts import Facts
-from .fs import fmt_fs, get_mnts
-from .luks import luks_check
-from .lvm import deactivate_vgs, RecoveryLVM
-from .md import get_md_info, md_check
-from .parted import Parted
-from .tar import restore_tar
-from .utils import dev_from_file, dev_from_name, rsync, run_cmd, mount, umount
+from selinux import chcon
+
+from planb.exceptions import ExistsError, GeneralError, MountError, RunCMDError
+from planb.facts import Facts
+from planb.fs import fmt_fs, get_mnts
+from planb.luks import luks_check
+from planb.lvm import deactivate_vgs, RecoveryLVM
+from planb.md import get_md_info, md_check
+from planb.parted import Parted
+from planb.tar import restore_tar
+from planb.utils import dev_from_file, dev_from_name, rsync, run_cmd, mount, umount
 
 
 class Recover(object):
@@ -598,7 +600,7 @@ class Recover(object):
 
         # Cd back to the rroot fd, then chroot back out.
         chdir(rroot)
-        chroot('.')
+        chroot('../src/modules')
 
         # Clean up tmpfs mounts from earlier.
         for m in tmpfs_mnts:

@@ -13,12 +13,13 @@
 # <http://www.gnu.org/licenses/>.
 
 import logging
+
 from argparse import ArgumentParser
 from os import getuid
 
-from .config import LoadConfig
-from .facts import Facts
-from .logger import set_log_cfg
+from planb.config import LoadConfig
+from planb.facts import Facts
+from planb.logger import set_log_cfg
 
 
 def parse_args():

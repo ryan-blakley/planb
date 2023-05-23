@@ -14,8 +14,8 @@
 
 import logging
 
-from .exceptions import RunCMDError
-from .utils import dev_from_file, get_dev_type, run_cmd
+from planb.exceptions import RunCMDError
+from planb.utils import dev_from_file, get_dev_type, run_cmd
 
 
 def activate_vg(vg):

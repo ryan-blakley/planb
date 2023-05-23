@@ -13,16 +13,18 @@
 # <http://www.gnu.org/licenses/>.
 
 import logging
+
 from glob import glob
-from jinja2 import Environment, FileSystemLoader
 from os import makedirs, rmdir, uname
 from os.path import exists, join
 from shutil import copy2
 
-from .distros import LiveOS, prep_rootfs, rh_customize_rootfs, suse_customize_rootfs
-from .exceptions import MountError, RunCMDError
-from .fs import fmt_fs, grab_mnt_info
-from .utils import dev_from_file,  is_block, mount, rand_str, run_cmd, udev_trigger, umount
+from jinja2 import Environment, FileSystemLoader
+
+from planb.distros import LiveOS, prep_rootfs, rh_customize_rootfs, suse_customize_rootfs
+from planb.exceptions import MountError, RunCMDError
+from planb.fs import fmt_fs, grab_mnt_info
+from planb.utils import dev_from_file,  is_block, mount, rand_str, run_cmd, udev_trigger, umount
 
 
 def fmt_usb(device):

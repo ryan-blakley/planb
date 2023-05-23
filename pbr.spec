@@ -1,4 +1,7 @@
-Name:           pbr
+%{?python_disable_dependency_generator}
+%define debug_package   %{nil}
+
+Name:           planb
 Version:        0.5
 Release:        1%{?dist}
 Summary:        Plan B Recovery is a backup and recovery utility.
@@ -46,21 +49,18 @@ Requires: syslinux-extlinux
 %description
 Plan B Recovery is a backup and recovery utility.
 
-# Had to remove BuildArch noarch, so I could filter Requires for syslinux,
-# doing that switched it to wanting to build a debuginfo rpm. Since this is
-# purely python, it doesn't need a debuginfo rpm, so disable generating one.
-%global debug_package %{nil}
-
 %prep
-%setup -q -n %{name}-%{version}
+%autosetup -n %{name}-%{version}
 
 %build
+%py3_build
 
 %install
-rm -rf $RPM_BUILD_ROOT
-%{__python3} setup.py install -O1 --root $RPM_BUILD_ROOT
+%py3_install
 
 %files
+%doc README.md
+%license LICENSE
 # For cfg files.
 %config(noreplace) %{_sysconfdir}/planb/
 %config(noreplace) %{_sysconfdir}/cron.d/pbr

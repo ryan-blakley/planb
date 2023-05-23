@@ -18,14 +18,15 @@ import json
 from os import environ, uname
 from os.path import exists
 from platform import machine
+
 from pyudev import Context
 
-from .fs import get_mnts
-from .luks import get_luks_devs
-from .lvm import get_lvm_report
-from .parted import get_part_layout
-from .md import get_md_info
-from .utils import get_modules, is_installed, run_cmd
+from planb.fs import get_mnts
+from planb.luks import get_luks_devs
+from planb.lvm import get_lvm_report
+from planb.parted import get_part_layout
+from planb.md import get_md_info
+from planb.utils import get_modules, is_installed, run_cmd
 
 
 class Facts(object):

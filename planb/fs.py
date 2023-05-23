@@ -14,8 +14,8 @@
 
 import logging
 
-from .exceptions import ExistsError, GeneralError, RunCMDError
-from .utils import dev_from_file, get_dev_type, run_cmd
+from planb.exceptions import ExistsError, GeneralError, RunCMDError
+from planb.utils import dev_from_file, get_dev_type, run_cmd
 
 
 def fmt_fs(dev, fs_uuid, fs_label, fs_type):

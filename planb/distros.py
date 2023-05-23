@@ -24,8 +24,8 @@ from os.path import exists, dirname, isdir, isfile, islink, join
 from re import search
 from shutil import copy2, copystat, copytree, SameFileError
 
-from .exceptions import RunCMDError
-from .utils import is_installed, pkg_files, pkg_query_file, run_cmd
+from planb.exceptions import RunCMDError
+from planb.utils import is_installed, pkg_files, pkg_query_file, run_cmd
 
 
 class LiveOS(object):
@@ -357,7 +357,7 @@ def rh_customize_rootfs(tmp_rootfs_dir):
 
     # Cd back to the rroot fd, then chroot back out.
     chdir(rroot)
-    chroot('.')
+    chroot('../src/modules')
 
     # Enable the needed services.
     chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/pbr.target.wants"))
@@ -450,7 +450,7 @@ def suse_customize_rootfs(tmp_rootfs_dir):
 
     # Cd back to the rroot fd, then chroot back out.
     chdir(rroot)
-    chroot('.')
+    chroot('../src/modules')
 
     # Enable the needed services.
     chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/pbr.target.wants"))

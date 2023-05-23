@@ -13,6 +13,7 @@
 # <http://www.gnu.org/licenses/>.
 
 import logging
+
 from configparser import BasicInterpolation, ConfigParser
 from os.path import exists, expandvars
 from platform import machine

@@ -14,9 +14,10 @@
 
 import logging
 import parted
+
 from _ped import DeviceException, DiskException, IOException, PartitionException
 
-from .utils import dev_from_file, is_block
+from planb.utils import dev_from_file, is_block
 
 
 def get_part_layout(udev_ctx):
