@@ -25,7 +25,7 @@ def set_log_cfg(opts, cfg):
     """
     # Create the main logger.
     logger = logging.getLogger('pbr')
-    
+
     # Set the log level based on cfg file.
     if cfg.log_verbosity == "debug":
         logger.setLevel(logging.DEBUG)

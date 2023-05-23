@@ -1,15 +1,15 @@
 # This file is part of the Plan (B)ackup Recovery project:
 # https://gitlab.cee.redhat.com/rblakley/pbr
 
-# Plan (B)ackup Recovery is free software; you can redistribute 
-# it and/or modify it under the terms of the GNU General Public 
-# License as published by the Free Software Foundation; either 
+# Plan (B)ackup Recovery is free software; you can redistribute
+# it and/or modify it under the terms of the GNU General Public
+# License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.
 
-# Plan (B)ackup Recovery is distributed in the hope that it will 
-# be useful, but WITHOUT ANY WARRANTY; without even the implied 
-# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
-# See the GNU General Public License for more details go to 
+# Plan (B)ackup Recovery is distributed in the hope that it will
+# be useful, but WITHOUT ANY WARRANTY; without even the implied
+# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details go to
 # <http://www.gnu.org/licenses/>.
 
 import logging
@@ -28,7 +28,7 @@ def parse_args():
     :return:
     """
     logger = logging.getLogger('pbr')
-    parser = ArgumentParser(description="""Plan B Recovery, if all else fails go to Plan B! 
+    parser = ArgumentParser(description="""Plan B Recovery, if all else fails go to Plan B!
                                         Plan B Recover comes with ABSOLUTELY NO WARRANTY.""")
 
     parser.add_argument("-c", "--check-facts", help="Check if the existing facts changed.", action='store_true')
@@ -51,7 +51,7 @@ def parse_args():
             logger.error("Please provide a valid argument.")
             parser.print_help()
             exit(1)
-    
+
     if (opts.backup or opts.backup_only) and opts.recover:
         logger.error("Choose either backup or recover not both.")
         parser.print_help()
@@ -137,6 +137,6 @@ def main():
     :return:
     """
     pbr = PBR()
-    pbr.run()    
+    pbr.run()
 
 # vim:set ts=4 sw=4 et:

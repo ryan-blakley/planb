@@ -1,9 +1,9 @@
 # This file is part of the Plan (B)ackup Recovery project:
 # https://gitlab.cee.redhat.com/rblakley/pbr
 
-# Plan (B)ackup Recovery is free software; you can redistribute 
-# it and/or modify it under the terms of the GNU General Public 
-# License as published by the Free Software Foundation; either 
+# Plan (B)ackup Recovery is free software; you can redistribute
+# it and/or modify it under the terms of the GNU General Public
+# License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.
 
 # Plan (B)ackup Recovery is distributed in the hope that it will
@@ -44,7 +44,7 @@ class LoadConfig(object):
 
             self.log_verbosity = cfg['App'].get('log_verbosity', 'info')
             self.tmp_dir = cfg['App'].get('tmp_dir', '/tmp')
-            
+
             if cfg['Backup'].get('boot_type', '') and cfg['Backup'].get('backup_location_type', ''):
                 self.boot_type = cfg['Backup']['boot_type']
                 if self.boot_type not in allowed_boot_types:

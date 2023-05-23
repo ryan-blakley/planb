@@ -1,9 +1,9 @@
 # This file is part of the Plan (B)ackup Recovery project:
 # https://gitlab.cee.redhat.com/rblakley/pbr
 
-# Plan (B)ackup Recovery is free software; you can redistribute 
-# it and/or modify it under the terms of the GNU General Public 
-# License as published by the Free Software Foundation; either 
+# Plan (B)ackup Recovery is free software; you can redistribute
+# it and/or modify it under the terms of the GNU General Public
+# License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.
 
 # Plan (B)ackup Recovery is distributed in the hope that it will
@@ -339,7 +339,7 @@ def prep_rootfs(cfg, tmp_dir, tmp_rootfs_dir):
     # Create mnt directories on the ISO.
     makedirs(join(tmp_rootfs_dir, "mnt/backup"))
     makedirs(join(tmp_rootfs_dir, "mnt/rootfs"))
-    
+
 
 def rh_customize_rootfs(tmp_rootfs_dir):
     """
@@ -400,7 +400,7 @@ def set_distro_pkgs(facts):
                     'python3-libs', 'alternatives', 'NetworkManager', 'binutils', 'crypto-policies',
                     'device-mapper-multipath', 'dosfstools', 'e2fsprogs', 'gawk', 'grep', 'gzip', 'iproute', 'iputils',
                     'kbd', 'kbd-misc', 'kmod', 'kpartx', 'less', 'libpwquality', 'lsof', 'mdadm', 'ncurses',
-                    'ncurses-base', 'openssh', 'openssh-clients', 'openssh-server', 'parted', 'passwd', 'pbr', 
+                    'ncurses-base', 'openssh', 'openssh-clients', 'openssh-server', 'parted', 'passwd', 'pbr',
                     'plymouth', 'procps-ng', 'python3-distro', 'python3-libselinux', 'python3-pyparted',
                     'python3-pyroute2', 'python3-pyudev', 'python3-rpm', 'python3-six', 'rng-tools', 'rootfiles', 'rpm',
                     'sed', 'vim-common', 'vim-enhanced', 'vim-filesystem', 'vim-minimal', 'xfsprogs']

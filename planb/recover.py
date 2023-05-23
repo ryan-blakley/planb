@@ -43,7 +43,7 @@ class Recover(object):
         :param cfg: The cfg file object.
         """
         self.log = logging.getLogger('pbr')
-        
+
         # Check to make sure we're booted into the iso.
         if not environ.get('RECOVERY_MODE'):
             self.log.error(" Recover should be ran from recovery mode only.")
@@ -120,14 +120,13 @@ class Recover(object):
                         del facts_disks[disk1]
                         continue
 
-                # If the serial number doesn't exist, or doesn't match, 
-                # chk the size.
+                # If the serial number doesn't exist, or doesn't match, chk the size.
                 elif size1 == int(facts_disks[disk1]['size']):
                     self.log.debug("name, and size matches")
                     # If the size matches, delete from facts_disks.
                     del facts_disks[disk1]
                     continue
-                
+
             self.log.debug(f"Disk {disk1} with the size of {size1} doesn't exist in the recovery environment, "
                            "checking if there is a suitable disk.")
             possible_size_matching_disks = []
@@ -149,10 +148,10 @@ class Recover(object):
                         self.map_disk(disk1, disk2)
                         del facts_disks[disk2]
                         break
-                
+
                 # If the size matches, add to list, and del the entry, we'll handle the list later.
                 elif size1 == size2:
-                    self.log.debug(f"sizes only match")
+                    self.log.debug("sizes only match")
                     possible_size_matching_disks.append(disk2)
                     del facts_disks[disk2]
                     break
@@ -250,10 +249,10 @@ class Recover(object):
             # so we can ignore non number keys.
             if key.isnumeric():
                 partitioned += 1
-                # If the restore disk is missing a partition, 
+                # If the restore disk is missing a partition,
                 # it will throw a key error, so catch and return false.
                 try:
-                    # Check if the partitions start sectors match, if not return false. Wrap key in int(), 
+                    # Check if the partitions start sectors match, if not return false. Wrap key in int(),
                     # since when the backup facts are written to disk, they're converted to str.
                     if not self.bk_disks[d1][key]['start'] == facts.disks[d2][int(key)]['start']:
                         return False
@@ -262,8 +261,8 @@ class Recover(object):
                 except KeyError:
                     return False
 
-        # This is a check for non partitioned disk with a fs, basically if we've made it this far, 
-        # the size has already been checked. So check for a fs key, if it exist return true, if 
+        # This is a check for non-partitioned disk with a fs, basically if we've made it this far,
+        # the size has already been checked. So check for a fs key, if it exists return true, if
         # it doesn't return false.
         if partitioned == 0:
             return self.bk_disks[d1].get('fs', '')
@@ -303,7 +302,7 @@ class Recover(object):
                         return dev_info.find_parent('block').device_node
                     elif info['md_devname']:
                         p = info['md_devname'].split('/')[-1]
-                        
+
                     # Since this is in an else statement, make sure p isn't None.
                     if p:
                         self.log.debug(f"recover: grab_bootloader_disk: p: {p}")
@@ -403,7 +402,7 @@ class Recover(object):
                 else:
                     self.bk_mnts[mnt]['path'] = info['path'].replace(o_disk, n_disk)
                     self.bk_mnts[mnt]['parent'] = info['parent'].replace(o_disk, n_disk)
-                
+
                 # Append the mp to the mapped list, so it can be skipped.
                 self.lst_mapped_mps.append(mnt)
 
@@ -490,7 +489,7 @@ class Recover(object):
             self.log.debug(f"recover: mnt_bk_mount: boot_type:{self.cfg.boot_type} "
                            f"bk_location_type:{self.cfg.bk_location_type} tmp_bk_mnt:{self.tmp_bk_mnt}")
         else:
-            self.log.debug(f"recover: mnt_bk_mount: Skipping mounting, since backup archive arg was passed.")
+            self.log.debug("recover: mnt_bk_mount: Skipping mounting, since backup archive arg was passed.")
 
     def mnt_restored_rootfs(self):
         """

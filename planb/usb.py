@@ -24,7 +24,7 @@ from jinja2 import Environment, FileSystemLoader
 from planb.distros import LiveOS, prep_rootfs, rh_customize_rootfs, suse_customize_rootfs
 from planb.exceptions import MountError, RunCMDError
 from planb.fs import fmt_fs, grab_mnt_info
-from planb.utils import dev_from_file,  is_block, mount, rand_str, run_cmd, udev_trigger, umount
+from planb.utils import dev_from_file, is_block, mount, rand_str, run_cmd, udev_trigger, umount
 
 
 def fmt_usb(device):

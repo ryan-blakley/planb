@@ -46,11 +46,9 @@ def get_part_layout(udev_ctx):
         dm_name = None
 
         # Skip if the device is a /dev/loop, mdraid, cd, or usb.
-        if (not search("/dev/loop", d.device_node)
-                and not d.get('MD_NAME', False)
-                and not search("cd", d.get('ID_TYPE', ""))
-                and not search("usb", d.get('ID_BUS', ""))
-                and not int(d.get('DM_MULTIPATH_DEVICE_PATH', False))):
+        if not search("/dev/loop", d.device_node) and not d.get('MD_NAME', False) and not search(
+                "cd", d.get('ID_TYPE', "")) and not search("usb", d.get('ID_BUS', "")) and not int(
+                d.get('DM_MULTIPATH_DEVICE_PATH', False)):
 
             # If it's a dm device check if it's mpath if not skip it,
             # if it is set the dm_name.
@@ -60,7 +58,7 @@ def get_part_layout(udev_ctx):
                 else:
                     continue
 
-            # If the device is an mpath path, then skip it, would prefer
+            # If the device is a mpath path, then skip it, would prefer
             # to query udev here, but apparently in the recovery
             # environment the DM_MULTIPATH_DEVICE_PATH variable is always
             # a zero for some reason. So I don't trust using it, so check

@@ -1,9 +1,9 @@
 # This file is part of the Plan (B)ackup Recovery project:
 # https://gitlab.cee.redhat.com/rblakley/pbr
 
-# Plan (B)ackup Recovery is free software; you can redistribute 
-# it and/or modify it under the terms of the GNU General Public 
-# License as published by the Free Software Foundation; either 
+# Plan (B)ackup Recovery is free software; you can redistribute
+# it and/or modify it under the terms of the GNU General Public
+# License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.
 
 # Plan (B)ackup Recovery is distributed in the hope that it will
@@ -327,7 +327,7 @@ class ISO(object):
                 ))
         elif self.facts.arch == "s390x":
             makedirs(self.tmp_images_dir)
-            
+
             # Set the cmdline arguments for the iso.
             with open(join(self.tmp_images_dir, "cdboot.prm"), "w") as f:
                 f.writelines(f"ro root=live:LABEL={self.label_name} rd.live.image selinux=0 "

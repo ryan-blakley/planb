@@ -1,9 +1,9 @@
 # This file is part of the Plan (B)ackup Recovery project:
 # https://gitlab.cee.redhat.com/rblakley/pbr
 
-# Plan (B)ackup Recovery is free software; you can redistribute 
-# it and/or modify it under the terms of the GNU General Public 
-# License as published by the Free Software Foundation; either 
+# Plan (B)ackup Recovery is free software; you can redistribute
+# it and/or modify it under the terms of the GNU General Public
+# License as published by the Free Software Foundation; either
 # version 3 of the License, or (at your option) any later version.
 
 # Plan (B)ackup Recovery is distributed in the hope that it will
@@ -116,7 +116,7 @@ class Backup(object):
                     self.tmp_bk_dir = join(self.tmp_mount_dir, self.facts.hostname.split('.')[0])
                     # Create backup dir based on the hostname on the mounted fs.
                     makedirs(self.tmp_bk_dir, exist_ok=True)
-                
+
         self.log.debug(f"backup: chk_bk_settings: tmp_bk_dir:{self.tmp_bk_dir}")
 
     def cleanup(self, error=0):
@@ -234,7 +234,7 @@ class Backup(object):
                 m_p = str(info['parent'])
 
                 if info['md_devname']:
-                    self.log.debug(f"backup: cleanup_disks: Found md_devname, looping through md_info for the devs.")
+                    self.log.debug("backup: cleanup_disks: Found md_devname, looping through md_info for the devs.")
                     for d in self.facts.md_info[info['md_devname'].split('/')[-1]]['devs']:
                         self.log.debug(f"backup: cleanup_disks: Found d:{d}")
                         not_in_append(dev_from_name(self.facts.udev_ctx, d).find_parent('block').device_node, bk_disks)
@@ -254,7 +254,7 @@ class Backup(object):
         # Remove the unused disks from the facts disks.
         for d in rm_disks:
             self.facts.disks.pop(d)
-    
+
     def cmp_mnts_fstab(self):
         """
         Compare the currently mount points and fstab for any differences, this will
@@ -489,9 +489,8 @@ class Backup(object):
         to the start function to prevent duplicate code.
         :return:
         """
-        # Catch any exception and so umount can be ran, otherwise, the tmp dir function
-        # will wipe all of the files on the nfs mount, also the nfs mount would be 
-        # left hanging.
+        # Catch any exception and so umount can be run, otherwise, the tmp dir function
+        # will wipe all the files on the nfs mount, also the nfs mount would be left hanging.
         try:
             # Create a temporary working directory.
             self.tmp_dir = mkdtemp(prefix="pbr.")

@@ -36,7 +36,7 @@ def fmt_fs(dev, fs_uuid, fs_label, fs_type):
     if not exists(dev):
         logger.error(f"ERROR: Can't format {dev}, because it isn't a valid device.")
         raise ExistsError()
-    
+
     logger.info(f"  Formatting {dev} as {fs_type}")
 
     # Format the devs with the uuid and label if there was one.
