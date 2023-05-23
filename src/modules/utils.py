@@ -98,6 +98,42 @@ def is_block(dev):
         return False
 
 
+def is_installed(pkg):
+    from os.path import exists
+
+    if exists("/usr/bin/rpm"):
+        from rpm import RPMTAG_NAME, TransactionSet
+
+        ts = TransactionSet()
+
+        if ts.dbMatch(RPMTAG_NAME, pkg):
+            return True
+        else:
+            return False
+
+
+def pkg_files(pkg):
+    from os.path import exists
+
+    if exists("/usr/bin/rpm"):
+        from rpm import RPMTAG_NAME, files, TransactionSet
+
+        ts = TransactionSet()
+        for h in ts.dbMatch(RPMTAG_NAME, pkg):
+            return files(h)
+
+
+def pkg_query_file(file_name):
+    from os.path import exists
+
+    if exists("/usr/bin/rpm"):
+        from rpm import RPMTAG_BASENAMES, TransactionSet
+
+        ts = TransactionSet()
+        for h in ts.dbMatch(RPMTAG_BASENAMES, file_name):
+            return h['name']
+
+
 def mk_cdboot(kernel, initrd, parmfile, outfile):
     """
     Create the cdboot.img file needed for s390 to boot. I based this off of
@@ -168,22 +204,6 @@ def rand_str(length, hexa):
     else:
         letters = "abcdef" + string.digits
     return ''.join(random.choices(letters, k=length))
-
-
-def rpmq(pkg):
-    """
-    Check if a pkg is installed on the system.
-    :param pkg: pkg name
-    :return: True/False
-    """
-    from rpm import RPMTAG_NAME, TransactionSet
-
-    ts = TransactionSet()
-
-    if ts.dbMatch(RPMTAG_NAME, pkg):
-        return True
-    else:
-        return False
 
 
 def rpmql(pkg):

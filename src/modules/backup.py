@@ -14,6 +14,7 @@
 
 import json
 import logging
+
 from os import chdir, listdir, makedirs, remove, rename
 from os.path import exists, join
 from shutil import copyfile, copytree, rmtree
@@ -25,7 +26,7 @@ from .facts import Facts
 from .iso import ISO
 from .tar import create_tar
 from .usb import USB
-from .utils import dev_from_file, dev_from_name, not_in_append, rpmq, rsync, run_cmd, mount, umount
+from .utils import dev_from_file, dev_from_name, is_installed, not_in_append, rsync, run_cmd, mount, umount
 
 
 class Backup(object):
@@ -58,13 +59,18 @@ class Backup(object):
             if ex not in self.bk_excludes:
                 self.bk_excludes.append(ex)
 
+        if "suse" in self.facts.distro.lower():
+            self.nfs_pkg = "nfs-client"
+        else:
+            self.nfs_pkg = "nfs-utils"
+
     def chk_bk_settings(self):
         t = self.cfg.bk_location_type
         # Need to add a section to check that the remote host is accessible, and
         # has rsync installed, probably can use paramiko and run rpm -q rsync on
         # the remote host to confirm.
         if t == "rsync":
-            if not rpmq("rsync"):
+            if not is_installed("rsync"):
                 self.log.error(" Backup location type is set to rsync, but rsync isn't installed, please install.")
             else:
                 self.tmp_bk_dir = None
@@ -81,12 +87,15 @@ class Backup(object):
         else:
             # Check if boot type is usb and mkrescue was passed, before mounting.
             if not ("usb" in self.cfg.boot_type.lower() and self.opts.mkrescue):
-                if (t == "nfs" or t == "cifs") and not rpmq(f"{t}-utils"):
-                    # On suse the pkg name is nfs-client.
-                    if not rpmq(f"{t}-client"):
-                        self.log.error(f"Backup location type is set to {t}, but {t}-utils isn't installed, "
-                                       "please install.")
-                        raise ExistsError()
+                if t == "cifs" and not is_installed(f"{t}-utils"):
+                    self.log.error(f"Backup location type is set to {t}, but {t}-utils isn't installed, "
+                                   "please install.")
+                    raise ExistsError()
+                    # Since the nfs pkg is named different across distros, just separate it out.
+                elif t == "nfs" and not is_installed(self.nfs_pkg):
+                    self.log.error(f"Backup location type is set to {t}, but {self.nfs_pkg} isn't installed, "
+                                   "please install.")
+                    raise ExistsError()
 
                 # Mount bk_mount, which is where the backup archive
                 # will be stored later on.
@@ -271,6 +280,7 @@ class Backup(object):
 
         # If there is anymore entries in mp, throw an error.
         if len(mp) > 0:
+            self.log.debug(f"backup: cmp_mnt_fstab: mp: {mp}")
             self.log.error("""There is a discrepancy between the mount points and the fstab, please correct the """
                            """fstab and try again. This is here to help prevent a can't boot after restoration.""")
             raise GeneralError()

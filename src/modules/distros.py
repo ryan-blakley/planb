@@ -15,6 +15,7 @@
 import fileinput
 import logging
 import magic
+
 from contextlib import suppress
 from glob import glob
 from os import chdir, chroot, listdir, makedirs, remove, symlink, uname, O_RDONLY
@@ -24,7 +25,7 @@ from re import search
 from shutil import copy2, copystat, copytree, SameFileError
 
 from .exceptions import RunCMDError
-from .utils import rpmq, rpmql, rpmqf, run_cmd
+from .utils import is_installed, pkg_files, pkg_query_file, run_cmd
 
 
 class LiveOS(object):
@@ -65,7 +66,7 @@ class LiveOS(object):
             # Suppress the following exceptions, normally they're caused by symlinks, or multiple
             # pkgs that state they own the same file/dir.
             with suppress(TypeError, FileExistsError, SameFileError):
-                for f in rpmql(pkg):
+                for f in pkg_files(pkg):
                     fname = f"{f}"
                     for exclude in self.exclude_files:
                         if exclude in fname:
@@ -81,7 +82,7 @@ class LiveOS(object):
                                     # If exception, try making the dir of the path, then copy, if still
                                     # the file isn't found there is probably a dead symlink in the path.
                                     with suppress(FileNotFoundError):
-                                        makedirs(dirname(dst))
+                                        makedirs(dirname(dst), exist_ok=True)
                                         copystat(dirname(fname), dirname(dst))
                                         copy2(fname, dst, follow_symlinks=False)
 
@@ -90,7 +91,7 @@ class LiveOS(object):
                             elif isdir(fname) and not exists(dst):
                                 # If not found suppress it, there is probably a dead symlink in the path.
                                 with suppress(FileNotFoundError):
-                                    makedirs(dst)
+                                    makedirs(dst, exist_ok=True)
                                     copystat(fname, dst)
 
     def create(self):
@@ -152,7 +153,7 @@ class LiveOS(object):
         for pkg in pkgs:
             with suppress(TypeError):
                 # Loop through all the files in the pkg.
-                for f in rpmql(pkg):
+                for f in pkg_files(pkg):
                     fname = f"{f}"
 
                     # Check the magic of the file.
@@ -176,7 +177,7 @@ class LiveOS(object):
         # Loop through the lib files, and find the pkgs they belong to,
         # then append those pkg names to the lib_pkgs list.
         for x in self.libs:
-            pkg = rpmqf(x)
+            pkg = pkg_query_file(x)
             if pkg not in self.lib_pkgs:
                 self.lib_pkgs.append(pkg)
 
@@ -216,7 +217,7 @@ class LiveOS(object):
         # Include the specific pkgs for the bk_location_types.
         if self.cfg.bk_location_type == "nfs":
             # On opensuse the pkg name is nfs-client not nfs-utils.
-            if not rpmq("nfs-utils"):
+            if not is_installed("nfs-utils"):
                 pkgs.append('nfs-client')
             else:
                 pkgs.append('nfs-utils')
@@ -262,12 +263,12 @@ def prep_rootfs(cfg, tmp_dir, tmp_rootfs_dir):
     symlink("pbr.target", "default.target")
 
     # Create the needed getty wants dir and lnk the service files.
-    makedirs(join(tmp_rootfs_dir, "usr/lib/systemd/system/getty.target.wants"))
+    makedirs(join(tmp_rootfs_dir, "usr/lib/systemd/system/getty.target.wants"), exist_ok=True)
     chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/getty.target.wants"))
     symlink("../getty@.service", "getty@tty1.service")
 
     # Create the custom target wants dir, and lnk the needed service and target files.
-    makedirs(join(tmp_rootfs_dir, "usr/lib/systemd/system/pbr.target.wants"))
+    makedirs(join(tmp_rootfs_dir, "usr/lib/systemd/system/pbr.target.wants"), exist_ok=True)
     chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/pbr.target.wants"))
     symlink("../dbus.service", "dbus.service")
     symlink("../getty.target", "getty.target")
@@ -381,7 +382,7 @@ def rh_customize_rootfs(tmp_rootfs_dir):
     if exists("NetworkManager-dispatcher.service"):
         symlink("NetworkManager-dispatcher.service", "dbus-org.freedesktop.nm-dispatcher.service")
 
-    makedirs(join(tmp_rootfs_dir, "usr/lib/systemd/system/network-online.target.wants"))
+    makedirs(join(tmp_rootfs_dir, "usr/lib/systemd/system/network-online.target.wants"), exist_ok=True)
     chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/network-online.target.wants"))
     symlink("../NetworkManager-wait-online.service", "NetworkManager-wait-online.service")
 
@@ -401,9 +402,8 @@ def set_distro_pkgs(facts):
                     'kbd', 'kbd-misc', 'kmod', 'kpartx', 'less', 'libpwquality', 'lsof', 'mdadm', 'ncurses',
                     'ncurses-base', 'openssh', 'openssh-clients', 'openssh-server', 'parted', 'passwd', 'pbr', 
                     'plymouth', 'procps-ng', 'python3-distro', 'python3-libselinux', 'python3-pyparted',
-                    'python3-pyroute2', 'python3-pyudev', 'python3-rpm', 'python3-six', 'python3-tqdm', 'rng-tools',
-                    'rootfiles', 'rpm', 'sed', 'vim-common', 'vim-enhanced', 'vim-filesystem', 'vim-minimal',
-                    'xfsprogs']
+                    'python3-pyroute2', 'python3-pyudev', 'python3-rpm', 'python3-six', 'rng-tools', 'rootfiles', 'rpm',
+                    'sed', 'vim-common', 'vim-enhanced', 'vim-filesystem', 'vim-minimal', 'xfsprogs']
 
     suse_base_pkgs = ['filesystem', 'glibc', 'glibc-common', 'glibc-locale-base', 'systemd', 'systemd-sysvinit', 'udev',
                       'bash', 'bash-completion', 'aaa_base', 'aaa_base-extras', 'coreutils', 'pam', 'pam-config',
@@ -412,9 +412,9 @@ def set_distro_pkgs(facts):
                       'iputils', 'kbd', 'kmod', 'kmod-compat', 'kpartx', 'less', 'libpwquality1', 'lsof', 'mdadm',
                       'ncurses-utils', 'openssh', 'openssh-clients', 'openssh-server', 'openSUSE-release', 'parted',
                       'pbr', 'plymouth', 'procps', 'python3-distro', 'python3-parted', 'python3-pyroute2',
-                      'python3-pyudev', 'python3-rpm', 'python3-selinux', 'python3-six', 'python3-tqdm', 'rng-tools',
-                      'rootfiles', 'rpm', 'sed', 'shadow', 'sysconfig', 'terminfo-base', 'vim', 'vim-data-common',
-                      'wicked', 'wicked-service', 'xfsprogs']
+                      'python3-pyudev', 'python3-rpm', 'python3-selinux', 'python3-six', 'rng-tools', 'rootfiles',
+                      'rpm', 'sed', 'shadow', 'sysconfig', 'terminfo-base', 'vim', 'vim-data-common', 'wicked',
+                      'wicked-service', 'xfsprogs']
 
     fedora_pkgs = ['python3', 'fedora-release', 'fedora-release-common', 'fedora-release-server',
                    'fedora-release-identity-server']
@@ -464,7 +464,7 @@ def suse_customize_rootfs(tmp_rootfs_dir):
         else:
             print(line, end='')
 
-    makedirs(join(tmp_rootfs_dir, "usr/lib/systemd/system/network-online.target.wants"))
+    makedirs(join(tmp_rootfs_dir, "usr/lib/systemd/system/network-online.target.wants"), exist_ok=True)
     chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/network-online.target.wants"))
     symlink("../wicked.service", "wicked.service")
 
