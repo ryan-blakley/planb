@@ -575,12 +575,16 @@ class Recover(object):
         if self.bk_misc['uefi']:
             if "Fedora" in self.bk_misc['distro']:
                 distro = "fedora"
-            elif "CentOS" in self.bk_misc['distro']:
-                distro = "centos"
-            elif "openSUSE" in self.bk_misc['distro']:
-                distro = "opensuse"
             elif "Red Hat" in self.bk_misc['distro'] or "Oracle" in self.bk_misc['distro']:
                 distro = "redhat"
+            elif "CentOS" in self.bk_misc['distro']:
+                distro = "centos"
+            elif "AlmaLinux" in self.bk_misc['distro']:
+                distro = "almalinux"
+            elif "Rocky Linux" in self.bk_misc['distro']:
+                distro = "rocky"
+            elif "openSUSE" in self.bk_misc['distro']:
+                distro = "opensuse"
             else:
                 distro = self.bk_misc['distro'].lower()
 
