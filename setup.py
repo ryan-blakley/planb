@@ -3,13 +3,12 @@ from setuptools import find_packages, setup
 
 requires = [
     'distro',
+    'file-magic',
     'jinja2',
-    'python-magic',
-    'python-parted',
+    'pyparted',
     'pyudev',
     'rpm',
-    'six',
-    'tqdm',
+    'six'
 ]
 
 data_files = [
