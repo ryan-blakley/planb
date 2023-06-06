@@ -155,11 +155,11 @@ class LiveOS(object):
                 # Loop through all the files in the pkg.
                 for f in pkg_files(pkg):
                     fname = f"{f}"
+                    if not exists(fname):
+                        continue
 
                     # Check the magic of the file.
-                    m = magic.open(magic.NONE)
-                    m.load()
-                    mg = m.file(fname)
+                    mg = magic.detect_from_filename(fname).name
 
                     # If the file type is ELF, then run ldd against it.
                     if search("ELF", mg):
@@ -362,14 +362,15 @@ def rh_customize_rootfs(tmp_rootfs_dir):
     # Enable the needed services.
     chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/pbr.target.wants"))
     symlink("../NetworkManager.service", "NetworkManager.service")
-    symlink("../rngd.service", "rngd.service")
 
-    # Replace the execstart of rngd so enough urandom is generated.
-    for line in fileinput.input(join(tmp_rootfs_dir, "usr/lib/systemd/system/rngd.service"), inplace=True):
-        if search("^ExecStart", line):
-            print("ExecStart=/usr/sbin/rngd -f -r /dev/urandom")
-        else:
-            print(line, end='')
+    if exists("../rngd.service"):
+        # Replace the execstart of rngd so enough urandom is generated.
+        symlink("../rngd.service", "rngd.service")
+        for line in fileinput.input(join(tmp_rootfs_dir, "usr/lib/systemd/system/rngd.service"), inplace=True):
+            if search("^ExecStart", line):
+                print("ExecStart=/usr/sbin/rngd -f -r /dev/urandom")
+            else:
+                print(line, end='')
 
     chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/"))
     # Fedora renamed dbus to dbus-broker, and symlinks dbus and messsagebus from
