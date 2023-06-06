@@ -43,6 +43,7 @@ class Facts(object):
         self.hostname = uname().nodename
         self.distro = distro.name()
         self.distro_pretty = distro.name(pretty=True)
+        self.distro_version = distro.version_parts()[0]
         self.uname = uname().release
         self.udev_ctx = Context()
         self.mnts = get_mnts(self.udev_ctx)

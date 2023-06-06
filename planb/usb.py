@@ -24,7 +24,7 @@ from jinja2 import Environment, FileSystemLoader
 from planb.distros import LiveOS, prep_rootfs, rh_customize_rootfs, suse_customize_rootfs
 from planb.exceptions import MountError, RunCMDError
 from planb.fs import fmt_fs, grab_mnt_info
-from planb.utils import dev_from_file, is_block, mount, rand_str, run_cmd, udev_trigger, umount
+from planb.utils import dev_from_file, is_block, mount, rand_str, run_cmd, set_distro_efi_file, udev_trigger, umount
 
 
 def fmt_usb(device):
@@ -234,7 +234,6 @@ class USB(object):
         Copy the needed files for syslinux in the tmp working directory.
         :return:
         """
-        memtest = 0
         self.log.info("Mounting USB boot directory")
         makedirs(self.tmp_usbfs_dir)
         ret = mount("/dev/disk/by-label/PLANBRECOVER-USB", self.tmp_usbfs_dir)
@@ -242,41 +241,9 @@ class USB(object):
             self.log.error(f"{ret.args} returned the following error: {ret.stderr.decode()}")
             raise MountError()
 
-        # Make the needed temp directory.
+        memtest = 0
         makedirs(self.tmp_syslinux_dir, exist_ok=True)
-
-        # Set the local distro and efi_file variable for the grub.cfg file.
-        if "Fedora" in self.facts.distro:
-            distro = "fedora"
-
-            if "aarch64" in self.facts.arch:
-                efi_file = "shimaa64.efi"
-            else:
-                efi_file = "shimx64.efi"
-        elif "Red Hat" in self.facts.distro or "Oracle" in self.facts.distro:
-            distro = "redhat"
-
-            if "aarch64" in self.facts.arch:
-                efi_file = "shimaa64.efi"
-            else:
-                efi_file = "shimx64.efi"
-        elif "CentOS" in self.facts.distro:
-            distro = "centos"
-
-            if "aarch64" in self.facts.arch:
-                efi_file = "shimaa64.efi"
-            else:
-                efi_file = "shimx64.efi"
-        elif "SUSE" in self.facts.distro:
-            distro = "opensuse"
-            efi_file = "shim.efi"
-        else:
-            distro = "redhat"
-
-            if "aarch64" in self.facts.arch:
-                efi_file = "shimaa64.efi"
-            else:
-                efi_file = "shimx64.efi"
+        distro, efi_file = set_distro_efi_file(self.facts)
 
         # Grab the uuid of the fs that /boot is located on.
         if grab_mnt_info(self.facts, "/boot"):

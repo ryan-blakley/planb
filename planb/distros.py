@@ -395,42 +395,81 @@ def set_distro_pkgs(facts):
     :return:
     """
     # List of base packages that need to be installed, WARNING the order of this array does matter.
-    rh_base_pkgs = ['filesystem', 'glibc', 'glibc-common', 'setup', 'systemd', 'systemd-udev', 'bash',
-                    'bash-completion', 'initscripts', 'coreutils', 'coreutils-common', 'pam', 'authselect',
-                    'authselect-libs', 'util-linux', 'dbus', 'dbus-broker', 'dbus-common', 'dbus-daemon', 'polkit',
-                    'python3-libs', 'alternatives', 'NetworkManager', 'binutils', 'crypto-policies',
-                    'device-mapper-multipath', 'dosfstools', 'e2fsprogs', 'gawk', 'grep', 'gzip', 'iproute', 'iputils',
-                    'kbd', 'kbd-misc', 'kmod', 'kpartx', 'less', 'libpwquality', 'lsof', 'mdadm', 'ncurses',
-                    'ncurses-base', 'openssh', 'openssh-clients', 'openssh-server', 'parted', 'passwd', 'pbr',
-                    'plymouth', 'procps-ng', 'python3-distro', 'python3-libselinux', 'python3-pyparted',
-                    'python3-pyroute2', 'python3-pyudev', 'python3-rpm', 'python3-six', 'rng-tools', 'rootfiles', 'rpm',
-                    'sed', 'vim-common', 'vim-enhanced', 'vim-filesystem', 'vim-minimal', 'xfsprogs']
+    rh_base_pkgs = [
+        'filesystem', 'glibc', 'glibc-common', 'setup', 'systemd', 'systemd-udev', 'bash', 'bash-completion',
+        'initscripts', 'coreutils', 'coreutils-common', 'pam', 'authselect', 'authselect-libs', 'util-linux',
+        'util-linux-core', 'dbus', 'dbus-broker', 'dbus-common', 'dbus-daemon', 'polkit', 'python3', 'python3-libs',
+        'alternatives', 'NetworkManager', 'binutils', 'crypto-policies', 'device-mapper-multipath', 'dosfstools',
+        'e2fsprogs', 'gawk', 'grep', 'gzip', 'iproute', 'iputils', 'kbd', 'kbd-misc', 'kmod', 'kpartx', 'less',
+        'libpwquality', 'lsof', 'mdadm', 'ncurses', 'ncurses-base', 'openssh', 'openssh-clients', 'openssh-server',
+        'parted', 'passwd', 'planb', 'plymouth', 'procps-ng', 'python3-distro', 'python3-jinja2', 'python3-libselinux',
+        'python3-magic', 'python3-markupsafe', 'python3-pyparted', 'python3-pyroute2', 'python3-pyudev', 'python3-rpm',
+        'python3-six', 'rng-tools', 'rootfiles', 'rpm', 'sed', 'vim-common', 'vim-enhanced', 'vim-filesystem',
+        'vim-minimal', 'xfsprogs'
+    ]
 
-    suse_base_pkgs = ['filesystem', 'glibc', 'glibc-common', 'glibc-locale-base', 'systemd', 'systemd-sysvinit', 'udev',
-                      'bash', 'bash-completion', 'aaa_base', 'aaa_base-extras', 'coreutils', 'pam', 'pam-config',
-                      'util-linux', 'util-linux-systemd', 'dbus-1', 'polkit', 'python3', 'python3-base',
-                      'update-alternatives', 'binutils', 'dosfstools', 'e2fsprogs', 'gawk', 'grep', 'gzip', 'iproute2',
-                      'iputils', 'kbd', 'kmod', 'kmod-compat', 'kpartx', 'less', 'libpwquality1', 'lsof', 'mdadm',
-                      'ncurses-utils', 'openssh', 'openssh-clients', 'openssh-server', 'openSUSE-release', 'parted',
-                      'pbr', 'plymouth', 'procps', 'python3-distro', 'python3-parted', 'python3-pyroute2',
-                      'python3-pyudev', 'python3-rpm', 'python3-selinux', 'python3-six', 'rng-tools', 'rootfiles',
-                      'rpm', 'sed', 'shadow', 'sysconfig', 'terminfo-base', 'vim', 'vim-data-common', 'wicked',
-                      'wicked-service', 'xfsprogs']
+    rh8_base_pkgs = [
+        'platform-python', 'platform-python-setuptools', 'python36'
+    ]
 
-    fedora_pkgs = ['python3', 'fedora-release', 'fedora-release-common', 'fedora-release-server',
-                   'fedora-release-identity-server']
-    rhel_pkgs = ['platform-python', 'python36', 'redhat-release']
-    cent_pkgs = ['platform-python', 'python36', 'centos-release']
-    oel_pkgs = ['platform-python', 'python36', 'oraclelinux-release']
+    suse_base_pkgs = [
+        'filesystem', 'glibc', 'glibc-common', 'glibc-locale-base', 'systemd', 'systemd-sysvinit', 'udev', 'bash',
+        'bash-completion', 'aaa_base', 'aaa_base-extras', 'coreutils', 'pam', 'pam-config', 'util-linux',
+        'util-linux-systemd', 'dbus-1', 'polkit', 'python3', 'python3-base', 'update-alternatives', 'binutils',
+        'dosfstools', 'e2fsprogs', 'gawk', 'grep', 'gzip', 'iproute2', 'iputils', 'kbd', 'kmod', 'kmod-compat',
+        'kpartx', 'less', 'libpwquality1', 'lsof', 'mdadm', 'ncurses-utils', 'openssh', 'openssh-clients',
+        'openssh-server', 'openSUSE-release', 'parted', 'planb', 'plymouth', 'procps', 'python3-distro',
+        'python3-Jinja2', 'python3-magic', 'python3-MarkupSafe', 'python3-parted', 'python3-pyroute2', 'python3-pyudev',
+        'python3-rpm', 'python3-selinux', 'python3-six', 'rng-tools', 'rootfiles', 'rpm', 'sed', 'shadow', 'sysconfig',
+        'terminfo-base', 'vim', 'vim-data-common', 'wicked', 'wicked-service', 'xfsprogs'
+    ]
 
     if "Fedora" in facts.distro:
-        return rh_base_pkgs + fedora_pkgs
+        rh_base_pkgs.extend([
+            'fedora-release', 'fedora-release-common', 'fedora-release-server', 'fedora-release-identity-server'
+        ])
+
+        return rh_base_pkgs
     elif "Red Hat" in facts.distro:
-        return rh_base_pkgs + rhel_pkgs
+        rh_base_pkgs.extend([
+            'redhat-release'
+        ])
+        if facts.distro_version == "8":
+            rh_base_pkgs.extend(rh8_base_pkgs)
+
+        return rh_base_pkgs
     elif "CentOS" in facts.distro:
-        return rh_base_pkgs + cent_pkgs
+        rh_base_pkgs.extend([
+            'centos-release', 'centos-stream-release'
+        ])
+        if facts.distro_version == "8":
+            rh_base_pkgs.extend(rh8_base_pkgs)
+
+        return rh_base_pkgs
     elif "Oracle Linux" in facts.distro:
-        return rh_base_pkgs + oel_pkgs
+        rh_base_pkgs.extend([
+            'oraclelinux-release'
+        ])
+        if facts.distro_version == "8":
+            rh_base_pkgs.extend(rh8_base_pkgs)
+
+        return rh_base_pkgs
+    elif "AlmaLinux" in facts.distro:
+        rh_base_pkgs.extend([
+            'almalinux-release', 'almalinux-repos'
+        ])
+        if facts.distro_version == "8":
+            rh_base_pkgs.extend(rh8_base_pkgs)
+
+        return rh_base_pkgs
+    elif "Rocky Linux" in facts.distro:
+        rh_base_pkgs.extend([
+            'rocky-release', 'rocky-repos'
+        ])
+        if facts.distro_version == "8":
+            rh_base_pkgs.extend(rh8_base_pkgs)
+
+        return rh_base_pkgs
     elif "openSUSE" in facts.distro:
         return suse_base_pkgs
 

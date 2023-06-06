@@ -314,6 +314,35 @@ def run_cmd(cmd, ret=False, timeout=None, capture_output=True):
         raise RunCMDError()
 
 
+def set_distro_efi_file(facts):
+    # Set the local distro and efi_file variable for the grub.cfg file.
+    if "aarch64" in facts.arch:
+        efi_file = "shimaa64.efi"
+    else:
+        efi_file = "shimx64.efi"
+
+    if "Fedora" in facts.distro:
+        distro = "fedora"
+    elif "Red Hat" in facts.distro or "Oracle" in facts.distro:
+        distro = "redhat"
+    elif "CentOS" in facts.distro:
+        distro = "centos"
+    elif "AlmaLinux" in facts.distro:
+        distro = "almalinux"
+    elif "Rocky Linux" in facts.distro:
+        distro = "rocky"
+    elif "SUSE" in facts.distro:
+        distro = "opensuse"
+        if "aarch64" in facts.arch:
+            efi_file = "grubaa64.efi"
+        else:
+            efi_file = "shim.efi"
+    else:
+        distro = "redhat"
+
+    return distro, efi_file
+
+
 def udev_trigger():
     """
     Run udevadm trigger, to force udev reload.

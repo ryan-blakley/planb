@@ -38,6 +38,8 @@ stability is added. Stability is the most important thing needed in a backup and
   - RHEL 8+
   - CentOS 8+
   - Oracle Linux 8+
+  - AlmaLinux 8+
+  - Rocky Linux 8+
   - openSUSE Leap 15+
 
 ## TODO
@@ -52,7 +54,4 @@ stability is added. Stability is the most important thing needed in a backup and
 - [x] Add option to name the backup archive, and iso files.
 - [x] Potentially find a better way to do the pam files, instead of including them in the pkg.
 - [x] Add option for post scripting.
-- [ ] Add support for stratis.
 - [ ] Add support for scp and lftp possibly.
-- [ ] Would like to add an option to create pxe boot entries.
-- [ ] Possibly add other distros, this is a maybe since all I run is Fedora/RHEL based.

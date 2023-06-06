@@ -24,7 +24,7 @@ from jinja2 import Environment, FileSystemLoader
 from planb.distros import LiveOS, prep_rootfs, rh_customize_rootfs, suse_customize_rootfs
 from planb.exceptions import MountError
 from planb.fs import fmt_fs
-from planb.utils import mk_cdboot, mount, rand_str, run_cmd, umount
+from planb.utils import mk_cdboot, mount, rand_str, run_cmd, set_distro_efi_file, umount
 
 
 class ISO(object):
@@ -218,41 +218,8 @@ class ISO(object):
         :return:
         """
         memtest = 0
-        # Make the needed temp directory.
         makedirs(self.tmp_isolinux_dir)
-
-        # Set the local distro and efi_file variable for the grub.cfg file.
-        if "Fedora" in self.facts.distro:
-            distro = "fedora"
-
-            if "aarch64" in self.facts.arch:
-                efi_file = "shimaa64.efi"
-            else:
-                efi_file = "shimx64.efi"
-        elif "Red Hat" in self.facts.distro or "Oracle" in self.facts.distro:
-            distro = "redhat"
-
-            if "aarch64" in self.facts.arch:
-                efi_file = "shimaa64.efi"
-            else:
-                efi_file = "shimx64.efi"
-        elif "CentOS" in self.facts.distro:
-            distro = "centos"
-
-            if "aarch64" in self.facts.arch:
-                efi_file = "shimaa64.efi"
-            else:
-                efi_file = "shimx64.efi"
-        elif "SUSE" in self.facts.distro:
-            distro = "opensuse"
-            efi_file = "shim.efi"
-        else:
-            distro = "redhat"
-
-            if "aarch64" in self.facts.arch:
-                efi_file = "shimaa64.efi"
-            else:
-                efi_file = "shimx64.efi"
+        distro, efi_file = set_distro_efi_file(self.facts)
 
         # Since syslinux is only available on x86_64, check the arch.
         # Then copy all of the needed isolinux files to the tmp dir.
