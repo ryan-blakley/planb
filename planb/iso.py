@@ -58,7 +58,7 @@ class ISO(object):
         chdir(join(self.tmp_dir, "isofs"))
         makedirs(join("/var/lib/pbr", "output"), exist_ok=True)
 
-        # Set the bk_dir and create it if it's doesn't exist, it should only need to
+        # Set the bk_dir and create it if it doesn't exist, it should only need to
         # be created when the backup is being included on the iso itself.
         bk_dir = join(join(self.tmp_dir, "backup"), uname().nodename.split('.')[0])
         makedirs(bk_dir, exist_ok=True)
@@ -71,7 +71,7 @@ class ISO(object):
         else:
             cmd = "/usr/bin/mkisofs"
 
-        # isohybrid is only available on x86_64, so set to none to begin with.
+        # isohybrid is only available on x86_64, so set too none to begin with.
         cmd_isohybrid = None
 
         if self.facts.uefi and self.facts.arch == "x86_64":
@@ -222,7 +222,7 @@ class ISO(object):
         distro, efi_file = set_distro_efi_file(self.facts)
 
         # Since syslinux is only available on x86_64, check the arch.
-        # Then copy all of the needed isolinux files to the tmp dir.
+        # Then copy all the needed isolinux files to the tmp dir.
         if self.facts.arch == "x86_64":
             chdir("/usr/share/syslinux/")
             copy2("chain.c32", self.tmp_isolinux_dir)
@@ -357,7 +357,7 @@ class ISO(object):
         self.log.info("Creating the ISO's LiveOS IMG")
         liveos.create_squashfs()
 
-        # If the bk location isn't set to iso, then create the iso. Otherwise
+        # If the bk location isn't set to iso, then create the iso. Otherwise,
         # skip this step since the iso needs to be created after the backup
         # archive is done.
         if not self.cfg.bk_location_type == "iso":

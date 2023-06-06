@@ -227,8 +227,8 @@ class Backup(object):
                 self.log.debug("backup: cleanup_disks: Skipping due to being mounted in the tmp dir.")
                 continue
 
-            # Check if it has a parent set, if it does check if it exist in bk_exclude_disks, if it doesn't
-            # then add it to the bk_disks list. If it does then skip it and it will be removed below.
+            # Check if it has a parent set, if it does check if it exists in bk_exclude_disks, if it doesn't
+            # then add it to the bk_disks list. If it does then skip it, and it will be removed below.
             if info['parent'] and info['parent'] not in self.cfg.bk_exclude_disks:
                 # Capture the parent for each mp.
                 m_p = str(info['parent'])
@@ -257,7 +257,7 @@ class Backup(object):
 
     def cmp_mnts_fstab(self):
         """
-        Compare the currently mount points and fstab for any differences, this will
+        Compare the current mount points and fstab for any differences, this will
         hopefully help prevent any can't boots after restoration due to fstab entries.
         :return:
         """
@@ -287,7 +287,7 @@ class Backup(object):
 
     def create_tmp_dirs(self):
         """
-        Create sub directories in the tmp dir that are needed.
+        Create subdirectories in the tmp dir that are needed.
         :return:
         """
         # Set the tmp dir vars for use by other functions.
@@ -374,7 +374,7 @@ class Backup(object):
 
         # Loop through each mp, to capture list of vgs.
         for mnt, info in mnts.items():
-            # If the mp isn't an lv or luks skip it.
+            # If the mp isn't a lv or luks skip it.
             if (info['type'] == "lvm" or info['type'] == "crypt") and not info['parent']:
                 vg = info['vg']
 
@@ -387,7 +387,7 @@ class Backup(object):
                         bk_vgs.remove(vg)
                     continue
 
-                # Check if there are any bk_exlude_disks set, before running the below.
+                # Check if there are any bk_exclude_disks set, before running the below.
                 if self.cfg.bk_exclude_disks:
                     for pv in self.facts.lvm['PVS']:
                         self.log.debug(f"backup: get_bk_vgs: Checking if {pv} is in the excludes.")
@@ -475,7 +475,7 @@ class Backup(object):
                 self.log.info("Creating backup archive, this could take a while, please be patient")
                 create_tar(self.cfg, self.bk_excludes, self.tmp_bk_dir)
 
-        # Create the iso after the the backup archive is created
+        # Create the iso after the backup archive is created
         # if the backup location is set to iso.
         if self.cfg.bk_location_type == "iso":
             self.log.info("Creating the ISO file")
@@ -502,8 +502,8 @@ class Backup(object):
             # Let the games begin.
             self.start()
 
-            # By default remove the tmp dir after running, to prevent filling up /tmp.
-            # Otherwise if -k is passed don't remove the directory, this is used for debugging.
+            # By default, remove the tmp dir after running, to prevent filling up /tmp.
+            # Otherwise, if -k is passed don't remove the directory, this is used for debugging.
             if not self.opts.keep:
                 rmtree(self.tmp_dir)
         except (Exception, KeyboardInterrupt, RunCMDError):

@@ -15,7 +15,7 @@
 
 def dev_from_file(udev_ctx, dev):
     """
-    Queries udev based on the device path, this is so I don't have to import pyudev everywhere,
+    Queries udev based on the device path, this is, so I don't have to import pyudev everywhere,
     and it shortens the call.
     :param udev_ctx: Pass in the udev_ctx to use.
     :param dev: The device file path ex. /dev/sda.
@@ -27,7 +27,7 @@ def dev_from_file(udev_ctx, dev):
 
 def dev_from_name(udev_ctx, name):
     """
-    Queries udev based on the device name, this is so I don't have to import pyudev everywhere,
+    Queries udev based on the device name, this is, so I don't have to import pyudev everywhere,
     and it shortens the call.
     :param udev_ctx: Pass in the udev_ctx to use.
     :param name: Device name ex. sda1

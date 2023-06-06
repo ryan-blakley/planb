@@ -298,7 +298,7 @@ def prep_rootfs(cfg, tmp_dir, tmp_rootfs_dir):
     # Check if the mdadm.conf file exist if it does copy it.
     if exists("/etc/mdadm.conf"):
         copy2("/etc/mdadm.conf", join(tmp_rootfs_dir, "etc"))
-        # Remove the monitor service, it seems to cause issues when restoring some times.
+        # Remove the monitor service, it seems to cause issues when restoring sometimes.
         remove(join(tmp_rootfs_dir, "lib/systemd/system/mdmonitor.service"))
 
     # Check if the multipath.conf file exist if it does copy it.
@@ -331,7 +331,7 @@ def prep_rootfs(cfg, tmp_dir, tmp_rootfs_dir):
         fd.write("export RECOVERY_MODE='1'\n")
 
     # Append to the iso's sshd_config file the option to ssh as root,
-    # and to ssh with empty an password.
+    # and to ssh with empty a password.
     with open(join(tmp_rootfs_dir, "etc/ssh/sshd_config"), "a+") as fd:
         fd.write("PermitEmptyPasswords yes\n")
         fd.write("PermitRootLogin yes\n")

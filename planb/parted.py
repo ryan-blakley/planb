@@ -62,7 +62,7 @@ def get_part_layout(udev_ctx):
             # to query udev here, but apparently in the recovery
             # environment the DM_MULTIPATH_DEVICE_PATH variable is always
             # a zero for some reason. So I don't trust using it, so check
-            # if the dev has any holders, and if they're an mpath device.
+            # if the dev has any holders, and if they're a mpath device.
             holders = glob(f"/sys/block/{d.device_node.split('/')[-1]}/holders/*/dm/uuid")
             if holders:
                 with open(holders[0]) as f:
@@ -169,7 +169,7 @@ class Parted(object):
         :param ptype: The type of partition it should be.
         :return:
         """
-        # An array of a few fs that aren't actually valid parted fs's.
+        # An array of a few fs types that aren't actually valid parted fs types.
         bad_fs = ['LVM2_member', 'swap', 'linux_raid_member', 'vfat', 'crypto_LUKS']
 
         try:
@@ -219,7 +219,7 @@ class Parted(object):
 
     def create_legacy_usb(self, disk):
         """
-        Create the partition table on a usb, to make it bootable.
+        Create the partition table on an usb, to make it bootable.
         :param disk: USB device name.
         :return:
         """
@@ -238,7 +238,7 @@ class Parted(object):
 
     def create_prep_usb(self, disk):
         """
-        Create the partition table on a usb, to make it bootable.
+        Create the partition table on an usb, to make it bootable.
         :param disk: USB device name.
         :return:
         """
@@ -263,7 +263,7 @@ class Parted(object):
 
     def create_uefi_usb(self, disk):
         """
-        Create the partition table on a usb, to make it bootable.
+        Create the partition table on an usb, to make it bootable.
         :param disk: USB device name.
         :return:
         """

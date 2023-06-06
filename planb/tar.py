@@ -23,11 +23,11 @@ from shutil import get_terminal_size
 
 def create_tar(cfg, bk_excludes, tmp_dir):
     """
-    create_tar: Create a tar file of the rootfs, and exclude cfg'd dirs.
+    create_tar: Create a tar file of the rootfs, and exclude configured dirs.
     """
     logger = logging.getLogger('pbr')
 
-    # Change the directory to / before hand.
+    # Change the directory to / beforehand.
     chdir("/")
 
     # Sort the excludes, they're easier to parse if they are sorted.
@@ -89,8 +89,8 @@ def restore_tar(rootfs_dir, archive):
                                         int((100 / width) * (i / total_percentage))), end='\r')
 
             # If the member is a symlink, check to make sure the link doesn't exist,
-            # if the symlink exist, it will causes a massive performance hit on
-            # extraction. So skip it if it exist, and move on.
+            # if the symlink exist, it will cause a massive performance hit on
+            # extraction. So skip it if it exists, and move on.
             if member_info.issym() and lexists(member_info.name):
                 i += 1
                 continue

@@ -331,7 +331,7 @@ class Recover(object):
                     self.log.debug("backup: handle_disk_excludes: Skipping due to being type lvm.")
                     continue
 
-                # Check if it has a parent set, if it does check if it exist in rc_exclude_disks,
+                # Check if it has a parent set, if it does check if it exists in rc_exclude_disks,
                 # if it does then remove it from bk_mnts.
                 if info['parent'] and info['parent'] in self.cfg.rc_exclude_disks:
                     self.log.debug(f"backup: handle_disk_excludes: Removing {mp} from bk_mnts.")
@@ -504,13 +504,13 @@ class Recover(object):
                 m = self.bk_mnts[mnt]
                 mp = f"{self.tmp_rootfs_dir}{mnt}"
 
-                # If the mp is a sub directory create it before trying to mnt.
+                # If the mp is a subdirectory create it before trying to mnt.
                 if not isdir(mp):
                     self.log.debug(f"recover: mnt_restored_rootfs: Creating {mp} directory since it doesn't exist.")
                     makedirs(mp)
 
                     # Set the context on the directory before mounting, on a test box I hit an issue being
-                    # able to login. After bind mounting / and relabeling the directories that were unlabeled_t,
+                    # able to log in. After bind mounting / and relabeling the directories that were unlabeled_t,
                     # the issue disappeared. So any time a directory is created set the proper context.
                     if mnt == "/boot":
                         chcon(mp, "system_u:object_r:boot_t:s0")
@@ -622,7 +622,7 @@ class Recover(object):
 
             # Set the proper context on tmp mounts. This is because they will not get labeled before the tmpfs is
             # mounted over them, so a relabel will not fix the issue. This can cause issues with anything that
-            # bind mounts / some where. I hit this issue with dbus failing to start due to an avc denial that
+            # bind mounts / somewhere. I hit this issue with dbus failing to start due to an avc denial that
             # occurred on /run/systemd/unit-root/dev.
             chcon(join(self.tmp_rootfs_dir, "dev"), "system_u:object_r:device_t:s0")
             chcon(join(self.tmp_rootfs_dir, "proc"), "system_u:object_r:proc_t:s0")
@@ -704,7 +704,7 @@ class Recover(object):
                     rc_lvm = RecoveryLVM(self.facts, self.bk_mnts, self.bk_lvm)
                     rc_lvm.lvm_check(bk_vgs)
 
-                # If luks in bk_misc, then check if it was on an lvm device.
+                # If luks in bk_misc, then check if it was on a lvm device.
                 if self.bk_misc.get('luks', False):
                     self.log.info("Starting Luks check for encrypted lvms")
                     for dev in self.bk_misc['luks']:

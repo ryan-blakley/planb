@@ -252,7 +252,7 @@ class USB(object):
             boot_uuid = grab_mnt_info(self.facts, "/")['fs_uuid']
 
         # Since syslinux is only available on x86_64, check the arch.
-        # Then copy all of the needed syslinux files to the tmp dir.
+        # Then copy all the needed syslinux files to the tmp dir.
         if self.facts.arch == "x86_64":
             # If the memtest86+ pkg isn't installed, skip adding that boot option.
             if glob("/boot/memtest*"):

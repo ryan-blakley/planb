@@ -71,7 +71,7 @@ def get_lvm_report(udev_ctx):
                 udev_info = dev_from_file(udev_ctx, x['pv_name'])
                 d_type = get_dev_type(udev_info)
 
-                # Update the pvs output to reference the md_devname, also weather it's an md dev,
+                # Update the pvs output to reference the md_devname, also weather it's a md dev,
                 # and what the device type is.
                 if udev_info.get('MD_DEVNAME', False):
                     report[i]['pv_name'] = f"/dev/md/{udev_info['MD_DEVNAME']}"
@@ -167,7 +167,7 @@ class RecoveryLVM(object):
 
                 restore_vg_metadata(vg)
 
-        # Activate the volume groups, so mkfs can be ran.
+        # Activate the volume groups, so mkfs can be run.
         for vg in bk_vgs:
             self.log.info(f"  Activating the {vg} volume group")
             activate_vg(vg)
