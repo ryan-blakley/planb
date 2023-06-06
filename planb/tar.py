@@ -24,6 +24,11 @@ from shutil import get_terminal_size
 def create_tar(cfg, bk_excludes, tmp_dir):
     """
     create_tar: Create a tar file of the rootfs, and exclude configured dirs.
+
+    Args:
+        cfg (obj): Cfg object.
+        bk_excludes (list): List of directories to exclude.
+        tmp_dir (str): The tmp working directory.
     """
     logger = logging.getLogger('pbr')
 
@@ -71,7 +76,11 @@ def create_tar(cfg, bk_excludes, tmp_dir):
 
 def restore_tar(rootfs_dir, archive):
     """
-    restore_tar: Restore the backup archive file to the newly formatted mounts.
+    Restore the backup archive file to the newly formatted mounts.
+
+    Args:
+        rootfs_dir (str): The directory to restore the archive to.
+        archive (str): The archive path.
     """
     # Cd to the mounted disk, where the data will be restored to.
     chdir(rootfs_dir)

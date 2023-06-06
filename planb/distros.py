@@ -46,7 +46,6 @@ class LiveOS(object):
     def copy_include_files(self):
         """
         If include files is configured copy them to the recovery environment.
-        :return:
         """
         for src in self.cfg.rc_include_files:
             if exists(src):
@@ -59,8 +58,9 @@ class LiveOS(object):
         """
         Loop through the array of pkgs, then list all the files
         in the pkg and copy the file or directory to the tmp rootfs.
-        :param pkgs: Array of pkg names.
-        :return:
+
+        Args:
+            pkgs (list): List of pkg names.
         """
         for pkg in pkgs:
             # Suppress the following exceptions, normally they're caused by symlinks, or multiple
@@ -97,7 +97,6 @@ class LiveOS(object):
     def create(self):
         """
         Create the needed files for the LiveOS.
-        :return:
         """
         self.log.info("Creating initramfs for the LiveOS")
         self.create_initramfs()
@@ -114,7 +113,6 @@ class LiveOS(object):
     def create_initramfs(self):
         """
         Create initramfs for booting the ISO.
-        :return:
         """
         if self.cfg.boot_type == "iso":
             run_cmd(['/usr/bin/dracut', '-v', '-f', '-N', '-a', 'dmsquash-live', '-a', 'rescue', '--no-early-microcode',
@@ -126,7 +124,6 @@ class LiveOS(object):
     def create_squashfs(self):
         """
         Create squashfs of the tmp rootfs for booting the ISO.
-        :return:
         """
         # Create the output directory.
         if self.cfg.boot_type == "usb":
@@ -147,8 +144,9 @@ class LiveOS(object):
     def find_libs(self, pkgs):
         """
         For each pkg, run ldd on any compiled binary, and find any required dependency pkgs needed.
-        :param pkgs: Array of pkg names.
-        :return:
+
+        Args:
+            pkgs (list): List of pkg names.
         """
         for pkg in pkgs:
             with suppress(TypeError):
@@ -184,7 +182,9 @@ class LiveOS(object):
     def set_pkgs(self):
         """
         Append to the base pkgs array.
-        :return:
+
+        Returns:
+            pkgs (list): List of pkgs needed for iso rootfs.
         """
         # Set distro specific pkgs.
         pkgs = set_distro_pkgs(self.facts)
@@ -232,10 +232,11 @@ class LiveOS(object):
 def prep_rootfs(cfg, tmp_dir, tmp_rootfs_dir):
     """
     Prep the rootfs with the app specific customization.
-    :param cfg: App cfg file.
-    :param tmp_dir: The generated tmp working directory.
-    :param tmp_rootfs_dir: The tmp rootfs directory for the iso.
-    :return:
+
+    Args:
+        cfg (str): App cfg file.
+        tmp_dir (str): The generated tmp working directory.
+        tmp_rootfs_dir (str): The tmp rootfs directory for the iso.
     """
     # Create our custom login screen text.
     with open(join(tmp_rootfs_dir, "etc/issue"), "w") as f:
@@ -344,8 +345,9 @@ def prep_rootfs(cfg, tmp_dir, tmp_rootfs_dir):
 def rh_customize_rootfs(tmp_rootfs_dir):
     """
     Copy the needed systemd files to the tmp rootfs.
-    :param tmp_rootfs_dir: The tmp rootfs directory for the iso.
-    :return:
+
+    Args:
+        tmp_rootfs_dir (str): The tmp rootfs directory for the iso.
     """
     # Store the tmp rootfs dir fd, so it can exit the chroot.
     rroot = o_open("/", O_RDONLY)
@@ -391,8 +393,9 @@ def rh_customize_rootfs(tmp_rootfs_dir):
 def set_distro_pkgs(facts):
     """
     Append distro specific pkgs to the pkgs array.
-    :param facts: facts object to pull the distro name from.
-    :return:
+
+    Args:
+        facts (obj): Facts object.
     """
     # List of base packages that need to be installed, WARNING the order of this array does matter.
     rh_base_pkgs = [
@@ -477,8 +480,9 @@ def set_distro_pkgs(facts):
 def suse_customize_rootfs(tmp_rootfs_dir):
     """
     Copy the needed systemd files to the tmp rootfs.
-    :param tmp_rootfs_dir: The tmp rootfs directory for the iso.
-    :return:
+
+    Args:
+        tmp_rootfs_dir (str): The tmp rootfs directory for the iso.
     """
     # Store the tmp rootfs dir fd, so it can exit the chroot.
     rroot = o_open("/", O_RDONLY)

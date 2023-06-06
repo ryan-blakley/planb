@@ -20,8 +20,12 @@ from planb.utils import run_cmd
 def get_luks_devs(udev_ctx):
     """
     Loop through and find any luks devices.
-    :param udev_ctx: udev info ctx object.
-    :return:
+
+    Args:
+        udev_ctx (obj): udev info ctx object.
+
+    Returns:
+        luks (dict): Luks information.
     """
     luks = dict()
     for d in udev_ctx.list_devices(subsystem='block'):
@@ -42,10 +46,11 @@ def luks_check(udev_ctx, luks, dev):
     """
     Loop through current devices, if any luks devices open them, and return. Otherwise, restore the
     luks header, and open the luks device.
-    :param udev_ctx:
-    :param luks:
-    :param dev:
-    :return:
+
+    Args:
+        udev_ctx (obj): Udev context object.
+        luks (dict): Luks information.
+        dev (str): Device name.
     """
     logger = logging.getLogger('pbr')
     uuid = luks[dev]['uuid']

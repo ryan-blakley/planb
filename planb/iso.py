@@ -31,9 +31,11 @@ class ISO(object):
     def __init__(self, cfg, facts, tmp_dir):
         """
         A class for creating a bootable ISO, for recovering from a backup.
-        :param cfg: Object with cfg values.
-        :param facts: The facts object.
-        :param tmp_dir: The tmp working directory.
+
+        Args:
+            cfg (obj): Object with cfg values.
+            facts (obj): The facts object.
+            tmp_dir (str): The tmp working directory.
         """
         self.log = logging.getLogger('pbr')
         self.cfg = cfg
@@ -52,7 +54,6 @@ class ISO(object):
     def create_iso(self):
         """
         Generate a bootable live ISO.
-        :return:
         """
         # Change the isofs directory, and create the output directory.
         chdir(join(self.tmp_dir, "isofs"))
@@ -129,12 +130,15 @@ class ISO(object):
     def prep_uefi(self, memtest, distro, efi_file):
         """
         Prep the isofs working directory to work for uefi.
-        :return:
+
+        Args:
+            memtest (bool): Whether to include memtest or not.
+            distro (str): Distro name.
+            efi_file (str): The efi file location.
         """
         def cp_files():
             """
             Copy the efi files onto the efiboot.img and to the tmp working directory.
-            :return:
             """
             if glob("/boot/efi/EFI/BOOT/BOOT*.EFI"):
                 copy2(glob("/boot/efi/EFI/BOOT/BOOT*.EFI")[0], self.tmp_efi_dir)
@@ -215,7 +219,6 @@ class ISO(object):
     def prep_iso(self):
         """
         Copy the needed files to create the iso in the tmp working directory.
-        :return:
         """
         memtest = 0
         makedirs(self.tmp_isolinux_dir)
@@ -337,7 +340,6 @@ class ISO(object):
     def mkiso(self):
         """
         Main function of the class.
-        :return:
         """
         self.log.info("Prepping isolinux")
         self.prep_iso()

@@ -25,7 +25,12 @@ def get_part_layout(udev_ctx):
     Loop through the disk and use parted and udev to capture the
     partition layout. Might need to add threading to the for loop in the
     future for servers with a ton of disk.
-    :return:
+    
+    Args:
+        udev_ctx (obj): Udev ctx obj.
+
+    Returns:
+        disks_dict (dict): Dict of the disk partition layout.
     """
     from glob import glob
     from re import search
@@ -162,12 +167,13 @@ class Parted(object):
     def add_partition(self, start, end, fstype, flags, ptype):
         """
         Create a specified partition by start and end sectors.
-        :param start: The sector the partition will start at.
-        :param end: The sector the partition will end at.
-        :param fstype: The fstype of the partition if it's valid.
-        :param flags: The flags to set on the partition.
-        :param ptype: The type of partition it should be.
-        :return:
+
+        Args:
+            start (int): The sector the partition will start at.
+            end (int): The sector the partition will end at.
+            fstype (str): The fstype of the partition if it's valid.
+            flags (str): The flags to set on the partition.
+            ptype (str): The type of partition it should be.
         """
         # An array of a few fs types that aren't actually valid parted fs types.
         bad_fs = ['LVM2_member', 'swap', 'linux_raid_member', 'vfat', 'crypto_LUKS']
@@ -220,8 +226,9 @@ class Parted(object):
     def create_legacy_usb(self, disk):
         """
         Create the partition table on an usb, to make it bootable.
-        :param disk: USB device name.
-        :return:
+
+        Args:
+            disk (str): USB device name.
         """
         self.log.debug(f"parted: create_legacy_usb: disk:{disk}")
         self.init_disk(disk, "msdos")
@@ -239,8 +246,9 @@ class Parted(object):
     def create_prep_usb(self, disk):
         """
         Create the partition table on an usb, to make it bootable.
-        :param disk: USB device name.
-        :return:
+
+        Args:
+            disk (str): USB device name.
         """
         self.log.debug(f"parted: create_prep_usb: disk:{disk}")
         self.init_disk(disk, "msdos")
@@ -264,8 +272,9 @@ class Parted(object):
     def create_uefi_usb(self, disk):
         """
         Create the partition table on an usb, to make it bootable.
-        :param disk: USB device name.
-        :return:
+
+        Args:
+            disk (str): USB device name.
         """
         self.log.debug(f"parted: create_legacy_usb: disk:{disk}")
         self.init_disk(disk, "msdos")
@@ -289,9 +298,10 @@ class Parted(object):
     def init_disk(self, disk, ptable):
         """
         Initial and wipe the disk, and set the new partition table to ptable.
-        :param disk: Device to initialize.
-        :param ptable: Partition table to use msdos/gpt.
-        :return:
+
+        Args:
+            disk (str): Device to initialize.
+            ptable (str): Partition table to use msdos/gpt.
         """
         self.log.debug(f"parted: init_disk: disk:{disk} ptable:{ptable}")
         # Set the device.
@@ -306,9 +316,10 @@ class Parted(object):
     def recreate_disk(self, bdisk, rdisk):
         """
         Loop through the bdisk dictionary and recreate the partitions.
-        :param bdisk: Dictionary that has the partition information in it.
-        :param rdisk: The disk to recovery the partition onto.
-        :return:
+
+        Args:
+            bdisk (dict): Dictionary that has the partition information in it.
+            rdisk (str): The disk to recovery the partition onto.
         """
         self.log.debug(f"parted: recreate_disk: bdisk:{bdisk}")
         # Initialize the disk and create a label on it.

@@ -30,8 +30,9 @@ from planb.utils import dev_from_file, is_block, mount, rand_str, run_cmd, set_d
 def fmt_usb(device):
     """
     Format the usb to be bootable and have the proper label on the device for booting.
-    :param device: USB device name.
-    :return:
+
+    Args:
+        device (str): USB device name.
     """
     import pyudev
     from platform import machine
@@ -166,7 +167,11 @@ class USB(object):
     def prep_uefi(self, distro, efi_file, memtest):
         """
         Prep the usb to work for uefi.
-        :return:
+
+        Args:
+            distro (str): Distro name.
+            efi_file (str): The efi file location.
+            memtest (bool): Whether to include memtest or not.
         """
         self.log.info("Mounting EFI directory")
         ret = mount("/dev/disk/by-label/PBR-EFI", self.tmp_usbfs_boot_dir)
@@ -232,7 +237,6 @@ class USB(object):
     def prep_usb(self):
         """
         Copy the needed files for syslinux in the tmp working directory.
-        :return:
         """
         self.log.info("Mounting USB boot directory")
         makedirs(self.tmp_usbfs_dir)
@@ -308,7 +312,6 @@ class USB(object):
     def mkusb(self):
         """
         Main function of the class.
-        :return:
         """
         self.log.info("Prepping the USB")
         self.prep_usb()

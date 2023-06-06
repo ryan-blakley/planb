@@ -20,8 +20,12 @@ from planb.utils import is_block, run_cmd
 def get_md_info(udev_ctx):
     """
     Capture info on the md devices, and the devices associated with it.
-    :param udev_ctx: The udev ctx to use for querying.
-    :return:
+
+    Args:
+        udev_ctx (obj): The udev ctx to use for querying.
+
+    Returns:
+        md_info (dict): MD device information.
     """
     from os import listdir
 
@@ -59,9 +63,10 @@ def get_md_info(udev_ctx):
 def md_check(udev_ctx, bk_md_info):
     """
     Check if the md layout matches the backup's layout, if not fix.
-    :param udev_ctx: The udev ctx to use for querying.
-    :param bk_md_info: The loaded backup md_info output.
-    :return:
+
+    Args:
+        udev_ctx (obj): The udev ctx to use for querying.
+        bk_md_info (dict): The loaded backup md_info output.
     """
     from glob import glob
     from re import search
@@ -121,13 +126,14 @@ def md_check(udev_ctx, bk_md_info):
 def md_create(name, level, meta, num, uuid, devs):
     """
     Create a new md raid array.
-    :param name: md_devname
-    :param level: The raid level to use.
-    :param meta: The metadata version to use.
-    :param num: How many devices are in the array.
-    :param uuid: The uuid to use when creating the array.
-    :param devs: The device names to use in the array.
-    :return:
+
+    Args:
+        name (str): md_devname
+        level (str): The raid level to use.
+        meta (str): The metadata version to use.
+        num (str): How many devices are in the array.
+        uuid (str): The uuid to use when creating the array.
+        devs (list): The device names to use in the array.
     """
     from os.path import exists
 
@@ -147,9 +153,10 @@ def md_create(name, level, meta, num, uuid, devs):
 def md_re_add(name, dev):
     """
     Attempt to re-add the device, if not successfully, just add it.
-    :param name: md_devname
-    :param dev: Device to add to the array.
-    :return:
+
+    Args:
+        name (str): MD device name.
+        dev (str): Device to add to the array.
     """
     logger = logging.getLogger('pbr')
 

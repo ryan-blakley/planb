@@ -33,8 +33,10 @@ class Backup(object):
     def __init__(self, opts, cfg):
         """
         The main backup class.
-        :param opts: Argparse object.
-        :param cfg: Config file object.
+
+        Args:
+            opts: Argparse object.
+            cfg: Config file object.
         """
         self.opts = opts
         self.cfg = cfg
@@ -122,8 +124,9 @@ class Backup(object):
     def cleanup(self, error=0):
         """
         Cleanup by um-mounting the backup mount, so there isn't any hung mounts.
-        :param error: Bool, is this being called from a caught exception.
-        :return:
+
+        Args:
+            error (bool): Is this being called from a caught exception.
         """
         # Check if error is passed, so it's printed that the un-mount occurred
         # due to an error.
@@ -146,7 +149,6 @@ class Backup(object):
     def cleanup_bks(self):
         """
         Rotate the old backup archive files, and remove any if needed.
-        :return:
         """
         if exists(join(self.tmp_bk_dir, f"{self.cfg.bk_archive_prefix}.tar.gz")):
             num_bks = []
@@ -173,8 +175,9 @@ class Backup(object):
     def cleanup_disks(self, bk_vgs):
         """
         Remove any disk from facts.disks not used by a mount point.
-        :param bk_vgs: An array of volume groups being backed up.
-        :return:
+
+        Args:
+            bk_vgs (list): An array of volume groups being backed up.
         """
         # Create a dict of disk used by mnts.
         bk_disks = []
@@ -259,7 +262,6 @@ class Backup(object):
         """
         Compare the current mount points and fstab for any differences, this will
         hopefully help prevent any can't boots after restoration due to fstab entries.
-        :return:
         """
         mp = []
         with open("/etc/fstab", "r") as f:
@@ -288,7 +290,6 @@ class Backup(object):
     def create_tmp_dirs(self):
         """
         Create subdirectories in the tmp dir that are needed.
-        :return:
         """
         # Set the tmp dir vars for use by other functions.
         self.tmp_facts_dir = join(self.tmp_dir, "facts")
@@ -305,7 +306,6 @@ class Backup(object):
         """
         Dump all the server facts to json files, for use when recovering
         the system. These will be included in the iso later on.
-        :return:
         """
         self.log.info("Dumping facts")
 
@@ -366,7 +366,6 @@ class Backup(object):
         """
         Gather a list of volume groups needing to be checked/restored during recovery. Also remove
         any mount points that were part of a vg/disk that was excluded.
-        :return:
         """
         # Copy the facts mnts, so entries can be removed if need be.
         mnts = self.facts.mnts.copy()
@@ -418,7 +417,6 @@ class Backup(object):
         """
         Run the backup tasks from here so there isn't duplicate
         code in the main function above.
-        :return:
         """
         # Create the needed dirs in the tmp dir.
         self.create_tmp_dirs()
@@ -487,7 +485,6 @@ class Backup(object):
         """
         Main function, it creates the tmp directory and then hands off
         to the start function to prevent duplicate code.
-        :return:
         """
         # Catch any exception and so umount can be run, otherwise, the tmp dir function
         # will wipe all the files on the nfs mount, also the nfs mount would be left hanging.

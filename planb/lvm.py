@@ -21,8 +21,9 @@ from planb.utils import dev_from_file, get_dev_type, run_cmd
 def activate_vg(vg):
     """
     Run vgchange to activate the specific volume group.
-    :param vg: Volume group to activate.
-    :return:
+
+    Args:
+        vg (str): Volume group to activate.
     """
     run_cmd(['/usr/sbin/vgchange', '-ay', vg], timeout=15)
 
@@ -30,7 +31,6 @@ def activate_vg(vg):
 def deactivate_vgs():
     """
     Run vgchange to deactivate all the volume groups.
-    :return:
     """
     logger = logging.getLogger('pbr')
 
@@ -48,8 +48,12 @@ def deactivate_vgs():
 def get_lvm_report(udev_ctx):
     """
     Run pvs, pvs, and lvs and store the output.
-    :param udev_ctx: The udev ctx to use for querying.
-    :return: The lvm dictionary.
+
+    Args:
+        udev_ctx (obj): The udev ctx to use for querying.
+
+    Returns:
+        lvm (dict): LVM report information.
     """
     import json
 
@@ -100,10 +104,11 @@ def get_lvm_report(udev_ctx):
 def restore_pv_metadata(bk_pv, bk_pv_uuid, bk_vg):
     """
     Recreate the physical volume using the backed up metadata file.
-    :param bk_pv: The physical volume device name.
-    :param bk_pv_uuid: The uuid to used to restore the proper physical volume from the metadata file.
-    :param bk_vg: The volume group the physical volume will be a part of.
-    :return:
+
+    Args:
+        bk_pv (str): The physical volume device name.
+        bk_pv_uuid (str): The uuid to used to restore the proper physical volume from the metadata file.
+        bk_vg (str): The volume group the physical volume will be a part of.
     """
     logger = logging.getLogger('pbr')
     # Wipe any lvm metadata if there is any.
@@ -122,8 +127,9 @@ def restore_pv_metadata(bk_pv, bk_pv_uuid, bk_vg):
 def restore_vg_metadata(bk_vg):
     """
     Restore volume group from the backed up metadata file.
-    :param bk_vg: The volume group name being restored.
-    :return:
+
+    Args:
+        bk_vg (str): The volume group name being restored.
     """
     logging.getLogger('pbr').info(f"  Restoring the vg metadata for the {bk_vg} volume group.")
 
@@ -141,8 +147,9 @@ class RecoveryLVM(object):
     def lvm_check(self, bk_vgs):
         """
         Check if any volume groups need their layout actually restored, then activate said volume group.
-        :param bk_vgs: The list of volume groups needing to be checked.
-        :return:
+
+        Args:
+            bk_vgs (list): The list of volume groups needing to be checked.
         """
         from os.path import exists
 
@@ -181,8 +188,12 @@ class RecoveryLVM(object):
     def matching_lvm(self, vg):
         """
         Compare the backup lvm layout to the current, if they don't match fix.
-        :param vg: Volume group to compare.
-        :return: True/False
+
+        Args:
+            vg (str): Volume group to compare.
+
+        Returns:
+            (bool): Whether the lvm matches or not.
         """
         lvm = get_lvm_report(self.facts.udev_ctx)
         match = 0

@@ -39,8 +39,10 @@ class Recover(object):
     def __init__(self, opts, cfg):
         """
         A class to run all the recovery task out of.
-        :param opts: The argparse object.
-        :param cfg: The cfg file object.
+
+        Args:
+            opts (obj): The argparse object.
+            cfg (obj): The cfg file object.
         """
         self.log = logging.getLogger('pbr')
 
@@ -75,7 +77,6 @@ class Recover(object):
     def cleanup(self):
         """
         Un-mount the backup mount, and sync everything.
-        :return:
         """
         # When finished un-mount the bk_mount if there was a mount
         # for rsync there isn't a mount, so no need to un-mount anything.
@@ -91,7 +92,6 @@ class Recover(object):
         changes disk names, there is also going to be people that use this to
         migrate to different servers all together. So the disk need to be compared
         and mapped if needed to the proper disk in the recovery environment.
-        :return:
         """
         # Make a copy, so entries can be removed, and added to the originals.
         facts_disks = self.facts.disks.copy()
@@ -234,10 +234,14 @@ class Recover(object):
         table, or the same filesystem if no partition table. The purpose is to check if
         the disk needs to be repartitioned or not, there is no point in wiping and
         repartitioning a disk, if the partitions match the backup disk.
-        :param d1: First disk to compare.
-        :param d2: Second disk to compare.
-        :param facts: Facts object.
-        :return:
+
+        Args:
+            d1 (str): First disk to compare.
+            d2 (str): Second disk to compare.
+            facts (obj): Facts object.
+
+        Returns:
+            (bool): Whether the disk match or not.
         """
         match = 0
         partitioned = 0
@@ -278,7 +282,12 @@ class Recover(object):
         """
         Figure out what disk /boot is mounted on in the tmp dir,
         and return tha disk's path.
-        :return:
+
+        Args:
+            mp (str): Mount point to check.
+
+        Returns:
+            (str): The device name.
         """
         for mnt, info in get_mnts(self.facts.udev_ctx).items():
             self.log.debug(f"recover: grab_bootloader_disk: cmp_mp: {self.tmp_rootfs_dir}{mp} mnt: {mnt}")
@@ -317,7 +326,6 @@ class Recover(object):
         """
         Process any recovery_exclude_disks entries,
         and remove disk from bk_disks, and bk_mnts.
-        :return:
         """
         if self.cfg.rc_exclude_disks:
             # Loop through each mp, and remove any mp that it's parent is in the disk excludes.
@@ -349,7 +357,6 @@ class Recover(object):
         """
         Process any recovery_exclude_vgs that are set,
         and remove entries from bk_vgs, and bk_mnts.
-        :return:
         """
         if self.cfg.rc_exclude_vgs:
             for vg in self.cfg.rc_exclude_vgs:
@@ -367,9 +374,10 @@ class Recover(object):
         """
         This function changes the disk stored in bk_mnts and bk_disks, so that the
         recovery is done on the proper disk in the recovery environment.
-        :param o_disk: Original disk name from the backup.
-        :param n_disk: New disk name from the recovery environment.
-        :return:
+
+        Args:
+            o_disk (str): Original disk name from the backup.
+            n_disk (str): New disk name from the recovery environment.
         """
         # If the disk exist in bk_disks, then copy to tmp dict with the n_disk as the key.
         if self.bk_disks.get(o_disk, False):
@@ -457,7 +465,6 @@ class Recover(object):
     def mnt_bk_mount(self):
         """
         If the backup location type isn't rsync, then mount bk_mount in the tmp directory.
-        :return:
         """
         if not self.opts.backup_archive:
             if self.cfg.boot_type == "usb" and self.cfg.bk_location_type == "usb":
@@ -495,7 +502,6 @@ class Recover(object):
         """
         Loop through the bk_mnts, and mount up the restored mounts
         to /mnt/rootfs, so that the backup archive can be restored.
-        :return:
         """
         # Loop through the backed up mp's, and mount them up.
         for mnt in self.bk_mnts:
@@ -545,8 +551,9 @@ class Recover(object):
     def restore_bootloader(self, bootloader_disk):
         """
         Perform either a grub2-install or set the boot order via efibootmgr.
-        :param bootloader_disk: Disk that will be booted from.
-        :return:
+
+        Args:
+            bootloader_disk (str): Disk that will be booted from.
         """
         # Store the iso's root fd, so it can exit the chroot.
         rroot = o_open("/", O_RDONLY)
@@ -612,7 +619,6 @@ class Recover(object):
         """
         Check if selinux was enabled on the server when backed up,
         if so create the /.autorelabel file to trigger a relabel on boot.
-        :return:
         """
         if self.bk_misc.get('selinux_enabled', ''):
             self.log.info("Setting selinux to relabel on first boot")
@@ -633,7 +639,6 @@ class Recover(object):
         """
         Un-mount anything mounted under /mnt/rootfs, this is in case we're running
         after a failed execution, so we don't hit any errors about formatting/re-mounting.
-        :return:
         """
         ret = umount(self.tmp_rootfs_dir, recursive=True)
         if ret.returncode and "not mounted" not in ret.stderr.decode():
@@ -643,7 +648,6 @@ class Recover(object):
     def main(self):
         """
         The main function of the class that calls everything.
-        :return:
         """
         # Check for active mnts.
         self.umount_active_mnts()

@@ -21,11 +21,12 @@ from planb.utils import dev_from_file, get_dev_type, run_cmd
 def fmt_fs(dev, fs_uuid, fs_label, fs_type):
     """
     Creates a filesystem on the device specified.
-    :param dev: Device to format.
-    :param fs_uuid: The uuid to set when formatting.
-    :param fs_label: The label to set when formatting.
-    :param fs_type: The type of filesystem to format the device.
-    :return:
+
+    Args:
+        dev (str): Device to format.
+        fs_uuid (str): The uuid to set when formatting.
+        fs_label (str): The label to set when formatting.
+        fs_type (str): The type of filesystem to format the device.
     """
     from os.path import exists
     from re import search
@@ -95,13 +96,22 @@ def fmt_fs(dev, fs_uuid, fs_label, fs_type):
 def get_mnts(udev_ctx):
     """
     Query and store information about anything that's mounted.
-    :return:
+
+    Args:
+        udev_ctx (obj): Udev context obj.
     """
     from glob import glob
 
     mnts = dict()
 
     def add_entries(dev, mp):
+        """
+        Add mnt point entries.
+
+        Args:
+            dev (str): Device name.
+            mp (str): Mount point.
+        """
         info = dict()
         vg = None
         parent = None
@@ -178,14 +188,18 @@ def get_mnts(udev_ctx):
 def grab_mnt_info(facts, mp):
     """
     Return info dict for each mount point.
-    :param facts: Facts object to access the udev ctx.
-    :param mp: Mount point to search for and return info for.
-    :return:
+
+    Args:
+        facts (obj): Facts object to access the udev ctx.
+        mp (str): Mount point to search for and return info for.
+
+    Returns:
+        (str): Mount info.
     """
     for mnt, info in get_mnts(facts.udev_ctx).items():
         if mnt == f"{mp}":
             return info
         else:
-            return False
+            return None
 
 # vim:set ts=4 sw=4 et:

@@ -17,9 +17,13 @@ def dev_from_file(udev_ctx, dev):
     """
     Queries udev based on the device path, this is, so I don't have to import pyudev everywhere,
     and it shortens the call.
-    :param udev_ctx: Pass in the udev_ctx to use.
-    :param dev: The device file path ex. /dev/sda.
-    :return: Udev device object.
+
+    Args:
+        udev_ctx (obj): Pass in the udev_ctx to use.
+        dev (str): The device file path ex. /dev/sda.
+
+    Returns:
+        (obj): Udev device object.
     """
     from pyudev.device import Devices
     return Devices.from_device_file(udev_ctx, dev)
@@ -29,9 +33,13 @@ def dev_from_name(udev_ctx, name):
     """
     Queries udev based on the device name, this is, so I don't have to import pyudev everywhere,
     and it shortens the call.
-    :param udev_ctx: Pass in the udev_ctx to use.
-    :param name: Device name ex. sda1
-    :return: Udev device object
+
+    Args:
+        udev_ctx (obj): Pass in the udev_ctx to use.
+        name (str): Device name ex. sda1
+
+    Returns:
+        (obj): Udev device object
     """
     from pyudev.device import Devices
     return Devices.from_name(udev_ctx, 'block', name)
@@ -40,8 +48,12 @@ def dev_from_name(udev_ctx, name):
 def get_dev_type(udev_info):
     """
     Queries the udev object, and returns the device type.
-    :param udev_info: Pass in the udev_ctx to use.
-    :return: Device type in str format.
+
+    Args:
+        udev_info (obj): Pass in the udev_ctx to use.
+
+    Returns:
+        (obj): Device type in str format.
     """
     d_type = None
     if udev_info.get('DM_UUID', False):
@@ -70,8 +82,10 @@ def get_dev_type(udev_info):
 
 def get_modules():
     """
-    Parse /proc/modules, and return all loaded modules.
-    :return:
+    Parse /proc/modules.
+
+    Returns:
+        modules (list): All loaded modules.
     """
     with open("/proc/modules", "r") as f:
         lines = f.readlines()
@@ -85,8 +99,12 @@ def get_modules():
 def is_block(dev):
     """
     Check if the device path exist and is a block device.
-    :param dev: Device path to check.
-    :return:
+
+    Args:
+        dev (str): Device path to check.
+
+    Returns:
+        (bool): Whether the device is a block device or not.
     """
     from os import stat
     from os.path import exists
@@ -99,6 +117,15 @@ def is_block(dev):
 
 
 def is_installed(pkg):
+    """
+    Checks if the pkg is installed or not.
+
+    Args:
+        pkg (str): Pkg name
+
+    Returns:
+        (bool): Whether the pkg is installed or not.
+    """
     from os.path import exists
 
     if exists("/usr/bin/rpm"):
@@ -113,6 +140,15 @@ def is_installed(pkg):
 
 
 def pkg_files(pkg):
+    """
+    Query all files in a given pkg.
+
+    Args:
+        pkg (str): Pkg name.
+
+    Returns:
+        (list): The files in the pkg.
+    """
     from os.path import exists
 
     if exists("/usr/bin/rpm"):
@@ -124,6 +160,15 @@ def pkg_files(pkg):
 
 
 def pkg_query_file(file_name):
+    """
+    Query which pkg a file belongs to.
+
+    Args:
+        file_name (str): The file name.
+
+    Returns:
+        (str): Pkg name.
+    """
     from os.path import exists
 
     if exists("/usr/bin/rpm"):
@@ -139,11 +184,12 @@ def mk_cdboot(kernel, initrd, parmfile, outfile):
     Create the cdboot.img file needed for s390 to boot. I based this off of
     https://github.com/weldr/lorax/blob/master/src/bin/mk-s390-cdboot just
     slimmed it down a bit, instead of having it as an external script.
-    :param kernel: The vmlinuz file.
-    :param initrd: The initrd file.
-    :param parmfile: The parmfile normally cdboot.prm
-    :param outfile: The outputted file.
-    :return:
+
+    Args:
+        kernel (str): The vmlinuz file.
+        initrd (str): The initrd file.
+        parmfile (str): The parmfile normally cdboot.prm
+        outfile (str): The outputted file.
     """
     from os import stat
     from shutil import copy2
@@ -181,9 +227,10 @@ def mk_cdboot(kernel, initrd, parmfile, outfile):
 def not_in_append(dev, array):
     """
     Check if dev is in the array, if not append to the array.
-    :param dev: str
-    :param array: array
-    :return: nothing
+
+    Args:
+        dev (str): String to check if it's in the array.
+        array (list): List to check against.
     """
     if dev not in array:
         array.append(dev)
@@ -192,9 +239,13 @@ def not_in_append(dev, array):
 def rand_str(length, hexa):
     """
     Return a random string, used for uuid generation when needed.
-    :param length: Length of string to return.
-    :param hexa: Bool if hexa, return only hexadecimals.
-    :return: String
+
+    Args:
+        length (int): Length of string to return.
+        hexa (bool): Bool if hexa, return only hexadecimals.
+
+    Returns:
+        (str): Random generated string.
     """
     import random
     import string
@@ -206,40 +257,15 @@ def rand_str(length, hexa):
     return ''.join(random.choices(letters, k=length))
 
 
-def rpmql(pkg):
-    """
-    List all the files belonging to the passed in rpm.
-    :param pkg: pkg name
-    :return: List of files.
-    """
-    from rpm import RPMTAG_NAME, files, TransactionSet
-
-    ts = TransactionSet()
-    for h in ts.dbMatch(RPMTAG_NAME, pkg):
-        return files(h)
-
-
-def rpmqf(path):
-    """
-    Return the rpm that own the file/dir.
-    :param path: File to check.
-    :return: RPM that owns the file.
-    """
-    from rpm import RPMTAG_BASENAMES, TransactionSet
-
-    ts = TransactionSet()
-    for h in ts.dbMatch(RPMTAG_BASENAMES, path):
-        return h['name']
-
-
 def rsync(cfg, opts, facts, bk_excludes=None):
     """
     Create the rsync command needed for backup or recovery, then execute that command.
-    :param cfg: The cfg object, to pull cfg parameters.
-    :param opts: The opts object, to check for verbosity.
-    :param facts: The facts object, to query the hostname.
-    :param bk_excludes: A list of paths to exclude from the backup.
-    :return:
+
+    Args:
+        cfg (obj): The cfg object, to pull cfg parameters.
+        opts (obj): The argparse object.
+        facts (obj): The facts object.
+        bk_excludes (list): A list of paths to exclude from the backup.
     """
     import logging
     from .exceptions import RunCMDError
@@ -280,11 +306,15 @@ def rsync(cfg, opts, facts, bk_excludes=None):
 def run_cmd(cmd, ret=False, timeout=None, capture_output=True):
     """
     Wrapper function around subprocess.run.
-    :param ret: Bool, on weather to return anything or not.
-    :param cmd: Array that contains the command to run.
-    :param timeout: Timeout time, useful for nfs mounts.
-    :param capture_output: Bool, on weather to capture the output or not.
-    :return: The output/return code.
+
+    Args:
+        ret (bool): Bool, on weather to return anything or not.
+        cmd (list): Array that contains the command to run.
+        timeout (float): Timeout time, useful for nfs mounts.
+        capture_output (bool): Bool, on weather to capture the output or not.
+
+    Returns:
+        (obj): The run command object, that includes the output and return code.
     """
     import logging
     from subprocess import PIPE, run, TimeoutExpired
@@ -315,7 +345,15 @@ def run_cmd(cmd, ret=False, timeout=None, capture_output=True):
 
 
 def set_distro_efi_file(facts):
-    # Set the local distro and efi_file variable for the grub.cfg file.
+    """
+    Set the local distro and efi_file variable for the grub.cfg file.
+
+    Args:
+        facts (obj): Facts object.
+
+    Returns:
+        (tuple): Of the distro and efi file.
+    """
     if "aarch64" in facts.arch:
         efi_file = "shimaa64.efi"
     else:
@@ -346,7 +384,6 @@ def set_distro_efi_file(facts):
 def udev_trigger():
     """
     Run udevadm trigger, to force udev reload.
-    :return:
     """
     from time import sleep
 
@@ -357,11 +394,15 @@ def udev_trigger():
 def mount(src, dest, fstype=None, opts=None):
     """
     Wrapper that calls the mount command.
-    :param src: The device/network share that's being mounted.
-    :param dest: The location the src will be mounted.
-    :param fstype: The filesystem type.
-    :param opts: Mount options to use when mounting.
-    :return: The output, and return code.
+
+    Args:
+        src (str): The device/network share that's being mounted.
+        dest (str): The location the src will be mounted.
+        fstype (str): The filesystem type.
+        opts (str): Mount options to use when mounting.
+
+    Returns:
+        (obj): Returns the run command obj.
     """
     if opts is None:
         opts = "defaults"
@@ -377,10 +418,14 @@ def mount(src, dest, fstype=None, opts=None):
 def umount(mnt, recursive=False, lazy=False):
     """
     Wrapper that calls the umount command.
-    :param lazy: Perform a lazy umount.
-    :param recursive: Bool, weather to un-mount recursively or not.
-    :param mnt: Mount point to un-mount.
-    :return: The output, and return code.
+
+    Args:
+        mnt (str): Mount point to un-mount.
+        recursive (bool): Bool, weather to un-mount recursively or not.
+        lazy (bool): Perform a lazy umount.
+
+    Returns:
+        (obj): Returns the run command obj.
     """
     if recursive:
         if lazy:

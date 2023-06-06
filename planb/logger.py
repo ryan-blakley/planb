@@ -19,9 +19,13 @@ import sys
 def set_log_cfg(opts, cfg):
     """
     Set the logging configuration.
-    :param opts: Argparse options.
-    :param cfg: Config file variables.
-    :return:
+
+    Args:
+        opts (obj): Argparse object.
+        cfg (obj): Config file variables.
+
+    Returns:
+        logger (obj): Logging object.
     """
     # Create the main logger.
     logger = logging.getLogger('pbr')

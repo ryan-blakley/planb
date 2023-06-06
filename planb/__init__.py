@@ -25,7 +25,9 @@ from planb.logger import set_log_cfg
 def parse_args():
     """
     Function that parses the args passed on the command line.
-    :return:
+
+    Returns:
+        opts (obj): Argparse object.
     """
     log = logging.getLogger('pbr')
     parser = ArgumentParser(description="""Plan B Recovery, if all else fails go to Plan B!
@@ -107,7 +109,6 @@ class PBR(object):
     def run(self):
         """
         Main run function.
-        :return:
         """
         self.log.info("")
         self.log.info("Plan (B)ackup Recovery")
@@ -134,7 +135,6 @@ class PBR(object):
 def main():
     """
     Main function that executes the main PBR class.
-    :return:
     """
     pbr = PBR()
     pbr.run()
