@@ -14,50 +14,55 @@ endif
 ifdef aarch64
 	mock -r fedora-38-aarch64 --rebuild SRPMS/*.src.rpm
 endif
-ifdef s390x
-	mock -r fedora-38-s390x --rebuild SRPMS/*.src.rpm
-endif
 ifdef ppc64le
 	mock -r fedora-38-ppc64le --rebuild SRPMS/*.src.rpm
+endif
+ifdef s390x
+	mock -r fedora-38-s390x --rebuild SRPMS/*.src.rpm
 endif
 endif
 
 ifdef epel-8
 ifdef x86
-	mock -r epel-8-x86_64 --rebuild SRPMS/*.src.rpm
+	mock -r centos-stream+epel-8-x86_64 --rebuild SRPMS/*.src.rpm
 endif
 ifdef aarch64
-	mock -r epel-8-aarch64 --rebuild SRPMS/*.src.rpm
+	mock -r centos-stream+epel-8-aarch64 --rebuild SRPMS/*.src.rpm
 endif
 ifdef ppc64le
-	mock -r epel-8-ppc64le --rebuild SRPMS/*.src.rpm
+	mock -r centos-stream+epel-8-ppc64le --rebuild SRPMS/*.src.rpm
 endif
 endif
 
 ifdef epel-9
 ifdef x86
-	mock -r epel-9-x86_64 --rebuild SRPMS/*.src.rpm
+	mock -r centos-stream+epel-9-x86_64 --rebuild SRPMS/*.src.rpm
 endif
 ifdef aarch64
-	mock -r epel-9-aarch64 --rebuild SRPMS/*.src.rpm
+	mock -r centos-stream+epel-9-aarch64 --rebuild SRPMS/*.src.rpm
 endif
 ifdef ppc64le
-	mock -r epel-9-ppc64le --rebuild SRPMS/*.src.rpm
+	mock -r centos-stream+epel-9-ppc64le --rebuild SRPMS/*.src.rpm
+endif
+ifdef s390x
+	mock -r centos-stream+epel-9-s390x --rebuild SRPMS/*.src.rpm
 endif
 endif
 
 ifdef suse
 ifdef x86
-	mock -r opensuse-leap-15.2-x86_64 --rebuild SRPMS/*.src.rpm
+	mock -r opensuse-leap-15.4-x86_64 --offline --rebuild SRPMS/*.src.rpm
 endif
 ifdef aarch64
-	mock -r opensuse-leap-15.2-aarch64 --rebuild SRPMS/*.src.rpm
+	mock -r opensuse-leap-15.4-aarch64 --rebuild SRPMS/*.src.rpm
 endif
 ifdef ppc64le
-	mock -r opensuse-leap-15.2-ppc64le --rebuild SRPMS/*.src.rpm
+	mock -r opensuse-leap-15.4-ppc64le --rebuild SRPMS/*.src.rpm
+endif
+ifdef s390x
+	mock -r opensuse-leap-15.4-s390x --rebuild SRPMS/*.src.rpm
 endif
 endif
 
 cleanbuild:
 	-/usr/bin/rm -rf build dist *.egg-info BUILD BUILDROOT MANIFEST
-
