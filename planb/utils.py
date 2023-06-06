@@ -268,7 +268,7 @@ def rsync(cfg, opts, facts, bk_excludes=None):
         bk_excludes (list): A list of paths to exclude from the backup.
     """
     import logging
-    from .exceptions import RunCMDError
+    from planb.exceptions import RunCMDError
 
     logger = logging.getLogger('pbr')
 
@@ -318,7 +318,7 @@ def run_cmd(cmd, ret=False, timeout=None, capture_output=True):
     """
     import logging
     from subprocess import PIPE, run, TimeoutExpired
-    from .exceptions import RunCMDError
+    from planb.exceptions import RunCMDError
 
     logger = logging.getLogger('pbr')
     logger.debug(f"utils: run_cmd: cmd: {cmd}")

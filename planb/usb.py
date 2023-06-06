@@ -36,7 +36,7 @@ def fmt_usb(device):
     """
     import pyudev
     from platform import machine
-    from .parted import Parted
+    from planb.parted import Parted
 
     # Query the arch and set the udev context.
     arch = machine()
