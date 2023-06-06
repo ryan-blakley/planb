@@ -26,7 +26,7 @@ from planb.luks import get_luks_devs
 from planb.lvm import get_lvm_report
 from planb.parted import get_part_layout
 from planb.md import get_md_info
-from planb.utils import get_modules, is_installed, run_cmd
+from planb.utils import get_modules, run_cmd
 
 
 class Facts(object):
@@ -47,7 +47,7 @@ class Facts(object):
         self.udev_ctx = Context()
         self.mnts = get_mnts(self.udev_ctx)
         self.disks = get_part_layout(self.udev_ctx)
-        self.lvm_installed = is_installed("lvm2")
+        self.lvm_installed = exists('/usr/sbin/lvm')
 
         if not self.recovery_mode:
             self.modules = get_modules()
@@ -62,7 +62,7 @@ class Facts(object):
                 self.selinux_enabled = 0
                 self.selinux_enforcing = 0
 
-            if is_installed("mokutil") and "enabled" in run_cmd(['mokutil', '--sb-state'], ret=True).stdout.decode():
+            if exists('/usr/bin/mokutil') and "enabled" in run_cmd(['mokutil', '--sb-state'], ret=True).stdout.decode():
                 self.secure_boot = 1
             else:
                 self.secure_boot = 0
