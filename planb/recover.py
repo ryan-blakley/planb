@@ -599,7 +599,7 @@ class Recover(object):
 
         # Cd back to the rroot fd, then chroot back out.
         chdir(rroot)
-        chroot('../src/modules')
+        chroot('.')
 
         # Clean up tmpfs mounts from earlier.
         for m in tmpfs_mnts:

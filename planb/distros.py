@@ -357,7 +357,7 @@ def rh_customize_rootfs(tmp_rootfs_dir):
 
     # Cd back to the rroot fd, then chroot back out.
     chdir(rroot)
-    chroot('../src/modules')
+    chroot('.')
 
     # Enable the needed services.
     chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/pbr.target.wants"))
@@ -450,7 +450,7 @@ def suse_customize_rootfs(tmp_rootfs_dir):
 
     # Cd back to the rroot fd, then chroot back out.
     chdir(rroot)
-    chroot('../src/modules')
+    chroot('.')
 
     # Enable the needed services.
     chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/pbr.target.wants"))
