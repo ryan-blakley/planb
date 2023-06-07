@@ -316,9 +316,9 @@ class ISO(object):
 
         # Copy the current running kernel's vmlinuz file to the tmp dir.
         if glob(f"/boot/Image-{uname().release}"):
-            copy2(glob(f"/boot/Image-{uname().release}*")[0], join(self.tmp_isolinux_dir, "vmlinuz"))
-        elif glob(f"/boot/vmlinu*-{uname().release}*"):
-            copy2(glob(f"/boot/vmlinu*-{uname().release}*")[0], join(self.tmp_isolinux_dir, "vmlinuz"))
+            copy2(glob(f"/boot/Image-{uname().release}")[0], join(self.tmp_isolinux_dir, "vmlinuz"))
+        elif glob(f"/boot/vmlinu*-{uname().release}"):
+            copy2(glob(f"/boot/vmlinu*-{uname().release}")[0], join(self.tmp_isolinux_dir, "vmlinuz"))
 
         if self.facts.uefi:
             self.prep_uefi(memtest, distro, efi_file)

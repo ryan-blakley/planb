@@ -21,7 +21,7 @@ Requires: python3-pyudev
 Requires: python3-rpm
 Requires: python3-six
 
-%if 0%{?is_opensuse}
+%if 0%{?suse_version} >= 1500
 Requires: mkisofs
 Requires: python3-Jinja2
 Requires: python3-selinux

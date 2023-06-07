@@ -403,14 +403,16 @@ def set_distro_pkgs(facts):
 
     suse_base_pkgs = [
         'filesystem', 'glibc', 'glibc-common', 'glibc-locale-base', 'systemd', 'systemd-sysvinit', 'udev', 'bash',
-        'bash-completion', 'aaa_base', 'aaa_base-extras', 'coreutils', 'pam', 'pam-config', 'util-linux',
+        'bash-completion', 'bash-sh', 'aaa_base', 'aaa_base-extras', 'coreutils', 'pam', 'pam-config', 'util-linux',
         'util-linux-systemd', 'dbus-1', 'polkit', 'python3', 'python3-base', 'update-alternatives', 'binutils',
         'dosfstools', 'e2fsprogs', 'gawk', 'grep', 'gzip', 'iproute2', 'iputils', 'kbd', 'kmod', 'kmod-compat',
-        'kpartx', 'less', 'libpwquality1', 'lsof', 'mdadm', 'ncurses-utils', 'openssh', 'openssh-clients',
-        'openssh-server', 'openSUSE-release', 'parted', 'planb', 'plymouth', 'procps', 'python3-distro',
-        'python3-Jinja2', 'python3-magic', 'python3-MarkupSafe', 'python3-parted', 'python3-pyroute2', 'python3-pyudev',
-        'python3-rpm', 'python3-selinux', 'python3-six', 'rng-tools', 'rootfiles', 'rpm', 'sed', 'shadow', 'sysconfig',
-        'terminfo-base', 'vim', 'vim-data-common', 'wicked', 'wicked-service', 'xfsprogs'
+        'kpartx', 'less', 'libpwquality1', 'libtirpc-netconfig', 'login_defs', 'lsof', 'mdadm', 'ncurses-utils',
+        'netcfg', 'nfs-client', 'openssh', 'openssh-clients', 'openssh-server', 'openSUSE-release', 'parted', 'planb',
+        'plymouth', 'procps', 'python3-appdirs', 'python3-distro', 'python3-Jinja2', 'python3-magic',
+        'python3-MarkupSafe', 'python3-packaging', 'python3-parted', 'python3-pyparsing', 'python3-pyroute2',
+        'python3-pyudev', 'python3-rpm', 'python3-selinux', 'python3-setuptools', 'python3-six', 'rng-tools',
+        'rootfiles', 'rpcbind', 'rpm', 'sed', 'shadow', 'sysconfig', 'terminfo-base', 'vim', 'vim-data-common',
+        'wicked', 'wicked-service', 'xfsprogs'
     ]
 
     if "Fedora" in facts.distro:
