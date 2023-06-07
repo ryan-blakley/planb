@@ -11,7 +11,7 @@ def get_part_layout(udev_ctx):
     Loop through the disk and use parted and udev to capture the
     partition layout. Might need to add threading to the for loop in the
     future for servers with a ton of disk.
-    
+
     Args:
         udev_ctx (obj): Udev ctx obj.
 
