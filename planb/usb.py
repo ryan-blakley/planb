@@ -9,7 +9,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from planb.distros import LiveOS, prep_rootfs, rh_customize_rootfs, suse_customize_rootfs
 from planb.exceptions import MountError, RunCMDError
-from planb.fs import fmt_fs, grab_mnt_info
+from planb.fs import fmt_fs
 from planb.utils import dev_from_file, is_block, mount, rand_str, run_cmd, set_distro_efi_file, udev_trigger, umount
 
 
@@ -235,11 +235,9 @@ class USB(object):
         makedirs(self.tmp_syslinux_dir, exist_ok=True)
         distro, efi_file = set_distro_efi_file(self.facts)
 
-        # Grab the uuid of the fs that /boot is located on.
-        if grab_mnt_info(self.facts, "/boot"):
-            boot_uuid = grab_mnt_info(self.facts, "/boot")['fs_uuid']
-        else:
-            boot_uuid = grab_mnt_info(self.facts, "/")['fs_uuid']
+        # Grab the uuid of the fs that /boot is located on, if
+        # /boot isn't a partition then it returns the uuid of /.
+        boot_uuid = self.facts.mnts.get("/boot", self.facts.mnts.get("/", {})).get("fs_uuid")
 
         # Since syslinux is only available on x86_64, check the arch.
         # Then copy all the needed syslinux files to the tmp dir.
