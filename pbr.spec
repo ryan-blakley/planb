@@ -21,17 +21,12 @@ Requires: python3-pyudev
 Requires: python3-rpm
 Requires: python3-six
 
-%if 0%{?suse_version} >= 1500
-Requires: mkisofs
-Requires: python3-Jinja2
-Requires: python3-selinux
-Requires: python3-parted
-Requires: squashfs
 # The syslinux pkg is only available for x86_64.
 %ifarch x86_64
 Requires: syslinux
 %endif
-%else
+
+%if 0%{?fedora}%{?el8}%{?el9}
 Requires: authselect-libs >= 1.2
 Requires: dracut-live
 Requires: genisoimage
@@ -39,11 +34,22 @@ Requires: python3-jinja2
 Requires: python3-libselinux
 Requires: python3-pyparted
 Requires: squashfs-tools
-# The syslinux pkg is only available for x86_64.
-%ifarch x86_64
-Requires: syslinux
-Requires: syslinux-extlinux
 %endif
+
+%if 0%{?suse_version} >= 1500
+Requires: mkisofs
+Requires: python3-Jinja2
+Requires: python3-selinux
+Requires: python3-parted
+Requires: squashfs
+%endif
+
+%if 0%{?mageia}
+Requires: cdrkit-genisoimage
+Requires: python3-jinja2
+Requires: python3-libselinux
+Requires: python3-parted
+Requires: squashfs-tools
 %endif
 
 %description

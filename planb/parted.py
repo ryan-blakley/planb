@@ -1,9 +1,17 @@
+import _ped
 import logging
 import parted
 
-from _ped import DeviceException, DiskException, IOException, PartitionException
+from _ped import (DeviceException, DiskException, IOException, PartitionException, PARTITION_BOOT, PARTITION_BIOS_GRUB,
+                  PARTITION_EXTENDED, PARTITION_LOGICAL, PARTITION_LVM, PARTITION_NORMAL, PARTITION_PREP,
+                  PARTITION_RAID, PARTITION_SWAP)
 
 from planb.utils import dev_from_file, is_block
+
+if hasattr(_ped, 'PARTITION_ESP'):
+    from _ped import PARTITION_ESP
+else:
+    PARTITION_ESP = 18
 
 
 def get_part_layout(udev_ctx):
@@ -167,13 +175,13 @@ class Parted(object):
         try:
             # Set the partition type.
             if ptype == 0:
-                p_type = parted.PARTITION_NORMAL
+                p_type = PARTITION_NORMAL
             elif ptype == 1:
-                p_type = parted.PARTITION_LOGICAL
+                p_type = PARTITION_LOGICAL
             elif ptype == 2:
-                p_type = parted.PARTITION_EXTENDED
+                p_type = PARTITION_EXTENDED
             else:
-                p_type = parted.PARTITION_NORMAL
+                p_type = PARTITION_NORMAL
 
             geometry = parted.Geometry(start=start, end=end, device=self.device)
 
@@ -186,19 +194,19 @@ class Parted(object):
             # Set any flags needed.
             for flags in flags.split(','):
                 if "boot" in flags:
-                    partition.setFlag(parted.PARTITION_BOOT)
+                    partition.setFlag(PARTITION_BOOT)
                 elif "lvm" in flags:
-                    partition.setFlag(parted.PARTITION_LVM)
+                    partition.setFlag(PARTITION_LVM)
                 elif "swap" in flags:
-                    partition.setFlag(parted.PARTITION_SWAP)
+                    partition.setFlag(PARTITION_SWAP)
                 elif "raid" in flags:
-                    partition.setFlag(parted.PARTITION_RAID)
+                    partition.setFlag(PARTITION_RAID)
                 elif "bios_grub" in flags:
-                    partition.setFlag(parted.PARTITION_BIOS_GRUB)
+                    partition.setFlag(PARTITION_BIOS_GRUB)
                 elif "esp" in flags:
-                    partition.setFlag(parted.PARTITION_ESP)
+                    partition.setFlag(PARTITION_ESP)
                 elif "prep" in flags:
-                    partition.setFlag(parted.PARTITION_PREP)
+                    partition.setFlag(PARTITION_PREP)
 
             self.pdisk.addPartition(partition, constraint=parted.Constraint(exactGeom=geometry))
             self.pdisk.commit()
@@ -220,10 +228,10 @@ class Parted(object):
         self.init_disk(disk, "msdos")
 
         geometry = parted.Geometry(device=self.device, start=2048, length=self.device.getLength() - 2049)
-        partition = parted.Partition(disk=self.pdisk, type=parted.PARTITION_NORMAL, geometry=geometry)
+        partition = parted.Partition(disk=self.pdisk, type=PARTITION_NORMAL, geometry=geometry)
 
         self.pdisk.addPartition(partition=partition, constraint=self.device.optimalAlignedConstraint)
-        partition.setFlag(parted.PARTITION_BOOT)
+        partition.setFlag(PARTITION_BOOT)
 
         self.pdisk.commit()
 
@@ -240,14 +248,14 @@ class Parted(object):
         self.init_disk(disk, "msdos")
 
         geometry = parted.Geometry(device=self.device, start=2048, end=10239)
-        partition = parted.Partition(disk=self.pdisk, type=parted.PARTITION_NORMAL, geometry=geometry)
+        partition = parted.Partition(disk=self.pdisk, type=PARTITION_NORMAL, geometry=geometry)
 
         self.pdisk.addPartition(partition=partition, constraint=self.device.optimalAlignedConstraint)
-        partition.setFlag(parted.PARTITION_BOOT)
-        partition.setFlag(parted.PARTITION_PREP)
+        partition.setFlag(PARTITION_BOOT)
+        partition.setFlag(PARTITION_PREP)
 
         geometry = parted.Geometry(device=self.device, start=10240, length=self.device.getLength() - 10240)
-        partition = parted.Partition(disk=self.pdisk, type=parted.PARTITION_NORMAL, geometry=geometry)
+        partition = parted.Partition(disk=self.pdisk, type=PARTITION_NORMAL, geometry=geometry)
 
         self.pdisk.addPartition(partition=partition, constraint=self.device.optimalAlignedConstraint)
 
@@ -266,14 +274,14 @@ class Parted(object):
         self.init_disk(disk, "msdos")
 
         geometry = parted.Geometry(device=self.device, start=2048, end=206849)
-        partition = parted.Partition(disk=self.pdisk, type=parted.PARTITION_NORMAL, geometry=geometry)
+        partition = parted.Partition(disk=self.pdisk, type=PARTITION_NORMAL, geometry=geometry)
 
         self.pdisk.addPartition(partition=partition, constraint=self.device.optimalAlignedConstraint)
-        partition.setFlag(parted.PARTITION_BOOT)
-        partition.setFlag(parted.PARTITION_ESP)
+        partition.setFlag(PARTITION_BOOT)
+        partition.setFlag(PARTITION_ESP)
 
         geometry = parted.Geometry(device=self.device, start=206850, length=self.device.getLength() - 206850)
-        partition = parted.Partition(disk=self.pdisk, type=parted.PARTITION_NORMAL, geometry=geometry)
+        partition = parted.Partition(disk=self.pdisk, type=PARTITION_NORMAL, geometry=geometry)
 
         self.pdisk.addPartition(partition=partition, constraint=self.device.optimalAlignedConstraint)
 

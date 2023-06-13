@@ -257,7 +257,7 @@ class Backup(object):
 
         # Loop over the lines and grab the mount points set in the fstab.
         for line in lines:
-            if line and not line.startswith('#'):
+            if line and not line.startswith('#') and not line.startswith('none') and not line.startswith('tmpfs'):
                 if line.split()[1].startswith('/'):
                     mp.append(line.split()[1])
 

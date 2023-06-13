@@ -120,7 +120,7 @@ class LiveOS(object):
         makedirs(liveos_dir, exist_ok=True)
 
         # Create the squashfs img file.
-        if "openSUSE" in self.facts.distro:
+        if "openSUSE" in self.facts.distro or "Mageia" in self.facts.distro:
             cmd = "/usr/bin/mksquashfs"
         else:
             cmd = "/usr/sbin/mksquashfs"
@@ -335,17 +335,18 @@ def rh_customize_rootfs(tmp_rootfs_dir):
     Args:
         tmp_rootfs_dir (str): The tmp rootfs directory for the iso.
     """
-    # Store the tmp rootfs dir fd, so it can exit the chroot.
-    rroot = o_open("/", O_RDONLY)
+    if exists(join(tmp_rootfs_dir, "/usr/bin/authselect")):
+        # Store the tmp rootfs dir fd, so it can exit the chroot.
+        rroot = o_open("/", O_RDONLY)
 
-    # Chroot into the tmp_rootfs_dir.
-    chroot(tmp_rootfs_dir)
+        # Chroot into the tmp_rootfs_dir.
+        chroot(tmp_rootfs_dir)
 
-    run_cmd(['/usr/bin/authselect', 'select', 'minimal', '--force'])
+        run_cmd(['/usr/bin/authselect', 'select', 'minimal', '--force'])
 
-    # Cd back to the rroot fd, then chroot back out.
-    chdir(rroot)
-    chroot('.')
+        # Cd back to the rroot fd, then chroot back out.
+        chdir(rroot)
+        chroot('.')
 
     # Enable the needed services.
     chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/pbr.target.wants"))
@@ -374,6 +375,14 @@ def rh_customize_rootfs(tmp_rootfs_dir):
     makedirs(join(tmp_rootfs_dir, "usr/lib/systemd/system/network-online.target.wants"), exist_ok=True)
     chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/network-online.target.wants"))
     symlink("../NetworkManager-wait-online.service", "NetworkManager-wait-online.service")
+
+    # On Magiea /etc/init.d is symlinked to /etc/rc.d/init.d so manually create it.
+    chdir(tmp_rootfs_dir)
+    if exists("etc/rc.d/init.d") and not exists('etc/init.d'):
+        symlink("etc/rc.d/init.d", "etc/init.d")
+
+    if exists("usr/bin/vim-enhanced") and not exists("usr/bin/vim"):
+        symlink("usr/bin/vim-enhanced", "usr/bin/vim")
 
 
 def set_distro_pkgs(facts):
@@ -447,7 +456,7 @@ def set_distro_pkgs(facts):
         return rh_base_pkgs
     elif "AlmaLinux" in facts.distro:
         rh_base_pkgs.extend([
-            'almalinux-release', 'almalinux-repos'
+            'almalinux-release'
         ])
         if facts.distro_version == "8":
             rh_base_pkgs.extend(rh8_base_pkgs)
@@ -455,7 +464,7 @@ def set_distro_pkgs(facts):
         return rh_base_pkgs
     elif "Rocky Linux" in facts.distro:
         rh_base_pkgs.extend([
-            'rocky-release', 'rocky-repos'
+            'rocky-release'
         ])
         if facts.distro_version == "8":
             rh_base_pkgs.extend(rh8_base_pkgs)
@@ -463,6 +472,15 @@ def set_distro_pkgs(facts):
         return rh_base_pkgs
     elif "openSUSE" in facts.distro:
         return suse_base_pkgs
+    elif "Mageia" in facts.distro:
+        rh_base_pkgs.extend([
+            'chkconfig', 'hostname', 'iproute2', 'lib64crack2', 'lib64python3.8', 'lib64python3.8-stdlib', 'locales',
+            'locales-en', 'mageia-release-Default', 'mageia-release-common', 'networkmanager', 'python3-parted'
+        ])
+
+        return rh_base_pkgs
+    else:
+        return rh_base_pkgs
 
 
 def suse_customize_rootfs(tmp_rootfs_dir):

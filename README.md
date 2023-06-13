@@ -41,6 +41,7 @@ stability is added. Stability is the most important thing needed in a backup and
   - AlmaLinux 8+
   - Rocky Linux 8+
   - openSUSE Leap 15+
+  - Mageia 8
 
 ## TODO
 - [x] Add man page(s).

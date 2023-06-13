@@ -360,6 +360,9 @@ def set_distro_efi_file(facts):
             efi_file = "grubaa64.efi"
         else:
             efi_file = "shim.efi"
+    elif "Mageia" in facts.distro:
+        distro = "mageia"
+        efi_file = "grubx64.efi"
     else:
         distro = "redhat"
 

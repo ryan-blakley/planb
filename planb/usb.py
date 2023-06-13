@@ -197,7 +197,6 @@ class USB(object):
                     boot_args=self.cfg.rc_kernel_args,
                     arch=self.facts.arch,
                     distro=distro,
-                    iso=0,
                     efi=1
                 ))
             else:
@@ -213,9 +212,15 @@ class USB(object):
                     distro=distro,
                     efi_file=efi_file,
                     secure_boot=self.facts.secure_boot,
-                    iso=0,
                     efi=1
                 ))
+
+        if "mageia" in distro:
+            run_cmd(['/usr/bin/grub2-mkimage', '--verbose', '-O', 'x86_64-efi', '-p', '/EFI/BOOT', '-o',
+                     join(self.tmp_efi_dir, "bootx64.efi"), 'iso9660', 'ext2', 'fat', 'f2fs', 'jfs', 'reiserfs',
+                     'xfs', 'part_apple', 'part_bsd', 'part_gpt', 'part_msdos', 'all_video', 'font', 'gfxterm',
+                     'gfxmenu', 'png', 'boot', 'chain', 'configfile', 'echo', 'gettext', 'linux', 'linux32', 'ls',
+                     'search', 'test', 'videoinfo'])
 
         self.log.info("Un-mounting EFI directory")
         umount(self.tmp_usbfs_boot_dir)
@@ -263,7 +268,6 @@ class USB(object):
                         distro=distro,
                         memtest=memtest,
                         boot_uuid=boot_uuid,
-                        iso=0,
                         efi=0
                     ))
         elif self.facts.arch == "ppc64le":
@@ -280,15 +284,14 @@ class USB(object):
                     boot_args=self.cfg.rc_kernel_args,
                     arch=self.facts.arch,
                     distro=distro,
-                    iso=0,
                     efi=0
                 ))
 
         # Copy the current running kernel's vmlinuz file to the tmp dir.
         if glob(f"/boot/Image-{uname().release}"):
-            copy2(glob(f"/boot/Image-{uname().release}*")[0], join(self.tmp_syslinux_dir, "vmlinuz"))
-        elif glob(f"/boot/vmlinu*-{uname().release}*"):
-            copy2(glob(f"/boot/vmlinu*-{uname().release}*")[0], join(self.tmp_syslinux_dir, "vmlinuz"))
+            copy2(glob(f"/boot/Image-{uname().release}")[0], join(self.tmp_syslinux_dir, "vmlinuz"))
+        elif glob(f"/boot/vmlinu*-{uname().release}"):
+            copy2(glob(f"/boot/vmlinu*-{uname().release}")[0], join(self.tmp_syslinux_dir, "vmlinuz"))
 
         if self.facts.uefi:
             self.prep_uefi(distro, efi_file, memtest)

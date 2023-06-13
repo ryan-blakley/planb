@@ -64,5 +64,14 @@ ifdef s390x
 endif
 endif
 
+ifdef mageia-8
+ifdef x86
+	mock -r mageia-8-x86_64 --rebuild SRPMS/*.src.rpm
+endif
+ifdef aarch64
+	mock -r mageia-8-aarch64 --rebuild SRPMS/*.src.rpm
+endif
+endif
+
 cleanbuild:
 	-/usr/bin/rm -rf build dist *.egg-info BUILD BUILDROOT MANIFEST

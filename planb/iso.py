@@ -30,9 +30,11 @@ class ISO(object):
         self.label_name = "PLANBRECOVER-ISO"
         self.tmp_dir = tmp_dir
         self.tmp_rootfs_dir = join(tmp_dir, "rootfs")
-        self.tmp_boot_dir = join(tmp_dir, "isofs/boot/grub")
+        self.tmp_boot_grub_dir = join(tmp_dir, "isofs/boot/grub")
+        self.tmp_boot_grub2_dir = join(tmp_dir, "isofs/boot/grub2")
         self.tmp_efi_dir = join(tmp_dir, "isofs/EFI/BOOT")
         self.tmp_images_dir = join(tmp_dir, "isofs/images")
+        self.tmp_isofs_dir = join(tmp_dir, "isofs")
         self.tmp_isolinux_dir = join(tmp_dir, "isofs/isolinux")
         self.tmp_ppc_dir = join(tmp_dir, "isofs/ppc")
         self.tmp_share_dir = join(tmp_dir, "/usr/share/planb")
@@ -42,7 +44,7 @@ class ISO(object):
         Generate a bootable live ISO.
         """
         # Change the isofs directory, and create the output directory.
-        chdir(join(self.tmp_dir, "isofs"))
+        chdir(self.tmp_isofs_dir)
         makedirs(join("/var/lib/pbr", "output"), exist_ok=True)
 
         # Set the bk_dir and create it if it doesn't exist, it should only need to
@@ -156,7 +158,6 @@ class ISO(object):
                         boot_args=self.cfg.rc_kernel_args,
                         arch=self.facts.arch,
                         distro=distro,
-                        iso=1,
                         efi=1
                     ))
                 else:
@@ -172,9 +173,15 @@ class ISO(object):
                         efi_file=efi_file,
                         secure_boot=self.facts.secure_boot,
                         memtest=memtest,
-                        iso=1,
                         efi=1
                     ))
+
+            if "mageia" in distro:
+                run_cmd(['/usr/bin/grub2-mkimage', '--verbose', '-O', 'x86_64-efi', '-p', '/EFI/BOOT', '-o',
+                         join(self.tmp_efi_dir, "bootx64.efi"), 'iso9660', 'ext2', 'fat', 'f2fs', 'jfs', 'reiserfs',
+                         'xfs', 'part_apple', 'part_bsd', 'part_gpt', 'part_msdos', 'all_video', 'font', 'gfxterm',
+                         'gfxmenu', 'png', 'boot', 'chain', 'configfile', 'echo', 'gettext', 'linux', 'linux32', 'ls',
+                         'search', 'test', 'videoinfo'])
 
         makedirs(self.tmp_efi_dir)
         makedirs(self.tmp_images_dir)
@@ -186,7 +193,7 @@ class ISO(object):
 
         # Format and mount the img file.
         fmt_fs(join(self.tmp_images_dir, "efiboot.img"), rand_str(8, True), "PBR-EFI", "vfat")
-        ret = mount(join(self.tmp_images_dir, "efiboot.img"), join(self.tmp_dir, "isofs"))
+        ret = mount(join(self.tmp_images_dir, "efiboot.img"), self.tmp_isofs_dir)
         if ret.returncode:
             self.log.error(f"{ret.args} returned the following error: {ret.stderr.decode()}")
             raise MountError()
@@ -196,10 +203,10 @@ class ISO(object):
         try:
             cp_files()
         except Exception:
-            umount(join(self.tmp_dir, "isofs"))
+            umount(self.tmp_isofs_dir)
 
         # Unmount the img file, and copy the efi files for the iso file itself.
-        umount(join(self.tmp_dir, "isofs"))
+        umount(self.tmp_isofs_dir)
         cp_files()
 
     def prep_iso(self):
@@ -213,7 +220,11 @@ class ISO(object):
         # Since syslinux is only available on x86_64, check the arch.
         # Then copy all the needed isolinux files to the tmp dir.
         if self.facts.arch == "x86_64":
-            chdir("/usr/share/syslinux/")
+            if exists("/usr/lib/syslinux"):
+                chdir("/usr/lib/syslinux/")
+            else:
+                chdir("/usr/share/syslinux/")
+
             copy2("chain.c32", self.tmp_isolinux_dir)
             copy2("isolinux.bin", self.tmp_isolinux_dir)
             copy2("menu.c32", self.tmp_isolinux_dir)
@@ -238,7 +249,7 @@ class ISO(object):
             # Write out the isolinux.cfg based on the template file.
             env = Environment(loader=FileSystemLoader("/usr/share/planb/"))
             isolinux_cfg = env.get_template("isolinux.cfg")
-            with open(join(join(self.tmp_dir, "isofs"), "isolinux.cfg"), "w+") as f:
+            with open(join(self.tmp_isofs_dir, "isolinux.cfg"), "w+") as f:
                 f.write(isolinux_cfg.render(
                     hostname=self.facts.hostname,
                     location="/isolinux/",
@@ -250,7 +261,7 @@ class ISO(object):
             # Copy the splash image over.
             copy2(join(self.tmp_share_dir, "splash.png"), self.tmp_isolinux_dir)
         elif self.facts.arch == "ppc64le":
-            makedirs(self.tmp_boot_dir)
+            makedirs(self.tmp_boot_grub_dir)
             makedirs(self.tmp_ppc_dir)
 
             # Create the bootinfo.txt file.
@@ -263,12 +274,12 @@ class ISO(object):
 
             # Generate a custom grub image file for booting iso's.
             run_cmd(['/usr/bin/grub2-mkimage', '--verbose', '-O', 'powerpc-ieee1275', '-p', '()/boot/grub', '-o',
-                     join(self.tmp_boot_dir, "core.elf"), 'linux', 'normal', 'iso9660'])
+                     join(self.tmp_boot_grub_dir, "core.elf"), 'linux', 'normal', 'iso9660'])
 
             # Generate a grub.cfg.
             env = Environment(loader=FileSystemLoader("/usr/share/planb/"))
             grub_cfg = env.get_template("grub.cfg")
-            with open(join(self.tmp_boot_dir, "grub.cfg"), "w+") as f:
+            with open(join(self.tmp_boot_grub_dir, "grub.cfg"), "w+") as f:
                 f.write(grub_cfg.render(
                     hostname=self.facts.hostname,
                     linux_cmd="linux",
@@ -278,7 +289,6 @@ class ISO(object):
                     boot_args=self.cfg.rc_kernel_args,
                     arch=self.facts.arch,
                     distro=distro,
-                    iso=1,
                     efi=0
                 ))
         elif self.facts.arch == "s390x":
@@ -308,7 +318,7 @@ class ISO(object):
                 f.writelines("'I 00C'\n")
 
             # Create the mapping file.
-            with open(join(join(self.tmp_dir, "isofs"), "generic.ins"), "w") as f:
+            with open(join(self.tmp_isofs_dir, "generic.ins"), "w") as f:
                 f.writelines("isolinux/vmlinuz 0x00000000\n")
                 f.writelines("isolinux/initramfs.img 0x02000000\n")
                 f.writelines("images/genericdvd.prm 0x00010480\n")

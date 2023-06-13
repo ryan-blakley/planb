@@ -558,32 +558,37 @@ class Recover(object):
         # Chroot into the restored rootfs to reinstall grub2.
         chroot(self.tmp_rootfs_dir)
 
-        if self.bk_misc['uefi']:
-            if "Fedora" in self.bk_misc['distro']:
-                distro = "fedora"
-            elif "Red Hat" in self.bk_misc['distro'] or "Oracle" in self.bk_misc['distro']:
-                distro = "redhat"
-            elif "CentOS" in self.bk_misc['distro']:
-                distro = "centos"
-            elif "AlmaLinux" in self.bk_misc['distro']:
-                distro = "almalinux"
-            elif "Rocky Linux" in self.bk_misc['distro']:
-                distro = "rocky"
-            elif "openSUSE" in self.bk_misc['distro']:
-                distro = "opensuse"
-            else:
-                distro = self.bk_misc['distro'].lower()
+        if "aarch64" in self.bk_misc['arch']:
+            efi_file = "shimaa64.efi"
+        else:
+            efi_file = "shimx64.efi"
 
-            if "suse" in distro:
-                shim = "shim.efi"
-            else:
+        if self.bk_misc['uefi']:
+            bk_distro = self.bk_misc['distro']
+            if "Fedora" in bk_distro:
+                distro = "fedora"
+            elif "Red Hat" in bk_distro or "Oracle" in bk_distro:
+                distro = "redhat"
+            elif "CentOS" in bk_distro:
+                distro = "centos"
+            elif "AlmaLinux" in bk_distro:
+                distro = "almalinux"
+            elif "Rocky Linux" in bk_distro:
+                distro = "rocky"
+            elif "openSUSE" in bk_distro:
+                distro = "opensuse"
                 if "aarch64" in self.bk_misc['arch']:
-                    shim = "shimaa64.efi"
+                    efi_file = "grubaa64.efi"
                 else:
-                    shim = "shimx64.efi"
+                    efi_file = "shim.efi"
+            elif "Mageia" in bk_distro:
+                distro = "mageia"
+                efi_file = "grubx64.efi"
+            else:
+                distro = bk_distro.lower()
 
             run_cmd(['/usr/sbin/efibootmgr', '-v', '-c', '-d', bootloader_disk, '-p', '1', '-l',
-                     f"\\EFI\\{distro}\\{shim}", '-L', self.bk_misc['distro_pretty']])
+                     f"\\EFI\\{distro}\\{efi_file}", '-L', self.bk_misc['distro_pretty']])
 
         else:
             # Reinstall the bootloader on the recovered disk.
