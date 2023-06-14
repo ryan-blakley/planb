@@ -43,16 +43,49 @@ stability is added. Stability is the most important thing needed in a backup and
   - openSUSE Leap 15+
   - Mageia 8
 
-## TODO
-- [x] Add man page(s).
-- [x] Add arg for specifying the backup archive to use.
-- [x] Add in restore data only argument.
-- [x] Test other archs beside x86.
-- [x] Add support for luks.
-- [x] Add a backup only option.
-- [x] Need to add checks for what's in the fstab and what's actually mounted.
-- [x] Need to figure out how to implement an option, that can be called from a cron job that rebuilds the iso on layout changes.
-- [x] Add option to name the backup archive, and iso files.
-- [x] Potentially find a better way to do the pam files, instead of including them in the pkg.
-- [x] Add option for post scripting.
-- [ ] Add support for scp and lftp possibly.
+## Installation
+You can download the repo from `https://copr.fedorainfracloud.org/coprs/krypto/pbr/` and then install it like any other package.
+
+## Usage
+```text
+usage: pbr [-h] [-c] [-b] [-bo] [-f] [--format FORMAT] [-k] [-m] [-r] [-v] [-ba BACKUP_ARCHIVE] [-ro]
+
+Plan B Recovery, if all else fails go to Plan B! Plan B Recover comes with ABSOLUTELY NO WARRANTY.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -c, --check-facts     Check if the existing facts changed.
+  -b, --backup          Create rescue media, and full system backup.
+  -bo, --backup-only    Create backup archive only.
+  -f, --facts           Print all the facts.
+  --format FORMAT       Format the specified usb device.
+  -k, --keep            Keep, don't remove temporary backup directory.
+  -m, --mkrescue        Create rescue media only.
+  -r, --recover         Recover system from backup.
+  -v, --verbose         Add verbosity.
+  -ba BACKUP_ARCHIVE, --backup-archive BACKUP_ARCHIVE
+                        Specify the location of the backup archive to use on restore.
+  -ro, --restore-only   Restore backup archive only.
+```
+
+## Examples
+```text
+# pbr -b
+
+Plan (B)ackup Recovery
+
+Created temporary directory /tmp/pbr.d9959zav
+Dumping facts
+Successfully mounted 10.0.0.10:/backups at /tmp/pbr.d9959zav/backup
+Prepping isolinux
+  Formatting /tmp/pbr.d9959zav/isofs/images/efiboot.img as vfat
+Creating initramfs for the LiveOS
+Copying pkg files for the LiveOS's rootfs
+Customizing the copied files to work in the ISO environment
+Creating the ISO's LiveOS IMG
+Creating the ISO file
+Creating backup archive, this could take a while, please be patient
+[================================================================================================ ] 99%
+Un-mounting backup location /tmp/pbr.d9959zav/backup
+Finished backing everything up
+```
