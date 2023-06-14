@@ -575,6 +575,10 @@ class Recover(object):
                 distro = "almalinux"
             elif "Rocky Linux" in bk_distro:
                 distro = "rocky"
+            elif "EuroLinux" in bk_distro:
+                distro = "eurolinux"
+            elif "Circle Linux" in bk_distro:
+                distro = "circle"
             elif "openSUSE" in bk_distro:
                 distro = "opensuse"
                 if "aarch64" in self.bk_misc['arch']:

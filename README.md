@@ -40,6 +40,8 @@ stability is added. Stability is the most important thing needed in a backup and
   - Oracle Linux 8+
   - AlmaLinux 8+
   - Rocky Linux 8+
+  - EuroLinux 8+
+  - Circle Linux 8+
   - openSUSE Leap 15+
   - Mageia 8
 

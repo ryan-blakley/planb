@@ -354,6 +354,10 @@ def set_distro_efi_file(facts):
         distro = "almalinux"
     elif "Rocky Linux" in facts.distro:
         distro = "rocky"
+    elif "EuroLinux" in facts.distro:
+        distro = "eurolinux"
+    elif "Circle Linux" in facts.distro:
+        distro = "circle"
     elif "SUSE" in facts.distro:
         distro = "opensuse"
         if "aarch64" in facts.arch:

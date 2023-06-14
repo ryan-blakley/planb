@@ -470,6 +470,22 @@ def set_distro_pkgs(facts):
             rh_base_pkgs.extend(rh8_base_pkgs)
 
         return rh_base_pkgs
+    elif "EuroLinux" in facts.distro:
+        rh_base_pkgs.extend([
+            'el-release'
+        ])
+        if facts.distro_version == "8":
+            rh_base_pkgs.extend(rh8_base_pkgs)
+
+        return rh_base_pkgs
+    elif "Circle Linux" in facts.distro:
+        rh_base_pkgs.extend([
+            'circle-release'
+        ])
+        if facts.distro_version == "8":
+            rh_base_pkgs.extend(rh8_base_pkgs)
+
+        return rh_base_pkgs
     elif "openSUSE" in facts.distro:
         return suse_base_pkgs
     elif "Mageia" in facts.distro:
