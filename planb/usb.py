@@ -238,7 +238,6 @@ class USB(object):
 
         memtest = 0
         makedirs(self.tmp_syslinux_dir, exist_ok=True)
-        distro, efi_file = set_distro_efi_file(self.facts)
 
         # Grab the uuid of the fs that /boot is located on, if
         # /boot isn't a partition then it returns the uuid of /.
@@ -265,7 +264,7 @@ class USB(object):
                         label_name=self.label_name,
                         boot_args=self.cfg.rc_kernel_args,
                         arch=self.facts.arch,
-                        distro=distro,
+                        distro=self.facts.efi_distro,
                         memtest=memtest,
                         boot_uuid=boot_uuid,
                         efi=0
@@ -283,7 +282,7 @@ class USB(object):
                     label_name=self.label_name,
                     boot_args=self.cfg.rc_kernel_args,
                     arch=self.facts.arch,
-                    distro=distro,
+                    distro=self.facts.efi_distro,
                     efi=0
                 ))
 
@@ -294,7 +293,7 @@ class USB(object):
             copy2(glob(f"/boot/vmlinu*-{uname().release}")[0], join(self.tmp_syslinux_dir, "vmlinuz"))
 
         if self.facts.uefi:
-            self.prep_uefi(distro, efi_file, memtest)
+            self.prep_uefi(self.facts.efi_distro, self.facts.efi_file, memtest)
 
     def mkusb(self):
         """

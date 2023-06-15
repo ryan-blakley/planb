@@ -215,7 +215,6 @@ class ISO(object):
         """
         memtest = 0
         makedirs(self.tmp_isolinux_dir)
-        distro, efi_file = set_distro_efi_file(self.facts)
 
         # Since syslinux is only available on x86_64, check the arch.
         # Then copy all the needed isolinux files to the tmp dir.
@@ -288,7 +287,7 @@ class ISO(object):
                     label_name=self.label_name,
                     boot_args=self.cfg.rc_kernel_args,
                     arch=self.facts.arch,
-                    distro=distro,
+                    distro=self.facts.efi_distro,
                     efi=0
                 ))
         elif self.facts.arch == "s390x":
@@ -331,7 +330,7 @@ class ISO(object):
             copy2(glob(f"/boot/vmlinu*-{uname().release}")[0], join(self.tmp_isolinux_dir, "vmlinuz"))
 
         if self.facts.uefi:
-            self.prep_uefi(memtest, distro, efi_file)
+            self.prep_uefi(memtest, self.facts.efi_distro, self.facts.efi_file)
 
     def mkiso(self):
         """

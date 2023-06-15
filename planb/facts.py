@@ -15,6 +15,44 @@ from planb.md import get_md_info
 from planb.utils import get_modules, run_cmd
 
 
+def distro_efi_vars(arch, dis):
+    """
+    Set the local distro and efi_file variable for the grub.cfg file.
+
+    Args:
+        arch (str): The cpu architecture.
+        dis (str): Distro name.
+
+    Returns:
+        (tuple): Of the distro and efi file.
+    """
+    if exists("/usr/sbin/efibootmgr"):
+        boot_current = ""
+        ret = run_cmd(['efibootmgr', '-v'], ret=True).stdout.decode().split("\n")
+        for line in ret:
+            if line.startswith("BootCurrent:"):
+                boot_current = f"Boot{line.split(':')[1].strip()}"
+                continue
+
+            if boot_current and line.startswith(boot_current):
+                path = line.split("File(")[1].split(")")[0].split("\\")
+                efi_file = path[-1]
+                efi_distro = path[-2].lower()
+                return efi_distro, efi_file
+    else:
+        if "aarch64" in arch:
+            efi_file = "shimaa64.efi"
+        else:
+            efi_file = "shimx64.efi"
+
+        if "Red Hat" in dis or "Oracle" in dis:
+            efi_distro = "redhat"
+        else:
+            efi_distro = dis.split(" ", 1)[0].lower()
+
+        return efi_distro, efi_file
+
+
 class Facts(object):
     def __init__(self):
         """
@@ -54,6 +92,9 @@ class Facts(object):
             else:
                 self.secure_boot = 0
 
+            if self.uefi:
+                self.efi_distro, self.efi_file = distro_efi_vars(self.arch, self.distro)
+
         # Confirm the lvm2 pkg is installed before querying lvm.
         if self.lvm_installed:
             self.lvm = get_lvm_report(self.udev_ctx)
@@ -68,6 +109,8 @@ class Facts(object):
             print(f"  Distro: {self.distro}")
             print(f"  UEFI: {self.uefi}")
             print(f"  SecureBoot: {self.secure_boot}")
+            print(f"  EFI Distro: {self.efi_distro}")
+            print(f"  EFI File: {self.efi_file}")
             print(f"  Uname: {self.uname}")
             print(f"  Arch: {self.arch}")
             print(f"  Selinux Enabled: {self.selinux_enabled}\n")

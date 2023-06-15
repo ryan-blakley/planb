@@ -51,7 +51,7 @@ endif
 
 ifdef suse
 ifdef x86
-	mock -r opensuse-leap-15.4-x86_64 --offline --rebuild SRPMS/*.src.rpm
+	mock -r opensuse-leap-15.4-x86_64 --rebuild SRPMS/*.src.rpm
 endif
 ifdef aarch64
 	mock -r opensuse-leap-15.4-aarch64 --rebuild SRPMS/*.src.rpm
