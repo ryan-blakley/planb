@@ -109,8 +109,9 @@ class Facts(object):
             print(f"  Distro: {self.distro}")
             print(f"  UEFI: {self.uefi}")
             print(f"  SecureBoot: {self.secure_boot}")
-            print(f"  EFI Distro: {self.efi_distro}")
-            print(f"  EFI File: {self.efi_file}")
+            if self.uefi:
+                print(f"  EFI Distro: {self.efi_distro}")
+                print(f"  EFI File: {self.efi_file}")
             print(f"  Uname: {self.uname}")
             print(f"  Arch: {self.arch}")
             print(f"  Selinux Enabled: {self.selinux_enabled}\n")

@@ -10,7 +10,7 @@ from jinja2 import Environment, FileSystemLoader
 from planb.distros import LiveOS, prep_rootfs, rh_customize_rootfs, suse_customize_rootfs
 from planb.exceptions import MountError, RunCMDError
 from planb.fs import fmt_fs
-from planb.utils import dev_from_file, is_block, mount, rand_str, run_cmd, set_distro_efi_file, udev_trigger, umount
+from planb.utils import dev_from_file, is_block, mount, rand_str, run_cmd, udev_trigger, umount
 
 
 def fmt_usb(device):
@@ -150,12 +150,12 @@ class USB(object):
 
         udev_trigger()
 
-    def prep_uefi(self, distro, efi_file, memtest):
+    def prep_uefi(self, efi_distro, efi_file, memtest):
         """
         Prep the usb to work for uefi.
 
         Args:
-            distro (str): Distro name.
+            efi_distro (str): EFI distro path name.
             efi_file (str): The efi file location.
             memtest (bool): Whether to include memtest or not.
         """
@@ -196,7 +196,8 @@ class USB(object):
                     label_name=self.label_name,
                     boot_args=self.cfg.rc_kernel_args,
                     arch=self.facts.arch,
-                    distro=distro,
+                    distro=self.facts.distro,
+                    efi_distro=efi_distro,
                     efi=1
                 ))
             else:
@@ -209,13 +210,14 @@ class USB(object):
                     boot_args=self.cfg.rc_kernel_args,
                     arch=self.facts.arch,
                     memtest=memtest,
-                    distro=distro,
+                    distro=self.facts.distro,
+                    efi_distro=efi_distro,
                     efi_file=efi_file,
                     secure_boot=self.facts.secure_boot,
                     efi=1
                 ))
 
-        if "mageia" in distro:
+        if "mageia" in efi_distro:
             run_cmd(['/usr/bin/grub2-mkimage', '--verbose', '-O', 'x86_64-efi', '-p', '/EFI/BOOT', '-o',
                      join(self.tmp_efi_dir, "bootx64.efi"), 'iso9660', 'ext2', 'fat', 'f2fs', 'jfs', 'reiserfs',
                      'xfs', 'part_apple', 'part_bsd', 'part_gpt', 'part_msdos', 'all_video', 'font', 'gfxterm',
@@ -264,7 +266,7 @@ class USB(object):
                         label_name=self.label_name,
                         boot_args=self.cfg.rc_kernel_args,
                         arch=self.facts.arch,
-                        distro=self.facts.efi_distro,
+                        distro=self.facts.distro,
                         memtest=memtest,
                         boot_uuid=boot_uuid,
                         efi=0
@@ -282,7 +284,7 @@ class USB(object):
                     label_name=self.label_name,
                     boot_args=self.cfg.rc_kernel_args,
                     arch=self.facts.arch,
-                    distro=self.facts.efi_distro,
+                    distro=self.facts.distro,
                     efi=0
                 ))
 

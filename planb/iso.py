@@ -10,7 +10,7 @@ from jinja2 import Environment, FileSystemLoader
 from planb.distros import LiveOS, prep_rootfs, rh_customize_rootfs, suse_customize_rootfs
 from planb.exceptions import MountError
 from planb.fs import fmt_fs
-from planb.utils import mk_cdboot, mount, rand_str, run_cmd, set_distro_efi_file, umount
+from planb.utils import mk_cdboot, mount, rand_str, run_cmd, umount
 
 
 class ISO(object):
@@ -115,13 +115,13 @@ class ISO(object):
         # Copy the iso locally under /var/lib/pbr.
         copy2(f"/var/lib/pbr/output/{self.cfg.rc_iso_prefix}.iso", bk_dir)
 
-    def prep_uefi(self, memtest, distro, efi_file):
+    def prep_uefi(self, memtest, efi_distro, efi_file):
         """
         Prep the isofs working directory to work for uefi.
 
         Args:
             memtest (bool): Whether to include memtest or not.
-            distro (str): Distro name.
+            efi_distro (str): EFI distro path name.
             efi_file (str): The efi file location.
         """
         def cp_files():
@@ -157,7 +157,8 @@ class ISO(object):
                         label_name=self.label_name,
                         boot_args=self.cfg.rc_kernel_args,
                         arch=self.facts.arch,
-                        distro=distro,
+                        distro=self.facts.distro,
+                        efi_distro=efi_distro,
                         efi=1
                     ))
                 else:
@@ -169,14 +170,15 @@ class ISO(object):
                         label_name=self.label_name,
                         boot_args=self.cfg.rc_kernel_args,
                         arch=self.facts.arch,
-                        distro=distro,
+                        distro=self.facts.distro,
+                        efi_distro=efi_distro,
                         efi_file=efi_file,
                         secure_boot=self.facts.secure_boot,
                         memtest=memtest,
                         efi=1
                     ))
 
-            if "mageia" in distro:
+            if "mageia" in efi_distro:
                 run_cmd(['/usr/bin/grub2-mkimage', '--verbose', '-O', 'x86_64-efi', '-p', '/EFI/BOOT', '-o',
                          join(self.tmp_efi_dir, "bootx64.efi"), 'iso9660', 'ext2', 'fat', 'f2fs', 'jfs', 'reiserfs',
                          'xfs', 'part_apple', 'part_bsd', 'part_gpt', 'part_msdos', 'all_video', 'font', 'gfxterm',
@@ -287,7 +289,7 @@ class ISO(object):
                     label_name=self.label_name,
                     boot_args=self.cfg.rc_kernel_args,
                     arch=self.facts.arch,
-                    distro=self.facts.efi_distro,
+                    distro=self.facts.distro,
                     efi=0
                 ))
         elif self.facts.arch == "s390x":
