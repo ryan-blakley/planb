@@ -10,7 +10,7 @@ from jinja2 import Environment, FileSystemLoader
 from planb.distros import LiveOS, prep_rootfs, rh_customize_rootfs, suse_customize_rootfs
 from planb.exceptions import MountError
 from planb.fs import fmt_fs
-from planb.utils import mk_cdboot, mount, rand_str, run_cmd, umount
+from planb.utils import mount, rand_str, run_cmd, umount
 
 
 class ISO(object):
@@ -95,7 +95,8 @@ class ISO(object):
                             stat(join(self.tmp_isolinux_dir, "initramfs.img")).st_size)
                 f.write(data)
 
-            mk_cdboot("isolinux/vmlinuz", "isolinux/initramfs.img", "images/cdboot.prm", "images/cdboot.img")
+            run_cmd(['/usr/bin/mk-s390image', 'isolinux/vmlinuz', 'images/cdboot.img', '-r', 'isolinux/initramfs.img',
+                     '-p', 'images/cdboot.prm'])
 
             cmd_mkisofs = [cmd, '-vv', '-o', iso_file, '-b', 'images/cdboot.img', '-J', '-R', '-l', '-c',
                            'isolinux/boot.cat', '-no-emul-boot', '-boot-load-size', '4', '-V', self.label_name,

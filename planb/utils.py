@@ -164,51 +164,6 @@ def pkg_query_file(file_name):
             return h['name']
 
 
-def mk_cdboot(kernel, initrd, parmfile, outfile):
-    """
-    Create the cdboot.img file needed for s390 to boot. I based this off of
-    https://github.com/weldr/lorax/blob/master/src/bin/mk-s390-cdboot just
-    slimmed it down a bit, instead of having it as an external script.
-
-    Args:
-        kernel (str): The vmlinuz file.
-        initrd (str): The initrd file.
-        parmfile (str): The parmfile normally cdboot.prm
-        outfile (str): The outputted file.
-    """
-    from os import stat
-    from shutil import copy2
-    from struct import pack
-
-    copy2(kernel, outfile)
-
-    with open(initrd, "rb") as initrd_fd:
-        with open(outfile, "r+b") as out_fd:
-            out_fd.seek(0x0000000000800000)
-            out_fd.write(initrd_fd.read())
-
-    size = stat(initrd).st_size
-
-    with open(outfile, "r+b") as out_fd:
-        out_fd.seek(0x04)
-        out_fd.write(pack(">L", 0x80010000))
-
-        # Write the initrd start and size
-        out_fd.seek(0x10408)
-        out_fd.write(pack(">Q", 0x0000000000800000))
-        out_fd.seek(0x10410)
-        out_fd.write(pack(">Q", size))
-
-        # Erase the previous COMMAND_LINE, write zeros
-        out_fd.seek(0x10480)
-        out_fd.write(bytes(896))
-
-        # Write the first line of the parmfile
-        cmdline = open(parmfile, "r").readline().strip()
-        out_fd.seek(0x10480)
-        out_fd.write(bytes(cmdline, "utf-8"))
-
-
 def not_in_append(dev, array):
     """
     Check if dev is in the array, if not append to the array.

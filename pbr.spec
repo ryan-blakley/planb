@@ -26,6 +26,10 @@ Requires: python3-six
 Requires: syslinux
 %endif
 
+%ifarch s390x
+Requires:       s390utils-base >= 2.15.0-2
+%endif
+
 %if 0%{?fedora}%{?el8}%{?el9}
 Requires: authselect-libs >= 1.2
 Requires: dracut-live
