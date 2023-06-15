@@ -47,6 +47,7 @@ stability is added. Stability is the most important thing needed in a backup and
 
 ## Installation
 You can download the repo from `https://copr.fedorainfracloud.org/coprs/krypto/pbr/` and then install it like any other package.
+For any RHEL based OS the epel-X repos should be used.
 
 ## Usage
 ```text
