@@ -2,7 +2,7 @@
 %define debug_package   %{nil}
 
 Name:           planb
-Version:        0.5
+Version:        0.6
 Release:        1%{?dist}
 Summary:        Plan B Recovery is a backup and recovery utility.
 
@@ -87,6 +87,36 @@ Plan B Recovery is a backup and recovery utility.
 %doc %{_mandir}/man5/pbr.conf.5*
 
 %changelog
+* Thu Jun 15 2023 Ryan Blakley <rblakley@redhat.com> 0.6-1
+- Update README
+- fix: s390x iso booting issue
+- fix: Issues for ppc64le installs
+- Dynamically determine the efi file and distro
+- feat: Add EuroLinux and Circle Linux support
+- Update the README
+- feat: Add basic support for Mageia 8
+- fix: Issue with incorrect boot uuid is set
+- fix: flake8 issue
+- fix: Errors on SUSE 15.4
+- Add debug boot option
+- Remove license header and vim line on all files
+- Add in missing distro checks in the recover stage
+- Update a few dot imports that I missed
+- Switch to Google style doc strings
+- fix: Update the requires with the proper module names
+- Update makefile with new chroots and arches
+- fix: Grammar and other issues reported by pycharm
+- feat: Add Alma and Rocky support
+- fix: Memory leak and error caused by file not existing
+- fix: Issue created by pycharm in the chroot command
+- fix: Check if command exists instead of if rpm exists
+- fix: Formatting issue in the mkfs.vfat command
+- fix: Flake8 issues
+- Update the project layout and build
+- Some updates to make functions not distro dependent
+- pbr: Added two new cfg options.
+- pbr: Add a check for rpmnew config file.
+
 * Sat Feb 27 2021 Ryan Blakley <rblakley@redhat.com> 0.5-1
 - pbr: Add arguments to the Makefile. (rblakley@redhat.com)
 - pbr: Switch to outputting the iso file locally first. (rblakley@redhat.com)

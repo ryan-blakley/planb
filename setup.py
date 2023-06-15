@@ -38,7 +38,7 @@ if __name__ == "__main__":
         author_email='rblakley@redhat.com',
         maintainer='Ryan Blakley',
         maintainer_email='rblakley@redhat.com',
-        version='0.5',
+        version='0.6',
         packages=find_packages(),
         entry_points=entry_points,
         data_files=data_files,
