@@ -1,3 +1,6 @@
+from planb.exceptions import GeneralError
+
+
 def dev_from_file(udev_ctx, dev):
     """
     Queries udev based on the device path, this is, so I don't have to import pyudev everywhere,
@@ -113,7 +116,7 @@ def is_installed(pkg):
     """
     from os.path import exists
 
-    if exists("/usr/bin/rpm"):
+    if exists("/usr/bin/rpm") and not exists("/usr/bin/dpkg"):
         from rpm import RPMTAG_NAME, TransactionSet
 
         ts = TransactionSet()
@@ -122,6 +125,15 @@ def is_installed(pkg):
             return True
         else:
             return False
+    elif exists("/usr/bin/dpkg") and not exists("/usr/bin/rpm"):
+        ret = run_cmd(['/usr/bin/dpkg', '-s', pkg], ret=True)
+        if ret.returncode:
+            return False
+        else:
+            return True
+    else:
+        raise GeneralError("This system doesn't have a supported package management tool, or it has conflicting tools "
+                           "installed.")
 
 
 def pkg_files(pkg):
@@ -136,12 +148,19 @@ def pkg_files(pkg):
     """
     from os.path import exists
 
-    if exists("/usr/bin/rpm"):
+    if exists("/usr/bin/rpm") and not exists("/usr/bin/dpkg"):
         from rpm import RPMTAG_NAME, files, TransactionSet
 
         ts = TransactionSet()
         for h in ts.dbMatch(RPMTAG_NAME, pkg):
             return files(h)
+    elif exists("/usr/bin/dpkg") and not exists("/usr/bin/rpm"):
+        ret = run_cmd(['/usr/bin/dpkg', '-L', pkg], ret=True)
+        if not ret.returncode:
+            return ret.stdout.decode().split()
+    else:
+        raise GeneralError("This system doesn't have a supported package management tool, or it has conflicting tools "
+                           "installed.")
 
 
 def pkg_query_file(file_name):
@@ -156,12 +175,19 @@ def pkg_query_file(file_name):
     """
     from os.path import exists
 
-    if exists("/usr/bin/rpm"):
+    if exists("/usr/bin/rpm") and not exists("/usr/bin/dpkg"):
         from rpm import RPMTAG_BASENAMES, TransactionSet
 
         ts = TransactionSet()
         for h in ts.dbMatch(RPMTAG_BASENAMES, file_name):
             return h['name']
+    elif exists("/usr/bin/dpkg") and not exists("/usr/bin/rpm"):
+        ret = run_cmd(['/usr/bin/dpkg', '-S', file_name], ret=True)
+        if not ret.returncode:
+            return ret.stdout.decode().split(':')[0]
+    else:
+        raise GeneralError("This system doesn't have a supported package management tool, or it has conflicting tools "
+                           "installed.")
 
 
 def not_in_append(dev, array):
@@ -261,7 +287,8 @@ def run_cmd(cmd, ret=False, timeout=None, capture_output=True):
     from planb.exceptions import RunCMDError
 
     logger = logging.getLogger('pbr')
-    logger.debug(f"utils: run_cmd: cmd: {cmd}")
+    if not ret:
+        logger.debug(f"utils: run_cmd: cmd: {cmd}")
 
     try:
         if capture_output:

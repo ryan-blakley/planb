@@ -558,50 +558,18 @@ class Recover(object):
         # Chroot into the restored rootfs to reinstall grub2.
         chroot(self.tmp_rootfs_dir)
 
-        if "aarch64" in self.bk_misc['arch']:
-            efi_file = "shimaa64.efi"
-        else:
-            efi_file = "shimx64.efi"
-
         if self.bk_misc['uefi']:
-            bk_distro = self.bk_misc['distro']
-            if "Fedora" in bk_distro:
-                distro = "fedora"
-            elif "Red Hat" in bk_distro or "Oracle" in bk_distro:
-                distro = "redhat"
-            elif "CentOS" in bk_distro:
-                distro = "centos"
-            elif "AlmaLinux" in bk_distro:
-                distro = "almalinux"
-            elif "Rocky Linux" in bk_distro:
-                distro = "rocky"
-            elif "EuroLinux" in bk_distro:
-                distro = "eurolinux"
-            elif "Circle Linux" in bk_distro:
-                distro = "circle"
-            elif "openSUSE" in bk_distro:
-                distro = "opensuse"
-                if "aarch64" in self.bk_misc['arch']:
-                    efi_file = "grubaa64.efi"
-                else:
-                    efi_file = "shim.efi"
-            elif "Mageia" in bk_distro:
-                distro = "mageia"
-                efi_file = "grubx64.efi"
-            else:
-                distro = bk_distro.lower()
-
-            run_cmd(['/usr/sbin/efibootmgr', '-v', '-c', '-d', bootloader_disk, '-p', '1', '-l',
-                     f"\\EFI\\{distro}\\{efi_file}", '-L', self.bk_misc['distro_pretty']])
-
+            run_cmd(['efibootmgr', '-v', '-c', '-d', bootloader_disk, '-p', '1', '-l',
+                     f"\\EFI\\{self.bk_misc['efi_distro']}\\{self.bk_misc['efi_file']}", '-L',
+                     self.bk_misc['distro_pretty']])
         else:
             # Reinstall the bootloader on the recovered disk.
             if "ppc64le" in self.bk_misc['arch']:
-                run_cmd(['/usr/sbin/grub2-install', '-v', f"{bootloader_disk}1"])
+                run_cmd([f"{self.bk_misc['grub_prefix']}-install", '-v', f"{bootloader_disk}1"])
             elif "s390x" in self.bk_misc['arch']:
                 run_cmd(['/usr/sbin/zipl', '-V'])
             else:
-                run_cmd(['/usr/sbin/grub2-install', '-v', bootloader_disk])
+                run_cmd([f"{self.bk_misc['grub_prefix']}-install", '-v', bootloader_disk])
 
         # Cd back to the rroot fd, then chroot back out.
         chdir(rroot)

@@ -1,77 +1,51 @@
-all:	clean build cleanbuild
+ifeq ($(fedora),1)
+DIST = fedora-38
+else ifeq ($(epel-8),1)
+DIST = centos-stream+epel-8
+else ifeq ($(epel-9),1)
+DIST = centos-stream+epel-9
+else ifeq ($(suse),1)
+DIST = opensuse-leap-15.4
+else ifeq ($(mageia-8),1)
+DIST = mageia-8
+endif
 
-clean:
-	-/usr/bin/rm -rf build dist *.egg-info BUILD BUILDROOT RPMS SRPMS MANIFEST
+ifeq ($(x86),1)
+ARCH = x86_64
+else ifeq ($(aarch64),1)
+ARCH = aarch64
+else ifeq ($(ppc64le),1)
+ARCH = ppc64le
+else ifeq ($(s390x),1)
+ARCH = s390x
+endif
 
-build:
+NAME = planb
+BUILD_DIR = BUILD
+SRPM = SRPMS/$(NAME)-*.src.rpm
+VERSION = $(shell grep "Version" packaging/rpm/$(NAME).spec | awk -F ':' '{ print $$2 }' | tr -d " ")
+BUILD_ROOT = $(BUILD_DIR)/$(NAME)-$(VERSION)
+
+rpm: buildsrpm buildrpm cleanrpm
+
+cleanrpm:
+	rm -rf build dist *.egg-info BUILD BUILDROOT RPMS SRPMS
+
+buildsrpm:
 	python3 setup.py sdist
-	rpmbuild -ba -D "_topdir $(PWD)" -D "_sourcedir $(PWD)/dist" *.spec
+	rpmbuild -bs -D "_topdir $(PWD)" -D "_sourcedir $(PWD)/dist" packaging/rpm/$(NAME).spec
 
-ifdef fedora
-ifdef x86
-	mock -r fedora-38-x86_64 --rebuild SRPMS/*.src.rpm
-endif
-ifdef aarch64
-	mock -r fedora-38-aarch64 --rebuild SRPMS/*.src.rpm
-endif
-ifdef ppc64le
-	mock -r fedora-38-ppc64le --rebuild SRPMS/*.src.rpm
-endif
-ifdef s390x
-	mock -r fedora-38-s390x --rebuild SRPMS/*.src.rpm
-endif
-endif
+buildrpm:
+	mock -r $(DIST)-$(ARCH) --rebuild $(SRPM)
 
-ifdef epel-8
-ifdef x86
-	mock -r centos-stream+epel-8-x86_64 --rebuild SRPMS/*.src.rpm
-endif
-ifdef aarch64
-	mock -r centos-stream+epel-8-aarch64 --rebuild SRPMS/*.src.rpm
-endif
-ifdef ppc64le
-	mock -r centos-stream+epel-8-ppc64le --rebuild SRPMS/*.src.rpm
-endif
-endif
+deb: builddeb cleandeb
 
-ifdef epel-9
-ifdef x86
-	mock -r centos-stream+epel-9-x86_64 --rebuild SRPMS/*.src.rpm
-endif
-ifdef aarch64
-	mock -r centos-stream+epel-9-aarch64 --rebuild SRPMS/*.src.rpm
-endif
-ifdef ppc64le
-	mock -r centos-stream+epel-9-ppc64le --rebuild SRPMS/*.src.rpm
-endif
-ifdef s390x
-	mock -r centos-stream+epel-9-s390x --rebuild SRPMS/*.src.rpm
-endif
-endif
+builddeb:
+	mkdir -p $(BUILD_DIR)
+	python3 setup.py sdist
+	tar -C $(BUILD_DIR) -xf dist/$(NAME)-$(VERSION).tar.gz
+	cp -r packaging/debian $(BUILD_ROOT)/
+	cd $(BUILD_ROOT)/ ; DEB_BUILD_OPTIONS=nocheck debuild -us -uc -i -b
 
-ifdef suse
-ifdef x86
-	mock -r opensuse-leap-15.4-x86_64 --rebuild SRPMS/*.src.rpm
-endif
-ifdef aarch64
-	mock -r opensuse-leap-15.4-aarch64 --rebuild SRPMS/*.src.rpm
-endif
-ifdef ppc64le
-	mock -r opensuse-leap-15.4-ppc64le --rebuild SRPMS/*.src.rpm
-endif
-ifdef s390x
-	mock -r opensuse-leap-15.4-s390x --rebuild SRPMS/*.src.rpm
-endif
-endif
-
-ifdef mageia-8
-ifdef x86
-	mock -r mageia-8-x86_64 --rebuild SRPMS/*.src.rpm
-endif
-ifdef aarch64
-	mock -r mageia-8-aarch64 --rebuild SRPMS/*.src.rpm
-endif
-endif
-
-cleanbuild:
-	-/usr/bin/rm -rf build dist *.egg-info BUILD BUILDROOT MANIFEST
+cleandeb:
+	rm -rf dist *.egg-info $(BUILD_ROOT)

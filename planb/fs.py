@@ -49,9 +49,9 @@ def fmt_fs(dev, fs_uuid, fs_label, fs_type):
 
         # Check to make sure fs_label isn't None.
         if fs_label:
-            cmd = ['/usr/sbin/mkfs.vfat', '-F', '16', '-i', uuid, '-n', fs_label, dev]
+            cmd = ['/usr/sbin/mkfs.fat', '-F', '16', '-i', uuid, '-n', fs_label, dev]
         else:
-            cmd = ['/usr/sbin/mkfs.vfat', '-F', '16', '-i', uuid, dev]
+            cmd = ['/usr/sbin/mkfs.fat', '-F', '16', '-i', uuid, dev]
 
     elif "ext" in fs_type:
         # Check to make sure fs_label isn't None.
