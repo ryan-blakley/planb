@@ -7,8 +7,7 @@ requires = [
     'jinja2',
     'pyparted',
     'pyudev',
-    'rpm',
-    'six'
+    'rpm'
 ]
 
 data_files = [
