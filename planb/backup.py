@@ -47,8 +47,10 @@ class Backup(object):
             if ex not in self.bk_excludes:
                 self.bk_excludes.append(ex)
 
-        if "suse" in self.facts.distro.lower():
+        if self.facts.is_suse_based():
             self.nfs_pkg = "nfs-client"
+        elif self.facts.is_debian_based():
+            self.nfs_pkg = "nfs-common"
         else:
             self.nfs_pkg = "nfs-utils"
 
@@ -257,8 +259,9 @@ class Backup(object):
 
         # Loop over the lines and grab the mount points set in the fstab.
         for line in lines:
-            if line and not line.startswith('#') and not line.startswith('none') and not line.startswith('tmpfs'):
-                if line.split()[1].startswith('/'):
+            if line and not line.startswith("#") and not line.startswith("none") and not line.startswith("tmpfs")\
+                    and not line.startswith("/dev/sr"):
+                if line.split()[1].startswith("/"):
                     mp.append(line.split()[1])
 
         # Now compare and remove any mount points that match.
@@ -281,10 +284,14 @@ class Backup(object):
         self.tmp_facts_dir = join(self.tmp_dir, "facts")
         self.tmp_mount_dir = join(self.tmp_dir, "backup")
         self.tmp_isofs_dir = join(self.tmp_dir, "isofs")
-        # Create the sub dirs.
+
+        # Create the required subdirectories.
         makedirs(self.tmp_facts_dir)
         makedirs(self.tmp_mount_dir)
-        makedirs(join(self.tmp_dir, "rootfs"))
+
+        if not self.facts.is_debian_based():
+            makedirs(join(self.tmp_dir, "rootfs"))
+
         if self.cfg.bk_location_type not in self.skip_location_types:
             makedirs(self.tmp_isofs_dir)
 
@@ -302,17 +309,21 @@ class Backup(object):
         self.cleanup_disks(bk_vgs)
 
         # Dump all the individual vars to their own json file.
-        misc = dict()
-        misc.update({"uefi": self.facts.uefi})
-        misc.update({"distro": self.facts.distro})
-        misc.update({"distro_pretty": self.facts.distro_pretty})
-        misc.update({"arch": self.facts.arch})
-        misc.update({"hostname": self.facts.hostname})
-        misc.update({"selinux_enabled": self.facts.selinux_enabled})
-        misc.update({"selinux_enforcing": self.facts.selinux_enforcing})
-        misc.update({"bk_vgs": bk_vgs})
-        misc.update({"md_info": self.facts.md_info})
-        misc.update({"luks": self.facts.luks})
+        misc = {
+            "uefi": self.facts.uefi,
+            "distro": self.facts.distro,
+            "distro_pretty": self.facts.distro_pretty,
+            "arch": self.facts.arch,
+            "hostname": self.facts.hostname,
+            "selinux_enabled": self.facts.selinux_enabled,
+            "selinux_enforcing": self.facts.selinux_enforcing,
+            "bk_vgs": bk_vgs,
+            "md_info": self.facts.md_info,
+            "luks": self.facts.luks,
+            "grub_prefix": self.facts.grub_prefix
+        }
+        if self.facts.uefi:
+            misc.update({"efi_distro": self.facts.efi_distro, "efi_file": self.facts.efi_file})
 
         # Write out the facts to the tmp iso dir.
         with open(join(self.tmp_facts_dir, "disks.json"), 'w') as f:

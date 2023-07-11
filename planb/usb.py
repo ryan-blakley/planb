@@ -7,7 +7,7 @@ from shutil import copy2
 
 from jinja2 import Environment, FileSystemLoader
 
-from planb.distros import LiveOS, prep_rootfs, rh_customize_rootfs, suse_customize_rootfs
+from planb.distros import LiveOS, prep_rootfs, customize_rootfs_debian, customize_rootfs_rh, customize_rootfs_suse
 from planb.exceptions import MountError, RunCMDError
 from planb.fs import fmt_fs
 from planb.utils import dev_from_file, is_block, mount, rand_str, run_cmd, udev_trigger, umount
@@ -21,7 +21,10 @@ def fmt_usb(device):
         device (str): USB device name.
     """
     import pyudev
+
     from platform import machine
+
+    from planb.facts import grub_prefix
     from planb.parted import Parted
 
     # Query the arch and set the udev context.
@@ -77,7 +80,7 @@ def fmt_usb(device):
             # Go ahead and install grub2 on the usb device, I don't think grub needs
             # to be installed every time a backup is created, so it makes sense to
             # just do it here once.
-            ret = run_cmd(['/usr/sbin/grub2-install', '-v', '--target=powerpc-ieee1275', f"--boot-directory={tmp_dir}",
+            ret = run_cmd([f'{grub_prefix()}-install', '-v', '--target=powerpc-ieee1275', f"--boot-directory={tmp_dir}",
                            f"{device}1"], ret=True)
             if ret.returncode:
                 logger.error(f" The command {ret.args} returned in error: {ret.stderr.decode()}")
@@ -112,7 +115,7 @@ def fmt_usb(device):
             # Go ahead and install grub2 on the usb device, I don't think grub needs
             # to be installed every time a backup is created, so it makes sense to
             # just do it here once.
-            ret = run_cmd(['/usr/sbin/grub2-install', '-v', f"--boot-directory={tmp_dir}", f"{device}"], ret=True)
+            ret = run_cmd([f'{grub_prefix()}-install', '-v', f"--boot-directory={tmp_dir}", f"{device}"], ret=True)
             if ret.returncode:
                 logger.error(f" The command {ret.args} returned in error: {ret.stderr.decode()}")
 
@@ -183,46 +186,59 @@ class USB(object):
             if "fbx64" not in efi and "fallback" not in efi:
                 copy2(efi, self.tmp_efi_dir)
 
+        # If a bootx86.efi or bootaa64.efi file doesn't exist
+        # create one by copying the shim or grub efi files.
+        if not glob(join(self.tmp_efi_dir, "boot*.efi")) and not glob(join(self.tmp_efi_dir, "BOOT*.EFI")):
+            for shim in ['shimx64.efi', 'shim.efi', 'grubx64.efi', 'shimaa64.efi', 'grubaa64.efi']:
+                if exists(join(self.tmp_efi_dir, shim)):
+                    boot_efi = "bootx64.efi"
+                    if "aarch64" in self.facts.arch:
+                        boot_efi = "bootaa64.efi"
+
+                    copy2(join(self.tmp_efi_dir, shim), join(self.tmp_efi_dir, boot_efi))
+                    break
+
         env = Environment(loader=FileSystemLoader("/usr/share/planb/"))
         grub_cfg = env.get_template("grub.cfg")
         with open(join(self.tmp_efi_dir, "grub.cfg"), "w+") as f:
             # For aarch64 it doesn't use the normal efi commands in grub.cfg.
             if self.facts.arch == "aarch64":
                 f.write(grub_cfg.render(
-                    hostname=self.facts.hostname,
+                    facts=self.facts,
                     linux_cmd="linux",
                     initrd_cmd="initrd",
                     location="/boot/syslinux/",
                     label_name=self.label_name,
                     boot_args=self.cfg.rc_kernel_args,
-                    arch=self.facts.arch,
-                    distro=self.facts.distro,
                     efi_distro=efi_distro,
                     efi=1
                 ))
             else:
                 f.write(grub_cfg.render(
-                    hostname=self.facts.hostname,
+                    facts=self.facts,
                     linux_cmd="linuxefi",
                     initrd_cmd="initrdefi",
                     location="/boot/syslinux/",
                     label_name=self.label_name,
                     boot_args=self.cfg.rc_kernel_args,
-                    arch=self.facts.arch,
                     memtest=memtest,
-                    distro=self.facts.distro,
                     efi_distro=efi_distro,
                     efi_file=efi_file,
-                    secure_boot=self.facts.secure_boot,
                     efi=1
                 ))
 
-        if "mageia" in efi_distro:
-            run_cmd(['/usr/bin/grub2-mkimage', '--verbose', '-O', 'x86_64-efi', '-p', '/EFI/BOOT', '-o',
+        if "mageia" in efi_distro and self.facts.arch == "x86_64":
+            run_cmd([f'{self.facts.grub_prefix}-mkimage', '--verbose', '-O', 'x86_64-efi', '-p', '/EFI/BOOT', '-o',
                      join(self.tmp_efi_dir, "bootx64.efi"), 'iso9660', 'ext2', 'fat', 'f2fs', 'jfs', 'reiserfs',
                      'xfs', 'part_apple', 'part_bsd', 'part_gpt', 'part_msdos', 'all_video', 'font', 'gfxterm',
                      'gfxmenu', 'png', 'boot', 'chain', 'configfile', 'echo', 'gettext', 'linux', 'linux32', 'ls',
-                     'search', 'test', 'videoinfo'])
+                     'search', 'test', 'videoinfo', 'reboot', 'gzio', 'gfxmenu', 'gfxterm', 'serial'])
+
+        if self.facts.is_debian_based() and self.facts.arch == "aarch64":
+            run_cmd([f'{self.facts.grub_prefix}-mkimage', '--verbose', '-O', 'arm64-efi', '-p', '/EFI/BOOT', '-o',
+                     join(self.tmp_efi_dir, "bootaa64.efi"), 'search', 'iso9660', 'configfile', 'normal', 'tar',
+                     'part_msdos', 'part_gpt', 'ext2', 'fat', 'xfs', 'linux', 'boot', 'chain', 'ls', 'reboot',
+                     'all_video', 'gzio', 'gfxmenu', 'gfxterm', 'serial'])
 
         self.log.info("Un-mounting EFI directory")
         umount(self.tmp_usbfs_boot_dir)
@@ -259,14 +275,12 @@ class USB(object):
                 grub_cfg = env.get_template("grub.cfg")
                 with open(join(self.tmp_dir, "usbfs/grub2/grub.cfg"), "w+") as f:
                     f.write(grub_cfg.render(
-                        hostname=self.facts.hostname,
+                        facts=self.facts,
                         linux_cmd="linux",
                         initrd_cmd="initrd",
                         location="/boot/syslinux/",
                         label_name=self.label_name,
                         boot_args=self.cfg.rc_kernel_args,
-                        arch=self.facts.arch,
-                        distro=self.facts.distro,
                         memtest=memtest,
                         boot_uuid=boot_uuid,
                         efi=0
@@ -277,14 +291,13 @@ class USB(object):
             grub_cfg = env.get_template("grub.cfg")
             with open(join(self.tmp_dir, "usbfs/grub2/grub.cfg"), "w+") as f:
                 f.write(grub_cfg.render(
-                    hostname=self.facts.hostname,
+                    facts=self.facts,
                     linux_cmd="linux",
                     initrd_cmd="initrd",
                     location="/boot/syslinux/",
                     label_name=self.label_name,
                     boot_args=self.cfg.rc_kernel_args,
-                    arch=self.facts.arch,
-                    distro=self.facts.distro,
+                    boot_uuid=boot_uuid,
                     efi=0
                 ))
 
@@ -311,10 +324,12 @@ class USB(object):
         prep_rootfs(self.cfg, self.tmp_dir, self.tmp_rootfs_dir)
 
         # Set OS specific customizations.
-        if "openSUSE" in self.facts.distro:
-            suse_customize_rootfs(self.tmp_rootfs_dir)
+        if self.facts.is_suse_based():
+            customize_rootfs_suse(self.tmp_rootfs_dir)
+        elif self.facts.is_debian_based():
+            customize_rootfs_debian(self.tmp_rootfs_dir)
         else:
-            rh_customize_rootfs(self.tmp_rootfs_dir)
+            customize_rootfs_rh(self.tmp_rootfs_dir)
 
         self.log.info("Creating the USB's LiveOS IMG")
         liveos.create_squashfs()

@@ -1,0 +1,14 @@
+Source: planb
+Section: misc
+Priority: optional
+Maintainer: Ryan Blakley <rblakley@redhat.com>
+Standards-Version: 3.9.8
+Homepage: https://github.com/ryan-blakley/planb
+Build-Depends: debhelper (>= 12), devscripts, dh-python, python3, python3-setuptools
+
+Package: planb
+Architecture: amd64 arm64 ppc64el s390x
+Provides: planb
+Depends: dosfstools[amd64 arm64], genisoimage, isolinux, live-boot, live-build, python3, python3-magic, python3-distro, python3-jinja2, python3-parted, python3-pyudev, python3-selinux, squashfs-tools, syslinux[amd64], syslinux-common[amd64], syslinux-utils[amd64]
+Suggests: cifs-utils, nfs-common, rsync
+Description: Plan B Recovery is a backup and recovery utility.

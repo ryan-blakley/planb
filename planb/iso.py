@@ -7,7 +7,7 @@ from shutil import copy2
 
 from jinja2 import Environment, FileSystemLoader
 
-from planb.distros import LiveOS, prep_rootfs, rh_customize_rootfs, suse_customize_rootfs
+from planb.distros import LiveOS, customize_rootfs_debian, customize_rootfs_rh, customize_rootfs_suse, prep_rootfs
 from planb.exceptions import MountError
 from planb.fs import fmt_fs
 from planb.utils import mount, rand_str, run_cmd, umount
@@ -145,46 +145,59 @@ class ISO(object):
                 if "fbx64" not in efi and "fallback" not in efi:
                     copy2(efi, self.tmp_efi_dir)
 
+            # If a bootx86.efi or bootaa64.efi file doesn't exist
+            # create one by copying the shim or grub efi files.
+            if not glob(join(self.tmp_efi_dir, "boot*.efi")) and not glob(join(self.tmp_efi_dir, "BOOT*.EFI")):
+                for shim in ['shimx64.efi', 'shim.efi', 'grubx64.efi', 'shimaa64.efi', 'grubaa64.efi']:
+                    if exists(join(self.tmp_efi_dir, shim)):
+                        boot_efi = "bootx64.efi"
+                        if "aarch64" in self.facts.arch:
+                            boot_efi = "bootaa64.efi"
+
+                        copy2(join(self.tmp_efi_dir, shim), join(self.tmp_efi_dir, boot_efi))
+                        break
+
             env = Environment(loader=FileSystemLoader("/usr/share/planb/"))
             grub_cfg = env.get_template("grub.cfg")
             with open(join(self.tmp_efi_dir, "grub.cfg"), "w+") as cfg:
                 # For aarch64 it doesn't use the normal efi commands in grub.cfg.
                 if self.facts.arch == "aarch64":
                     cfg.write(grub_cfg.render(
-                        hostname=self.facts.hostname,
+                        facts=self.facts,
                         linux_cmd="linux",
                         initrd_cmd="initrd",
                         location="/isolinux/",
                         label_name=self.label_name,
                         boot_args=self.cfg.rc_kernel_args,
-                        arch=self.facts.arch,
-                        distro=self.facts.distro,
                         efi_distro=efi_distro,
                         efi=1
                     ))
                 else:
                     cfg.write(grub_cfg.render(
-                        hostname=self.facts.hostname,
+                        facts=self.facts,
                         linux_cmd="linuxefi",
                         initrd_cmd="initrdefi",
                         location="/isolinux/",
                         label_name=self.label_name,
                         boot_args=self.cfg.rc_kernel_args,
-                        arch=self.facts.arch,
-                        distro=self.facts.distro,
                         efi_distro=efi_distro,
                         efi_file=efi_file,
-                        secure_boot=self.facts.secure_boot,
                         memtest=memtest,
                         efi=1
                     ))
 
-            if "mageia" in efi_distro:
-                run_cmd(['/usr/bin/grub2-mkimage', '--verbose', '-O', 'x86_64-efi', '-p', '/EFI/BOOT', '-o',
+            if "mageia" in efi_distro and self.facts.arch == "x86_64":
+                run_cmd([f'{self.facts.grub_prefix}-mkimage', '--verbose', '-O', 'x86_64-efi', '-p', '/EFI/BOOT', '-o',
                          join(self.tmp_efi_dir, "bootx64.efi"), 'iso9660', 'ext2', 'fat', 'f2fs', 'jfs', 'reiserfs',
                          'xfs', 'part_apple', 'part_bsd', 'part_gpt', 'part_msdos', 'all_video', 'font', 'gfxterm',
                          'gfxmenu', 'png', 'boot', 'chain', 'configfile', 'echo', 'gettext', 'linux', 'linux32', 'ls',
-                         'search', 'test', 'videoinfo'])
+                         'search', 'test', 'videoinfo', 'reboot', 'gzio', 'gfxmenu', 'gfxterm', 'serial'])
+
+            if self.facts.is_debian_based() and self.facts.arch == "aarch64":
+                run_cmd([f'{self.facts.grub_prefix}-mkimage', '--verbose', '-O', 'arm64-efi', '-p', '/EFI/BOOT', '-o',
+                         join(self.tmp_efi_dir, "bootaa64.efi"), 'search', 'iso9660', 'configfile', 'normal', 'tar',
+                         'part_msdos', 'part_gpt', 'ext2', 'fat', 'xfs', 'linux', 'boot', 'chain', 'ls', 'reboot',
+                         'all_video', 'gzio', 'gfxmenu', 'gfxterm', 'serial'])
 
         makedirs(self.tmp_efi_dir)
         makedirs(self.tmp_images_dir)
@@ -222,13 +235,21 @@ class ISO(object):
         # Since syslinux is only available on x86_64, check the arch.
         # Then copy all the needed isolinux files to the tmp dir.
         if self.facts.arch == "x86_64":
-            if exists("/usr/lib/syslinux"):
+            if exists("/usr/lib/syslinux/isolinux.bin"):
+                # Magia location
                 chdir("/usr/lib/syslinux/")
+                copy2("isolinux.bin", self.tmp_isolinux_dir)
+            elif exists("/usr/lib/ISOLINUX/"):
+                # Debian location
+                chdir("/usr/lib/ISOLINUX/")
+                copy2("isolinux.bin", self.tmp_isolinux_dir)
+                chdir("/usr/lib/syslinux/modules/bios/")
             else:
+                # RH based location
                 chdir("/usr/share/syslinux/")
+                copy2("isolinux.bin", self.tmp_isolinux_dir)
 
             copy2("chain.c32", self.tmp_isolinux_dir)
-            copy2("isolinux.bin", self.tmp_isolinux_dir)
             copy2("menu.c32", self.tmp_isolinux_dir)
             copy2("vesamenu.c32", self.tmp_isolinux_dir)
 
@@ -253,7 +274,7 @@ class ISO(object):
             isolinux_cfg = env.get_template("isolinux.cfg")
             with open(join(self.tmp_isofs_dir, "isolinux.cfg"), "w+") as f:
                 f.write(isolinux_cfg.render(
-                    hostname=self.facts.hostname,
+                    facts=self.facts,
                     location="/isolinux/",
                     label_name=self.label_name,
                     boot_args=self.cfg.rc_kernel_args,
@@ -266,6 +287,10 @@ class ISO(object):
             makedirs(self.tmp_boot_grub_dir)
             makedirs(self.tmp_ppc_dir)
 
+            # Grab the uuid of the fs that /boot is located on, if
+            # /boot isn't a partition then it returns the uuid of /.
+            boot_uuid = self.facts.mnts.get("/boot", self.facts.mnts.get("/", {})).get("fs_uuid")
+
             # Create the bootinfo.txt file.
             with open(join(self.tmp_ppc_dir, "bootinfo.txt"), "w") as f:
                 f.writelines("<chrp-boot>\n")
@@ -275,22 +300,23 @@ class ISO(object):
                 f.writelines("</chrp-boot>\n")
 
             # Generate a custom grub image file for booting iso's.
-            run_cmd(['/usr/bin/grub2-mkimage', '--verbose', '-O', 'powerpc-ieee1275', '-p', '()/boot/grub', '-o',
-                     join(self.tmp_boot_grub_dir, "core.elf"), 'linux', 'normal', 'iso9660'])
+            run_cmd([f'{self.facts.grub_prefix}-mkimage', '--verbose', '-O', 'powerpc-ieee1275', '-p', '()/boot/grub',
+                     '-o', join(self.tmp_boot_grub_dir, "core.elf"), 'search', 'iso9660', 'configfile', 'normal', 'tar',
+                     'part_msdos', 'part_gpt', 'ext2', 'xfs', 'linux', 'boot', 'ls', 'reboot', 'all_video', 'gzio',
+                     'gfxmenu', 'gfxterm', 'serial'])
 
             # Generate a grub.cfg.
             env = Environment(loader=FileSystemLoader("/usr/share/planb/"))
             grub_cfg = env.get_template("grub.cfg")
             with open(join(self.tmp_boot_grub_dir, "grub.cfg"), "w+") as f:
                 f.write(grub_cfg.render(
-                    hostname=self.facts.hostname,
+                    facts=self.facts,
                     linux_cmd="linux",
                     initrd_cmd="initrd",
                     location="/isolinux/",
                     label_name=self.label_name,
                     boot_args=self.cfg.rc_kernel_args,
-                    arch=self.facts.arch,
-                    distro=self.facts.distro,
+                    boot_uuid=boot_uuid,
                     efi=0
                 ))
         elif self.facts.arch == "s390x":
@@ -349,10 +375,12 @@ class ISO(object):
         prep_rootfs(self.cfg, self.tmp_dir, self.tmp_rootfs_dir)
 
         # Set OS specific customizations.
-        if "openSUSE" in self.facts.distro:
-            suse_customize_rootfs(self.tmp_rootfs_dir)
+        if self.facts.is_suse_based():
+            customize_rootfs_suse(self.tmp_rootfs_dir)
+        elif self.facts.is_debian_based():
+            customize_rootfs_debian(self.tmp_rootfs_dir)
         else:
-            rh_customize_rootfs(self.tmp_rootfs_dir)
+            customize_rootfs_rh(self.tmp_rootfs_dir)
 
         self.log.info("Creating the ISO's LiveOS IMG")
         liveos.create_squashfs()
