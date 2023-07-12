@@ -124,7 +124,17 @@ class Facts(object):
         Returns:
             (bool): Return True/False if it's a Fedora based distro.
         """
-        if "Fedora" in self.distro or "fedora" in self.distro_like:
+        if "Fedora" in self.distro or "fedora" in self.distro_like and "mandriva" not in self.distro_like:
+            return True
+        else:
+            return False
+
+    def is_mageia_based(self):
+        """
+        Returns:
+            (bool): Return True/False if it's a Mageia based distro.
+        """
+        if "Mageia" in self.distro or "mageia" in self.distro_like:
             return True
         else:
             return False

@@ -90,6 +90,14 @@ class LiveOS(object):
             self.log.info("Create minimal chroot with lb build")
             self.create_chroot_debian()
 
+        if self.facts.is_fedora_based():
+            self.log.info("Create minimal chroot with mock")
+            self.create_chroot_fedora()
+
+        if self.facts.is_mageia_based():
+            self.log.info("Create minimal chroot with mock")
+            self.create_chroot_mageia()
+
         self.log.info("Copying pkg files for the LiveOS's rootfs")
         self.find_libs(self.pkgs)
         self.copy_pkg_files(self.pkgs)
@@ -134,6 +142,75 @@ class LiveOS(object):
 
         rename(join(self.tmp_dir, "chroot"), self.tmp_rootfs_dir)
         run_cmd(['lb', 'clean'])
+
+    def create_chroot_fedora(self):
+        """
+        Create chroot with mock for fedora like distros.
+        """
+        chdir(self.tmp_dir)
+        pkgs = [
+            'authselect', 'bash-completion', 'dbus', 'device-mapper-multipath', 'dosfstools', 'e2fsprogs',
+            'grub2-common', 'grub2-tools', 'iproute', 'iputils', 'kdb', 'kmod', 'kpartx', 'less', 'lsof',
+            'NetworkManager', 'ncurses', 'openssh-server', 'parted', 'passwd', 'plymouth', 'polkit', 'procps-ng',
+            'python3', 'python3-distro', 'python3-jinja2', 'python3-libselinux', 'python3-magic', 'python3-pyparted',
+            'python3-pyudev', 'python3-pyroute2', 'python3-rpm', 'rng-tools', 'rootfiles', 'systemd', 'systemd-udev',
+            'vim-enhanced', 'vim-minimal'
+        ]
+        self.set_common_pkgs(pkgs)
+        self.create_chroot_with_mock(pkgs)
+
+    def create_chroot_mageia(self):
+        """
+        Create chroot with mock for mageia like distros.
+        """
+        chdir(self.tmp_dir)
+        pkgs = [
+            'bash-completion', 'chkconfig', 'dbus', 'device-mapper-multipath', 'dosfstools', 'e2fsprogs',
+            'grub2-common', 'hostname', 'initscripts', 'iproute2', 'iputils', 'kdb', 'kmod', 'kpartx', 'less',
+            'lib64crack2', 'locales', 'locales-en', 'lsof', 'networkmanager', 'ncurses', 'openssh-server', 'parted',
+            'passwd', 'plymouth', 'polkit', 'procps-ng', 'python3', 'python3-distro', 'python3-jinja2',
+            'python3-libselinux', 'python3-magic', 'python3-parted', 'python3-pyudev', 'python3-pyroute2',
+            'python3-rpm', 'rng-tools', 'rootfiles', 'systemd', 'vim-enhanced', 'vim-minimal'
+        ]
+        if self.facts.distro_version == "8":
+            pkgs.extend(['lib64python3.8', 'lib64python3.8-stdlib'])
+
+        self.set_common_pkgs(pkgs)
+        self.create_chroot_with_mock(pkgs)
+
+    def create_chroot_with_mock(self, pkgs):
+        """
+        Execute mock with the provided pkgs.
+
+        Args:
+            pkgs (list): List of pkgs to install in the chroot.
+        """
+        # Create the initial chroot environment.
+        if "centos" in self.facts.distro_id:
+            mock_template = f"centos-stream-{self.facts.distro_version}-{self.facts.arch}"
+        else:
+            mock_template = f"{self.facts.distro_id}-{self.facts.distro_version}-{self.facts.arch}"
+
+        ret = run_cmd(['mock', '-r', mock_template, '--no-bootstrap-chroot', '--isolation', 'simple', '--rootdir',
+                       self.tmp_rootfs_dir, '--init'], ret=True)
+        self.log.debug(f"distros: cmd: {ret.args} ret_code: {ret.returncode} stdout: {ret.stdout.decode()}"
+                       f"stderr: {ret.stderr.decode()}")
+        if ret.returncode == 1:
+            raise RunCMDError()
+
+        # Install the needed extra packages.
+        cmd = ['mock', '-r', mock_template, '--no-bootstrap-chroot', '--isolation', 'simple', '--rootdir',
+               self.tmp_rootfs_dir, '--dnf-cmd', '--skip-broken', '-v', '--install']
+        if self.facts.is_mageia_based():
+            cmd = ['mock', '-r', mock_template, '--no-bootstrap-chroot', '--isolation', 'simple', '--rootdir',
+                   self.tmp_rootfs_dir, '-v', '--install']
+        cmd.extend(pkgs)
+
+        ret = run_cmd(cmd, ret=True)
+        self.log.debug(f"distros: cmd: {ret.args} ret_code: {ret.returncode} stdout: {ret.stdout.decode()}"
+                       f"stderr: {ret.stderr.decode()}")
+        if ret.returncode == 30 or ret.returncode == 3:
+            raise RunCMDError()
 
     def create_initramfs(self):
         """
@@ -443,8 +520,12 @@ def prep_rootfs(cfg, tmp_dir, tmp_rootfs_dir):
     copy2("/usr/share/planb/pbr.service", join(tmp_rootfs_dir, "usr/lib/systemd/system"))
 
     # Link the default target to our custom target.
+    etc_default_target = join(tmp_rootfs_dir, "etc/systemd/system/default.target")
+    if exists(etc_default_target):
+        remove(etc_default_target)
+
     chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/"))
-    remove(join(tmp_rootfs_dir, "usr/lib/systemd/system/default.target"))
+    remove("default.target")
     symlink("pbr.target", "default.target")
 
     # Create the needed getty wants dir and lnk the service files.
@@ -537,23 +618,6 @@ def set_distro_pkgs(facts):
         facts (obj): Facts object.
     """
     # List of base packages that need to be installed, WARNING the order of this array does matter.
-    rh_base_pkgs = [
-        'filesystem', 'glibc', 'glibc-common', 'setup', 'systemd', 'systemd-udev', 'bash', 'bash-completion',
-        'initscripts', 'coreutils', 'coreutils-common', 'pam', 'authselect', 'authselect-libs', 'util-linux',
-        'util-linux-core', 'dbus', 'dbus-broker', 'dbus-common', 'dbus-daemon', 'polkit', 'python3', 'python3-libs',
-        'alternatives', 'NetworkManager', 'binutils', 'crypto-policies', 'device-mapper-multipath', 'dosfstools',
-        'e2fsprogs', 'gawk', 'grep', 'gzip', 'iproute', 'iputils', 'kbd', 'kbd-misc', 'kmod', 'kpartx', 'less',
-        'libpwquality', 'lsof', 'mdadm', 'ncurses', 'ncurses-base', 'openssh', 'openssh-clients', 'openssh-server',
-        'parted', 'passwd', 'planb', 'plymouth', 'procps-ng', 'python3-distro', 'python3-jinja2', 'python3-libselinux',
-        'python3-magic', 'python3-markupsafe', 'python3-pyparted', 'python3-pyroute2', 'python3-pyudev', 'python3-rpm',
-        'python3-six', 'rng-tools', 'rootfiles', 'rpm', 'sed', 'vim-common', 'vim-enhanced', 'vim-filesystem',
-        'vim-minimal', 'xfsprogs'
-    ]
-
-    rh8_base_pkgs = [
-        'platform-python', 'platform-python-setuptools', 'python36'
-    ]
-
     suse_base_pkgs = [
         'filesystem', 'glibc', 'glibc-common', 'glibc-locale-base', 'systemd', 'systemd-sysvinit', 'udev', 'bash',
         'bash-completion', 'bash-sh', 'aaa_base', 'aaa_base-extras', 'coreutils', 'pam', 'pam-config', 'util-linux',
@@ -568,78 +632,13 @@ def set_distro_pkgs(facts):
         'wicked', 'wicked-service', 'xfsprogs'
     ]
 
-    if "Fedora" in facts.distro:
-        rh_base_pkgs.extend([
-            'fedora-release', 'fedora-release-common', 'fedora-release-server', 'fedora-release-identity-server'
-        ])
-
-        return rh_base_pkgs
-    elif "Red Hat" in facts.distro:
-        rh_base_pkgs.extend([
-            'redhat-release'
-        ])
-        if facts.distro_version == "8":
-            rh_base_pkgs.extend(rh8_base_pkgs)
-
-        return rh_base_pkgs
-    elif "CentOS" in facts.distro:
-        rh_base_pkgs.extend([
-            'centos-release', 'centos-stream-release'
-        ])
-        if facts.distro_version == "8":
-            rh_base_pkgs.extend(rh8_base_pkgs)
-
-        return rh_base_pkgs
-    elif "Oracle Linux" in facts.distro:
-        rh_base_pkgs.extend([
-            'oraclelinux-release'
-        ])
-        if facts.distro_version == "8":
-            rh_base_pkgs.extend(rh8_base_pkgs)
-
-        return rh_base_pkgs
-    elif "AlmaLinux" in facts.distro:
-        rh_base_pkgs.extend([
-            'almalinux-release'
-        ])
-        if facts.distro_version == "8":
-            rh_base_pkgs.extend(rh8_base_pkgs)
-
-        return rh_base_pkgs
-    elif "Rocky Linux" in facts.distro:
-        rh_base_pkgs.extend([
-            'rocky-release'
-        ])
-        if facts.distro_version == "8":
-            rh_base_pkgs.extend(rh8_base_pkgs)
-
-        return rh_base_pkgs
-    elif "EuroLinux" in facts.distro:
-        rh_base_pkgs.extend([
-            'el-release'
-        ])
-        if facts.distro_version == "8":
-            rh_base_pkgs.extend(rh8_base_pkgs)
-
-        return rh_base_pkgs
-    elif "Circle Linux" in facts.distro:
-        rh_base_pkgs.extend([
-            'circle-release'
-        ])
-        if facts.distro_version == "8":
-            rh_base_pkgs.extend(rh8_base_pkgs)
-
-        return rh_base_pkgs
+    if facts.is_fedora_based():
+        return ['planb']
     elif "openSUSE" in facts.distro:
         return suse_base_pkgs
     elif "Mageia" in facts.distro:
-        rh_base_pkgs.extend([
-            'chkconfig', 'hostname', 'iproute2', 'lib64crack2', 'lib64python3.8', 'lib64python3.8-stdlib', 'locales',
-            'locales-en', 'mageia-release-Default', 'mageia-release-common', 'networkmanager', 'python3-parted'
-        ])
-
-        return rh_base_pkgs
+        return ['planb']
     elif facts.is_debian_based():
         return ['planb']
     else:
-        return rh_base_pkgs
+        return ['planb']

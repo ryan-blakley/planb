@@ -34,6 +34,7 @@ Requires:       s390utils-base >= 2.15.0-2
 Requires: authselect-libs >= 1.2
 Requires: dracut-live
 Requires: genisoimage
+Requires: mock
 Requires: python3-jinja2
 Requires: python3-libselinux
 Requires: python3-pyparted
@@ -50,6 +51,7 @@ Requires: squashfs
 
 %if 0%{?mageia}
 Requires: cdrkit-genisoimage
+Requires: mock
 Requires: python3-jinja2
 Requires: python3-libselinux
 Requires: python3-parted
