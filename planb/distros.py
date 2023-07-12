@@ -174,6 +174,8 @@ class LiveOS(object):
         ]
         if self.facts.distro_version == "8":
             pkgs.extend(['lib64python3.8', 'lib64python3.8-stdlib'])
+        elif self.facts.distro_version == "9":
+            pkgs.extend(['lib64python3.10', 'lib64python3.10-stdlib'])
 
         self.set_common_pkgs(pkgs)
         self.create_chroot_with_mock(pkgs)

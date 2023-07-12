@@ -43,7 +43,7 @@ stability is added. Stability is the most important thing needed in a backup and
   - EuroLinux 8+
   - Circle Linux 8+
   - openSUSE Leap 15+
-  - Mageia 8
+  - Mageia 8+
 
 ## Installation
 You can download the repo from `https://copr.fedorainfracloud.org/coprs/krypto/pbr/` and then install it like any other package.

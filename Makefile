@@ -8,6 +8,8 @@ else ifeq ($(suse),1)
 DIST = opensuse-leap-15.4
 else ifeq ($(mageia-8),1)
 DIST = mageia-8
+else ifeq ($(mageia-9),1)
+DIST = mageia-9
 endif
 
 ifeq ($(x86),1)
