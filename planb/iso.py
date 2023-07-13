@@ -193,7 +193,7 @@ class ISO(object):
                          'gfxmenu', 'png', 'boot', 'chain', 'configfile', 'echo', 'gettext', 'linux', 'linux32', 'ls',
                          'search', 'test', 'videoinfo', 'reboot', 'gzio', 'gfxmenu', 'gfxterm', 'serial'])
 
-            if self.facts.is_debian_based() and self.facts.arch == "aarch64":
+            if self.facts.is_debian_based and self.facts.arch == "aarch64":
                 run_cmd([f'{self.facts.grub_prefix}-mkimage', '--verbose', '-O', 'arm64-efi', '-p', '/EFI/BOOT', '-o',
                          join(self.tmp_efi_dir, "bootaa64.efi"), 'search', 'iso9660', 'configfile', 'normal', 'tar',
                          'part_msdos', 'part_gpt', 'ext2', 'fat', 'xfs', 'linux', 'boot', 'chain', 'ls', 'reboot',
@@ -375,9 +375,9 @@ class ISO(object):
         prep_rootfs(self.cfg, self.tmp_dir, self.tmp_rootfs_dir)
 
         # Set OS specific customizations.
-        if self.facts.is_suse_based():
+        if self.facts.is_suse_based:
             customize_rootfs_suse(self.tmp_rootfs_dir)
-        elif self.facts.is_debian_based():
+        elif self.facts.is_debian_based:
             customize_rootfs_debian(self.tmp_rootfs_dir)
         else:
             customize_rootfs_rh(self.tmp_rootfs_dir)

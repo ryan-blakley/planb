@@ -89,6 +89,11 @@ class Facts(object):
         self.uefi = exists("/sys/firmware/efi")
         self.uname = uname().release
 
+        self.is_debian_based = self._debian_based()
+        self.is_fedora_based = self._fedora_based()
+        self.is_mageia_based = self._mageia_based()
+        self.is_suse_based = self._suse_based()
+
         self.disks = get_part_layout(self.udev_ctx)
         self.luks = get_luks_devs(self.udev_ctx)
         self.lvm = get_lvm_report(self.udev_ctx) if self.lvm_installed else {}
@@ -109,7 +114,7 @@ class Facts(object):
             if self.uefi:
                 self.efi_distro, self.efi_file = distro_efi_vars(self.arch, self.distro)
 
-    def is_debian_based(self):
+    def _debian_based(self):
         """
         Returns:
             (bool): Return True/False if it's a Debian based distro.
@@ -119,7 +124,7 @@ class Facts(object):
         else:
             return False
 
-    def is_fedora_based(self):
+    def _fedora_based(self):
         """
         Returns:
             (bool): Return True/False if it's a Fedora based distro.
@@ -129,7 +134,7 @@ class Facts(object):
         else:
             return False
 
-    def is_mageia_based(self):
+    def _mageia_based(self):
         """
         Returns:
             (bool): Return True/False if it's a Mageia based distro.
@@ -139,7 +144,7 @@ class Facts(object):
         else:
             return False
 
-    def is_suse_based(self):
+    def _suse_based(self):
         """
         Returns:
             (bool): Return True/False if it's a SUSE based distro.

@@ -86,15 +86,15 @@ class LiveOS(object):
         self.log.info("Creating initramfs for the LiveOS")
         self.create_initramfs()
 
-        if self.facts.is_debian_based():
+        if self.facts.is_debian_based:
             self.log.info("Create minimal chroot with lb build")
             self.create_chroot_debian()
 
-        if self.facts.is_fedora_based():
+        if self.facts.is_fedora_based:
             self.log.info("Create minimal chroot with mock")
             self.create_chroot_fedora()
 
-        if self.facts.is_mageia_based():
+        if self.facts.is_mageia_based:
             self.log.info("Create minimal chroot with mock")
             self.create_chroot_mageia()
 
@@ -203,7 +203,7 @@ class LiveOS(object):
         # Install the needed extra packages.
         cmd = ['mock', '-r', mock_template, '--no-bootstrap-chroot', '--isolation', 'simple', '--rootdir',
                self.tmp_rootfs_dir, '--dnf-cmd', '--skip-broken', '-v', '--install']
-        if self.facts.is_mageia_based():
+        if self.facts.is_mageia_based:
             cmd = ['mock', '-r', mock_template, '--no-bootstrap-chroot', '--isolation', 'simple', '--rootdir',
                    self.tmp_rootfs_dir, '-v', '--install']
         cmd.extend(pkgs)
@@ -222,7 +222,7 @@ class LiveOS(object):
         if self.cfg.boot_type == "usb":
             initramfs_out = join(self.tmp_syslinux_dir, "initramfs.img")
 
-        if self.facts.is_debian_based():
+        if self.facts.is_debian_based:
             cmd = ['mkinitramfs', '-o', initramfs_out]
         else:
             cmd = ['dracut', '-v', '-f', '-N', '-a', 'dmsquash-live', '-a', 'rescue',
@@ -236,12 +236,12 @@ class LiveOS(object):
         """
         # Create the output directory.
         if self.cfg.boot_type == "usb":
-            if self.facts.is_debian_based():
+            if self.facts.is_debian_based:
                 liveos_dir = join(self.tmp_dir, "usbfs/live")
             else:
                 liveos_dir = join(self.tmp_dir, "usbfs/LiveOS")
         else:
-            if self.facts.is_debian_based():
+            if self.facts.is_debian_based:
                 liveos_dir = join(self.tmp_dir, "isofs/live")
             else:
                 liveos_dir = join(self.tmp_dir, "isofs/LiveOS")
@@ -250,7 +250,7 @@ class LiveOS(object):
 
         # Create the squashfs img file.
         out_file = "squashfs.img"
-        if self.facts.is_debian_based():
+        if self.facts.is_debian_based:
             out_file = "filesystem.squashfs"
 
         run_cmd(['mksquashfs', self.tmp_rootfs_dir, join(liveos_dir, out_file), '-noappend'])
@@ -347,7 +347,7 @@ class LiveOS(object):
         """
         # Set distro specific pkgs.
         pkgs = set_distro_pkgs(self.facts)
-        if not self.facts.is_debian_based():
+        if not self.facts.is_debian_based:
             self.set_common_pkgs(pkgs)
 
             # Check if lvm is installed, if so add lvm pkgs.
@@ -634,13 +634,13 @@ def set_distro_pkgs(facts):
         'wicked', 'wicked-service', 'xfsprogs'
     ]
 
-    if facts.is_fedora_based():
+    if facts.is_fedora_based:
         return ['planb']
     elif "openSUSE" in facts.distro:
         return suse_base_pkgs
     elif "Mageia" in facts.distro:
         return ['planb']
-    elif facts.is_debian_based():
+    elif facts.is_debian_based:
         return ['planb']
     else:
         return ['planb']

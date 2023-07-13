@@ -47,9 +47,9 @@ class Backup(object):
             if ex not in self.bk_excludes:
                 self.bk_excludes.append(ex)
 
-        if self.facts.is_suse_based():
+        if self.facts.is_suse_based:
             self.nfs_pkg = "nfs-client"
-        elif self.facts.is_debian_based():
+        elif self.facts.is_debian_based:
             self.nfs_pkg = "nfs-common"
         else:
             self.nfs_pkg = "nfs-utils"
@@ -289,7 +289,7 @@ class Backup(object):
         makedirs(self.tmp_facts_dir)
         makedirs(self.tmp_mount_dir)
 
-        if not self.facts.is_debian_based():
+        if not self.facts.is_debian_based:
             makedirs(join(self.tmp_dir, "rootfs"))
 
         if self.cfg.bk_location_type not in self.skip_location_types:
@@ -454,6 +454,7 @@ class Backup(object):
                 iso.mkiso()
             elif self.cfg.boot_type == "usb":
                 usb = USB(self.cfg, self.facts, self.tmp_dir)
+                usb.prep_usb()
                 usb.mkusb()
             else:
                 self.log.error("Please set a valid boot_type in the cfg file.")

@@ -457,6 +457,8 @@ class Recover(object):
                 # Since we use LiveOS it mounts the partition up,
                 # so just use that instead of another mount point.
                 self.tmp_bk_mnt = "/run/initramfs/live"
+                if self.facts.is_debian_based:
+                    self.tmp_bk_mnt = "/run/live/medium"
             elif self.cfg.boot_type == "iso" and self.cfg.bk_location_type == "iso":
                 # Since we use LiveOS it mounts the partition up,
                 # so just use that instead of another mount point.
