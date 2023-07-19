@@ -20,7 +20,10 @@ def set_log_cfg(opts, cfg):
     if cfg.log_verbosity == "debug":
         logger.setLevel(logging.DEBUG)
     elif cfg.log_verbosity == "info":
-        logger.setLevel(logging.INFO)
+        if opts.verbose:
+            logger.setLevel(logging.DEBUG)
+        else:
+            logger.setLevel(logging.INFO)
 
     # Create the log formatter.
     log_format = logging.Formatter('%(asctime)s - PBR - %(levelname)s: %(message)s')
@@ -39,7 +42,7 @@ def set_log_cfg(opts, cfg):
 
     # Create log file handler and the log level will be set above
     # based on what the cfg file log level is set to.
-    log_file = logging.FileHandler('/var/log/pbr.log', mode='w')
+    log_file = logging.FileHandler('/var/log/pbr.log', mode='a')
     log_file.setFormatter(log_format)
     logger.addHandler(log_file)
 
