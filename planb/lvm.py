@@ -43,6 +43,7 @@ def get_lvm_report(udev_ctx):
     """
     import json
 
+    logger = logging.getLogger('pbr')
     lvm = dict()
 
     cmds = ['pvs', 'vgs', 'lvs']
@@ -56,29 +57,31 @@ def get_lvm_report(udev_ctx):
         if c == "pvs":
             i = 0
             report = json.loads(ret.stdout.decode())['report'][0][c[:-1]]
+            logger.debug(f"lvm: get_lvm_report: c: {c} report: {report}")
 
             for x in report:
-                udev_info = dev_from_file(udev_ctx, x['pv_name'])
-                d_type = get_dev_type(udev_info)
+                if "unknown" not in x['pv_name']:
+                    udev_info = dev_from_file(udev_ctx, x['pv_name'])
+                    d_type = get_dev_type(udev_info)
 
-                # Update the pvs output to reference the md_devname, also weather it's a md dev,
-                # and what the device type is.
-                if udev_info.get('MD_DEVNAME', False):
-                    report[i]['pv_name'] = f"/dev/md/{udev_info['MD_DEVNAME']}"
-                    report[i]['md_dev'] = 1
-                    report[i]['d_type'] = d_type
-                else:
-                    report[i]['md_dev'] = 0
-                    report[i]['d_type'] = d_type
+                    # Update the pvs output to reference the md_devname, also weather it's a md dev,
+                    # and what the device type is.
+                    if udev_info.get('MD_DEVNAME', False):
+                        report[i]['pv_name'] = f"/dev/md/{udev_info['MD_DEVNAME']}"
+                        report[i]['md_dev'] = 1
+                        report[i]['d_type'] = d_type
+                    else:
+                        report[i]['md_dev'] = 0
+                        report[i]['d_type'] = d_type
 
-                if d_type == "part" or d_type == "part-raid":
-                    report[i]['parent'] = udev_info.find_parent('block').device_node
-                elif d_type == "part-mpath":
-                    report[i]['parent'] = f"/dev/mapper/{udev_info.get('DM_MPATH', '')}"
-                else:
-                    report[i]['parent'] = None
+                    if d_type == "part" or d_type == "part-raid":
+                        report[i]['parent'] = udev_info.find_parent('block').device_node
+                    elif d_type == "part-mpath":
+                        report[i]['parent'] = f"/dev/mapper/{udev_info.get('DM_MPATH', '')}"
+                    else:
+                        report[i]['parent'] = None
 
-                i += 1
+                    i += 1
 
             lvm.update({c.upper(): report})
         else:
@@ -129,6 +132,8 @@ class RecoveryLVM(object):
         self.facts = facts
         self.bk_mnts = bk_mnts
         self.bk_lvm = bk_lvm
+        # Query a fresh lvm report after re-partitioning.
+        self.rc_lvm = get_lvm_report(facts.udev_ctx)
 
     def lvm_check(self, bk_vgs):
         """
@@ -141,13 +146,18 @@ class RecoveryLVM(object):
 
         rc_vgs = []
 
+        # Check for any partial vgs due to missing pv.
+        for pv in self.rc_lvm.get('PVS'):
+            if "unknown" in pv['pv_name']:
+                rc_vgs.append(pv['vg_name'])
+
         for vg in bk_vgs:
-            if not self.matching_lvm(vg):
+            if not self.matching_lvm(vg) and vg not in rc_vgs:
                 rc_vgs.append(vg)
 
         # Recover any vgs needing it.
         if rc_vgs:
-            self.log.debug("LVM doesn't match.")
+            self.log.debug(f"lvm: lvm_check: rc_vgs: {rc_vgs}")
             # Deactivate any vgs in case it was never run prior.
             deactivate_vgs()
 
@@ -181,7 +191,6 @@ class RecoveryLVM(object):
         Returns:
             (bool): Whether the lvm matches or not.
         """
-        lvm = get_lvm_report(self.facts.udev_ctx)
         match = 0
         total = 0
         try:
@@ -189,7 +198,7 @@ class RecoveryLVM(object):
                 # Check to make sure the vg_name of the lv matches the vg.
                 if lv['vg_name'] == vg:
                     total += 1
-                    for lv2 in lvm['LVS']:
+                    for lv2 in self.rc_lvm['LVS']:
                         # Check if the lv entry exist in lv2, and that it's size match.
                         if lv['lv_name'] == lv2['lv_name'] and lv['lv_size'] == lv2['lv_size']:
                             match += 1
