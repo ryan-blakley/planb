@@ -41,7 +41,7 @@ def fmt_fs(dev, fs_uuid, fs_label, fs_type):
         else:
             cmd = ['/usr/sbin/mkfs.xfs', '-f', '-m', f"uuid={fs_uuid}", dev]
 
-    elif fs_type == "vfat":
+    elif fs_type == "vfat" or fs_type == "fat":
         if search("-", fs_uuid):
             uuid = "".join(fs_uuid.split('-'))
         else:
@@ -99,12 +99,14 @@ def get_mnts(udev_ctx):
             mp (str): Mount point.
         """
         info = dict()
-        vg = None
-        parent = None
+        logger = logging.getLogger('pbr')
         md_devname = None
+        parent = None
+        vg = None
 
-        # If the dev is a zram device, skip adding it.
-        if dev.startswith("/dev/zram"):
+        # If the dev is a zram or loop device, skip adding it.
+        logger.debug(f"fs: get_mnts: dev: {dev} mp: {mp}")
+        if dev.startswith("/dev/zram") or dev.startswith("/dev/loop"):
             return
 
         udev_info = dev_from_file(udev_ctx, dev)
@@ -138,15 +140,17 @@ def get_mnts(udev_ctx):
                 dm_parent = glob(f"/sys/block/{udev_info['DEVNAME'].split('/')[-1]}/slaves/*")[0].split('/')[-1]
                 parent = f"/dev/{dm_parent}"
 
-        info.update({"path": dev,
-                     "kname": udev_info['DEVNAME'],
-                     "fs_type": udev_info.get('ID_FS_TYPE', None),
-                     "fs_uuid": udev_info.get('ID_FS_UUID', None),
-                     "fs_label": udev_info.get('ID_FS_LABEL', None),
-                     "type": d_type,
-                     "vg": vg,
-                     "parent": parent,
-                     "md_devname": md_devname})
+        info.update({
+            "path": dev,
+            "kname": udev_info['DEVNAME'],
+            "fs_type": udev_info.get('ID_FS_TYPE', None),
+            "fs_uuid": udev_info.get('ID_FS_UUID', None),
+            "fs_label": udev_info.get('ID_FS_LABEL', None),
+            "type": d_type,
+            "vg": vg,
+            "parent": parent,
+            "md_devname": md_devname
+        })
 
         mnts.update({mp: info})
 
@@ -163,9 +167,13 @@ def get_mnts(udev_ctx):
 
     loop = 0
     for x in read_strip_filter("/proc/swaps"):
-        # To distinguish from actual mount points, name the entries SWAP-X,
-        # this is in case there are multiple swap devices in use.
-        add_entries(x.split()[0], f"SWAP-{loop}")
-        loop += 1
+        x_split = x.split()
+        # Only add swap entries that the type is partition. Will try to add
+        # file type entries in the future.
+        if "partition" in x_split[1]:
+            # To distinguish from actual mount points, name the entries SWAP-X,
+            # this is in case there are multiple swap devices in use.
+            add_entries(x_split[0], f"SWAP-{loop}")
+            loop += 1
 
     return mnts

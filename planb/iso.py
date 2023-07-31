@@ -14,7 +14,7 @@ from planb.utils import mount, rand_str, run_cmd, umount
 
 
 class ISO(object):
-    def __init__(self, cfg, facts, tmp_dir):
+    def __init__(self, cfg, facts, opts, tmp_dir):
         """
         A class for creating a bootable ISO, for recovering from a backup.
 
@@ -24,8 +24,10 @@ class ISO(object):
             tmp_dir (str): The tmp working directory.
         """
         self.log = logging.getLogger('pbr')
+
         self.cfg = cfg
         self.facts = facts
+        self.opts = opts
 
         self.label_name = "PLANBRECOVER-ISO"
         self.tmp_dir = tmp_dir
@@ -116,14 +118,12 @@ class ISO(object):
         # Copy the iso locally under /var/lib/pbr.
         copy2(f"/var/lib/pbr/output/{self.cfg.rc_iso_prefix}.iso", bk_dir)
 
-    def prep_uefi(self, memtest, efi_distro, efi_file):
+    def prep_uefi(self, memtest):
         """
         Prep the isofs working directory to work for uefi.
 
         Args:
             memtest (bool): Whether to include memtest or not.
-            efi_distro (str): EFI distro path name.
-            efi_file (str): The efi file location.
         """
         def cp_files():
             """
@@ -142,7 +142,7 @@ class ISO(object):
             # Loop through any efi file under /boot/efi/EFI/<distro>/, and copy.
             for efi in glob("/boot/efi/EFI/[a-z]*/*.efi"):
                 # Don't copy the fallback efi files, because it will cause it not to boot.
-                if "fbx64" not in efi and "fallback" not in efi:
+                if "fbx64" not in efi and "fallback" not in efi and "BOOT" not in efi:
                     copy2(efi, self.tmp_efi_dir)
 
             # If a bootx86.efi or bootaa64.efi file doesn't exist
@@ -169,7 +169,6 @@ class ISO(object):
                         location="/isolinux/",
                         label_name=self.label_name,
                         boot_args=self.cfg.rc_kernel_args,
-                        efi_distro=efi_distro,
                         efi=1
                     ))
                 else:
@@ -180,13 +179,11 @@ class ISO(object):
                         location="/isolinux/",
                         label_name=self.label_name,
                         boot_args=self.cfg.rc_kernel_args,
-                        efi_distro=efi_distro,
-                        efi_file=efi_file,
                         memtest=memtest,
                         efi=1
                     ))
 
-            if "mageia" in efi_distro and self.facts.arch == "x86_64":
+            if "mageia" in self.facts.efi_distro and self.facts.arch == "x86_64":
                 run_cmd([f'{self.facts.grub_prefix}-mkimage', '--verbose', '-O', 'x86_64-efi', '-p', '/EFI/BOOT', '-o',
                          join(self.tmp_efi_dir, "bootx64.efi"), 'iso9660', 'ext2', 'fat', 'f2fs', 'jfs', 'reiserfs',
                          'xfs', 'part_apple', 'part_bsd', 'part_gpt', 'part_msdos', 'all_video', 'font', 'gfxterm',
@@ -198,6 +195,12 @@ class ISO(object):
                          join(self.tmp_efi_dir, "bootaa64.efi"), 'search', 'iso9660', 'configfile', 'normal', 'tar',
                          'part_msdos', 'part_gpt', 'ext2', 'fat', 'xfs', 'linux', 'boot', 'chain', 'ls', 'reboot',
                          'all_video', 'gzio', 'gfxmenu', 'gfxterm', 'serial'])
+
+            if self.facts.is_debian_based and self.facts.arch == "x86_64":
+                run_cmd([f'{self.facts.grub_prefix}-mkimage', '--verbose', '-O', 'x86_64-efi', '-p', '/EFI/BOOT', '-o',
+                         join(self.tmp_efi_dir, "bootx64.efi"), 'search', 'iso9660', 'configfile', 'normal', 'tar',
+                         'part_msdos', 'part_gpt', 'ext2', 'fat', 'xfs', 'linux', 'linuxefi', 'boot', 'chain', 'ls',
+                         'reboot', 'all_video', 'gzio', 'gfxmenu', 'gfxterm', 'serial'])
 
         makedirs(self.tmp_efi_dir)
         makedirs(self.tmp_images_dir)
@@ -359,7 +362,7 @@ class ISO(object):
             copy2(glob(f"/boot/vmlinu*-{uname().release}")[0], join(self.tmp_isolinux_dir, "vmlinuz"))
 
         if self.facts.uefi:
-            self.prep_uefi(memtest, self.facts.efi_distro, self.facts.efi_file)
+            self.prep_uefi(memtest)
 
     def mkiso(self):
         """
@@ -368,7 +371,7 @@ class ISO(object):
         self.log.info("Prepping isolinux")
         self.prep_iso()
 
-        liveos = LiveOS(self.cfg, self.facts, self.tmp_dir)
+        liveos = LiveOS(self.cfg, self.facts, self.opts, self.tmp_dir)
         liveos.create()
 
         self.log.info("Customizing the copied files to work in the ISO environment")

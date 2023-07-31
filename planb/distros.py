@@ -14,10 +14,11 @@ from planb.utils import is_installed, pkg_files, pkg_query_file, run_cmd
 
 
 class LiveOS(object):
-    def __init__(self, cfg, facts, tmp_dir):
+    def __init__(self, cfg, facts, opts, tmp_dir):
         self.log = logging.getLogger('pbr')
         self.cfg = cfg
         self.facts = facts
+        self.opts = opts
         self.tmp_dir = tmp_dir
         self.tmp_rootfs_dir = join(tmp_dir, "rootfs")
         self.tmp_isolinux_dir = join(tmp_dir, "isofs/isolinux")
@@ -112,21 +113,29 @@ class LiveOS(object):
         Create debian chroot with the lb command.
         """
         chdir(self.tmp_dir)
+
         pkgs = [
-            'dbus', 'dosfstools', 'gawk', 'grub2-common', 'kpartx', 'less', 'libc-l10n', 'lsof', 'openssh-client',
-            'openssh-server', 'parted', 'procps', f'python{self.facts.pyvers}', 'python3-distro', 'python3-jinja2',
-            'python3-magic', 'python3-parted', 'python3-pyudev', 'python3-selinux', 'vim'
+            'dbus', 'dosfstools', 'gawk', 'grub2-common', 'kpartx', 'less', 'lsof', 'openssh-client', 'openssh-server',
+            'parted', 'procps', f'python{self.facts.pyvers}', 'python3-distro', 'python3-jinja2', 'python3-magic',
+            'python3-parted', 'python3-pyudev', 'python3-selinux', 'vim'
         ]
         self.set_common_pkgs(pkgs)
 
-        ret = run_cmd([
-            'lb', 'config', '--firmware-chroot', 'false', '-d', self.facts.distro_codename, '--debootstrap-options',
-            f'"--include={",".join(pkgs)}"'
-        ], ret=True)
+        config_cmd = [
+            'lb', 'config', '--firmware-binary', 'false', '--firmware-chroot', 'false', '-d',
+            self.facts.distro_codename, '--cache', 'false', '--apt-indices', 'false',
+        ]
+        if "ubuntu" in self.facts.distro_id:
+            config_cmd.extend(['--parent-archive-areas', 'main universe multiverse'])
+
+        ret = run_cmd(config_cmd, ret=True)
         self.log.debug(f"distros: cmd: lb config ret_code: {ret.returncode} stdout: {ret.stdout.decode()}")
         if ret.returncode == 1:
             self.log.error(f" The command {ret.args} returned in error: {ret.stderr.decode()}")
             raise RunCMDError()
+
+        with open(join(self.tmp_dir, "config/package-lists/planb.list.chroot"), "w") as p_files:
+            p_files.write("\n".join(pkgs))
 
         ret = run_cmd(['lb', 'bootstrap'], ret=True)
         self.log.debug(f"distros: cmd: lb bootstrap ret_code: {ret.returncode} stdout: {ret.stdout.decode()}")
@@ -136,12 +145,14 @@ class LiveOS(object):
 
         ret = run_cmd(['lb', 'chroot'], ret=True)
         self.log.debug(f"distros: cmd: lb chroot ret_code: {ret.returncode} stdout: {ret.stdout.decode()}")
-        if ret.returncode == 1:
+        if ret.returncode == 1 or ret.returncode == 123:
             self.log.error(f" The command {ret.args} returned in error: {ret.stderr.decode()}")
             raise RunCMDError()
 
         rename(join(self.tmp_dir, "chroot"), self.tmp_rootfs_dir)
-        run_cmd(['lb', 'clean'])
+
+        if not self.opts.keep:
+            run_cmd(['lb', 'clean', '--all'])
 
     def create_chroot_fedora(self):
         """
@@ -378,10 +389,26 @@ def customize_rootfs_debian(tmp_rootfs_dir):
     """
     # Enable the needed services.
     chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/pbr.target.wants"))
-    symlink("../networking.service", "networking.service")
 
-    if not exists(join(tmp_rootfs_dir, "etc/network/interfaces")):
+    if exists("../networking.service"):
+        symlink("../networking.service", "networking.service")
+
+    if exists("../networkd-dispatcher.service"):
+        symlink("../networkd-dispatcher.service", "networkd-dispatcher.service")
+
+    if exists("../systemd-networkd.service"):
+        symlink("../systemd-networkd.service", "systemd-networkd.service")
+
+    if not exists(join(tmp_rootfs_dir, "etc/network/interfaces")) and exists("/etc/network/interfaces"):
         copy2("/etc/network/interfaces", join(tmp_rootfs_dir, "etc/network/interfaces"))
+
+    if exists("/etc/netplan"):
+        for netplan_cfg in glob("/etc/netplan/*.yaml"):
+            copy2(netplan_cfg, join(tmp_rootfs_dir, "etc/netplan/"))
+
+    for ssh_cfg in glob("/etc/ssh/ssh_*"):
+        if isfile(ssh_cfg):
+            copy2(ssh_cfg, join(tmp_rootfs_dir, "etc/ssh/"))
 
 
 def customize_rootfs_rh(tmp_rootfs_dir):

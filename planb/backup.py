@@ -260,7 +260,7 @@ class Backup(object):
         # Loop over the lines and grab the mount points set in the fstab.
         for line in lines:
             if line and not line.startswith("#") and not line.startswith("none") and not line.startswith("tmpfs")\
-                    and not line.startswith("/dev/sr"):
+                    and not line.startswith("/dev/sr") and "swap" not in line:
                 if line.split()[1].startswith("/"):
                     mp.append(line.split()[1])
 
@@ -450,10 +450,10 @@ class Backup(object):
 
         if not self.opts.backup_only:
             if self.cfg.boot_type == "iso":
-                iso = ISO(self.cfg, self.facts, self.tmp_dir)
+                iso = ISO(self.cfg, self.facts, self.opts, self.tmp_dir)
                 iso.mkiso()
             elif self.cfg.boot_type == "usb":
-                usb = USB(self.cfg, self.facts, self.tmp_dir)
+                usb = USB(self.cfg, self.facts, self.opts, self.tmp_dir)
                 usb.prep_usb()
                 usb.mkusb()
             else:

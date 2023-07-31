@@ -3,8 +3,7 @@ import logging
 import parted
 
 from _ped import (DeviceException, DiskException, IOException, PartitionException, PARTITION_BOOT, PARTITION_BIOS_GRUB,
-                  PARTITION_EXTENDED, PARTITION_LOGICAL, PARTITION_LVM, PARTITION_NORMAL, PARTITION_PREP,
-                  PARTITION_RAID, PARTITION_SWAP)
+                  PARTITION_LVM, PARTITION_NORMAL, PARTITION_PREP, PARTITION_RAID, PARTITION_SWAP)
 
 from planb.utils import dev_from_file, is_block
 
@@ -173,23 +172,13 @@ class Parted(object):
         bad_fs = ['LVM2_member', 'swap', 'linux_raid_member', 'vfat', 'crypto_LUKS']
 
         try:
-            # Set the partition type.
-            if ptype == 0:
-                p_type = PARTITION_NORMAL
-            elif ptype == 1:
-                p_type = PARTITION_LOGICAL
-            elif ptype == 2:
-                p_type = PARTITION_EXTENDED
-            else:
-                p_type = PARTITION_NORMAL
-
             geometry = parted.Geometry(start=start, end=end, device=self.device)
 
             if fstype and fstype not in bad_fs:
                 filesystem = parted.FileSystem(type=fstype, geometry=geometry)
-                partition = parted.Partition(disk=self.pdisk, type=p_type, fs=filesystem, geometry=geometry)
+                partition = parted.Partition(disk=self.pdisk, type=ptype, fs=filesystem, geometry=geometry)
             else:
-                partition = parted.Partition(disk=self.pdisk, type=p_type, geometry=geometry)
+                partition = parted.Partition(disk=self.pdisk, type=ptype, geometry=geometry)
 
             # Set any flags needed.
             for flags in flags.split(','):
