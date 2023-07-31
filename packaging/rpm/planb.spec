@@ -14,6 +14,7 @@ BuildRequires:  python3-devel
 BuildRequires:  python3-setuptools
 
 Requires: dracut
+Requires: parted
 Requires: python3
 Requires: python3-distro
 Requires: python3-magic

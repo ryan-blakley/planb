@@ -36,20 +36,21 @@ def fmt_usb(device):
     confirmation = input(f"Are you sure you want to format {device} this will wipe it it, type YES if so: ")
 
     if dev_from_file(udev_ctx, device).get('ID_BUS', '') == "usb" and confirmation == "YES":
+        logger.info("Starting to partition the device")
         p = Parted()
         if exists("/sys/firmware/efi"):
             p.create_uefi_usb(device)
         elif "ppc64le" in arch:
-            logger.info("Wiping the device")
+            logger.info("Wiping the header first")
             # Wipe the disk, otherwise the grub install will complain about it not being empty.
             run_cmd(['/usr/bin/dd', 'bs=5M', 'count=1', 'if=/dev/zero', f"of={device}"])
 
-            logger.info("Starting to partition the device")
             p.create_prep_usb(device)
         else:
-            logger.info("Starting to partition the device")
             p.create_legacy_usb(device)
+
         logger.info("Partitioning complete")
+        run_cmd(['partprobe'])
 
         # Apparently the system take a second to recognize the new partition,
         # so if it doesn't exist query udev on the device again.
