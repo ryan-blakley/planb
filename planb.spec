@@ -2,7 +2,7 @@
 %define debug_package   %{nil}
 
 Name:           planb
-Version:        0.6
+Version:        0.7
 Release:        1%{?dist}
 Summary:        Plan B Recovery is a backup and recovery utility.
 
@@ -90,6 +90,26 @@ Plan B Recovery is a backup and recovery utility.
 %doc %{_mandir}/man5/pbr.conf.5*
 
 %changelog
+* Mon Jun 10 2024 Ryan Blakley <rblakley@redhat.com> 0.7-1
+- Update Makefile to build with F40 and new spec location (rblakley@redhat.com)
+- fix: Move the spec file back to the base of the project (rblakley@redhat.com)
+- fix: Cleanup mock cache files after creating rootfs (rblakley@redhat.com)
+- fix: efibootmgr output format changed (rblakley@redhat.com)
+- fix: Issue with authselect on F40 (rblakley@redhat.com)
+- fix: Issue when restoring lvm of a different size (rblakley@redhat.com)
+- Add Debian to the supported list in README (rblakley@redhat.com)
+- Add initial support for Ubuntu (rblakley@redhat.com)
+- Fix issue with usb devices not being recognized after partitioning
+  (rblakley@redhat.com)
+- Update the logger more to function better (rblakley@redhat.com)
+- fix: Issue with lvm restoring partial volume groups (rblakley@redhat.com)
+- Update logger module (rblakley@redhat.com)
+- Fix usb backing up on debian (rblakley@redhat.com)
+- Add Mageia 9 support (rblakley@redhat.com)
+- Use mock when available to create iso rootfs (rblakley@redhat.com)
+- Misc updates (rblakley@redhat.com)
+- Add initial Debian support for x86, arm64, and ppc64le (rblakley@redhat.com)
+
 * Thu Jun 15 2023 Ryan Blakley <rblakley@redhat.com> 0.6-1
 - Update README
 - fix: s390x iso booting issue
