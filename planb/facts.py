@@ -1,5 +1,6 @@
 import distro
 import json
+import logging
 
 from os import environ, uname
 from os.path import exists
@@ -13,6 +14,8 @@ from planb.lvm import get_lvm_report
 from planb.parted import get_part_layout
 from planb.md import get_md_info
 from planb.utils import get_modules, run_cmd
+
+logger = logging.getLogger('pbr')
 
 
 def distro_efi_vars(arch, dis):
@@ -35,10 +38,19 @@ def distro_efi_vars(arch, dis):
                 continue
 
             if boot_current and line.startswith(boot_current):
-                path = line.split("File(")[1].split(")")[0].split("\\")
-                efi_file = path[-1]
-                efi_distro = path[-2].lower()
-                return efi_distro, efi_file
+                logger.debug(f"facts: distro_efi_vars: line: {line}")
+                if "File" in line:
+                    path = line.split("File(")[1].split(")")[0].split("\\")
+                    logger.debug(f"facts: distro_efi_vars: path: {path}")
+                    efi_file = path[-1]
+                    efi_distro = path[-2].lower()
+                    return efi_distro, efi_file
+                else:
+                    path = line.split("/")[1].split("\\")
+                    logger.debug(f"facts: distro_efi_vars: path: {path}")
+                    efi_file = path[-1]
+                    efi_distro = path[-2].lower()
+                    return efi_distro, efi_file
     else:
         if "aarch64" in arch:
             efi_file = "shimaa64.efi"
@@ -155,45 +167,45 @@ class Facts(object):
             return False
 
     def print_facts(self):
-        print("General Facts")
-        print(f"  Arch: {self.arch}")
-        print(f"  Hostname: {self.hostname}")
-        print(f"  Uname: {self.uname}")
-        print(f"  Distro: {self.distro}")
-        print(f"  Distro Codename: {self.distro_codename}")
-        print(f"  Distro ID: {self.distro_id}")
-        print(f"  Distro Like: {self.distro_like}")
-        print(f"  Distro Version: {self.distro_version}")
-        print(f"  PyVers: {self.pyvers}")
-        print(f"  UEFI: {self.uefi}")
+        logger.info("General Facts")
+        logger.info(f"  Arch: {self.arch}")
+        logger.info(f"  Hostname: {self.hostname}")
+        logger.info(f"  Uname: {self.uname}")
+        logger.info(f"  Distro: {self.distro}")
+        logger.info(f"  Distro Codename: {self.distro_codename}")
+        logger.info(f"  Distro ID: {self.distro_id}")
+        logger.info(f"  Distro Like: {self.distro_like}")
+        logger.info(f"  Distro Version: {self.distro_version}")
+        logger.info(f"  PyVers: {self.pyvers}")
+        logger.info(f"  UEFI: {self.uefi}")
 
         if not self.recovery_mode:
-            print(f"  SecureBoot: {self.secure_boot}")
+            logger.info(f"  SecureBoot: {self.secure_boot}")
             if self.uefi:
-                print(f"  EFI Distro: {self.efi_distro}")
-                print(f"  EFI File: {self.efi_file}")
-            print(f"  Selinux Enabled: {self.selinux_enabled}")
-            print(f"  Selinux Enforcing: {self.selinux_enforcing}")
-        print("")
+                logger.info(f"  EFI Distro: {self.efi_distro}")
+                logger.info(f"  EFI File: {self.efi_file}")
+            logger.info(f"  Selinux Enabled: {self.selinux_enabled}")
+            logger.info(f"  Selinux Enforcing: {self.selinux_enforcing}")
+        logger.info("")
 
         if self.lvm:
-            print("LVM Facts")
-            print(json.dumps(self.lvm, indent=4))
-            print("")
+            logger.info("LVM Facts")
+            logger.info(json.dumps(self.lvm, indent=4))
+            logger.info("")
 
-        print("Disk Facts")
-        print(json.dumps(self.disks, indent=4))
-        print("")
-        print("Mount Facts")
-        print(json.dumps(self.mnts, indent=4))
-        print("")
+        logger.info("Disk Facts")
+        logger.info(json.dumps(self.disks, indent=4))
+        logger.info("")
+        logger.info("Mount Facts")
+        logger.info(json.dumps(self.mnts, indent=4))
+        logger.info("")
 
         if self.md_info:
-            print("MD Raid Facts")
-            print(json.dumps(self.md_info, indent=4))
-            print("")
+            logger.info("MD Raid Facts")
+            logger.info(json.dumps(self.md_info, indent=4))
+            logger.info("")
 
         if self.luks:
-            print("Luks Facts")
-            print(json.dumps(self.luks, indent=4))
-            print("")
+            logger.info("Luks Facts")
+            logger.info(json.dumps(self.luks, indent=4))
+            logger.info("")
