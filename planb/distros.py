@@ -227,6 +227,9 @@ class LiveOS(object):
         if ret.returncode == 30 or ret.returncode == 3:
             raise RunCMDError()
 
+        # Clean up the mock cache after the rootfs has been created.
+        run_cmd(['mock', '-r', mock_template, '--scrub', 'all', '-v'])
+
     def create_initramfs(self):
         """
         Create initramfs for booting the ISO.
