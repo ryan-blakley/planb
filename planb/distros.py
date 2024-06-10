@@ -12,6 +12,8 @@ from shutil import copy2, copystat, copytree, SameFileError
 from planb.exceptions import RunCMDError
 from planb.utils import is_installed, pkg_files, pkg_query_file, run_cmd
 
+logger = logging.getLogger('pbr')
+
 
 class LiveOS(object):
     def __init__(self, cfg, facts, opts, tmp_dir):
@@ -425,7 +427,21 @@ def customize_rootfs_rh(tmp_rootfs_dir):
             # Chroot into the tmp_rootfs_dir.
             chroot(tmp_rootfs_dir)
 
-            run_cmd(['/usr/bin/authselect', 'select', 'minimal', '--force'])
+            # Starting in F40 the minimal profile is now named local.
+            # So we need to check what profiles exist before running the select command.
+            ret = run_cmd(['/usr/bin/authselect', 'list'], ret=True)
+            logger.debug(f"distros: customize_rootfs_rh: cmd: authselect list ret_code: {ret.returncode}"
+                         f"stdout: {ret.stdout.decode()}")
+            if ret.returncode == 1:
+                logger.error(f" The command {ret.args} returned in error: {ret.stderr.decode()}")
+                raise RunCMDError()
+
+            if "minimal" in ret.stdout.decode():
+                profile = "minimal"
+            else:
+                profile = "local"
+
+            run_cmd(['/usr/bin/authselect', 'select', profile, '--force'])
 
             # Cd back to the rroot fd, then chroot back out.
             chdir(rroot)
