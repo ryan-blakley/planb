@@ -175,6 +175,10 @@ class RecoveryLVM(object):
             self.log.info(f"  Activating the {vg} volume group")
             activate_vg(vg)
 
+            # Reset rc_lvm in case the restored lvm has changed
+            # attributes so the matching check below doesn't fail.
+            self.rc_lvm = get_lvm_report(self.facts.udev_ctx)
+
             # Double check that the backup lvm matches the restored lvm.
             if not self.matching_lvm(vg):
                 self.log.error(f" After restoring lvm metadata for {vg}, "
@@ -193,15 +197,22 @@ class RecoveryLVM(object):
         """
         match = 0
         total = 0
+
         try:
             for lv in self.bk_lvm['LVS']:
+                self.log.debug(f"lvm: RecoveryLVM: matching_lvm: lv: {lv}")
+
                 # Check to make sure the vg_name of the lv matches the vg.
                 if lv['vg_name'] == vg:
                     total += 1
+
                     for lv2 in self.rc_lvm['LVS']:
+                        self.log.debug(f"lvm: RecoveryLVM: matching_lvm: lv2: {lv2}")
+
                         # Check if the lv entry exist in lv2, and that it's size match.
                         if lv['lv_name'] == lv2['lv_name'] and lv['lv_size'] == lv2['lv_size']:
                             match += 1
+
                     # If there wasn't any entries where the name
                     # and size matches, then return false.
                     if not match:
@@ -209,6 +220,7 @@ class RecoveryLVM(object):
         except KeyError:
             return False
 
+        self.log.debug(f"lvm: RecoveryLVM: matching_lvm: match: {match} total: {total}")
         if match == total:
             return True
         else:
