@@ -165,10 +165,15 @@ class LiveOS(object):
             'authselect', 'bash-completion', 'dbus', 'device-mapper-multipath', 'dosfstools', 'e2fsprogs',
             'grub2-common', 'grub2-tools', 'iproute', 'iputils', 'kdb', 'kmod', 'kpartx', 'less', 'lsof',
             'NetworkManager', 'ncurses', 'openssh-server', 'parted', 'passwd', 'plymouth', 'polkit', 'procps-ng',
-            'python3', 'python3-distro', 'python3-jinja2', 'python3-libselinux', 'python3-magic', 'python3-pyparted',
-            'python3-pyudev', 'python3-pyroute2', 'python3-rpm', 'rng-tools', 'rootfiles', 'systemd', 'systemd-udev',
-            'vim-enhanced', 'vim-minimal'
+            'python3', 'python3-distro', 'python3-jinja2', 'python3-libselinux', 'python3-pyparted', 'python3-pyudev',
+            'python3-pyroute2', 'python3-rpm', 'rng-tools', 'rootfiles', 'systemd', 'systemd-udev', 'vim-enhanced',
+            'vim-minimal'
         ]
+        if int(self.facts.distro_version) >= 42:
+            pkgs.extend(['python3-file-magic'])
+        else:
+            pkgs.extend(['python3-magic'])
+
         self.set_common_pkgs(pkgs)
         self.create_chroot_with_mock(pkgs)
 

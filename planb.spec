@@ -13,18 +13,22 @@ Source0:        %{name}-%{version}.tar.gz
 BuildRequires:  python3-devel
 BuildRequires:  python3-setuptools
 
-Requires: dracut
-Requires: parted
-Requires: python3
-Requires: python3-distro
-Requires: python3-magic
-Requires: python3-pyudev
-Requires: python3-rpm
-Requires: python3-six
+Requires:       dracut
+Requires:       parted
+Requires:       python3
+Requires:       python3-distro
+%if 0%{?fedora} >= 42
+Requires:       python3-file-magic
+%else
+Requires:	    python3-magic
+%endif
+Requires:       python3-pyudev
+Requires:       python3-rpm
+Requires:       python3-six
 
 # The syslinux pkg is only available for x86_64.
 %ifarch x86_64
-Requires: syslinux
+Requires:       syslinux
 %endif
 
 %ifarch s390x
@@ -32,31 +36,31 @@ Requires:       s390utils-base >= 2.15.0-2
 %endif
 
 %if 0%{?fedora}%{?el8}%{?el9}
-Requires: authselect-libs >= 1.2
-Requires: dracut-live
-Requires: genisoimage
-Requires: mock
-Requires: python3-jinja2
-Requires: python3-libselinux
-Requires: python3-pyparted
-Requires: squashfs-tools
+Requires:       authselect-libs >= 1.2
+Requires:       dracut-live
+Requires:       genisoimage
+Requires:       mock
+Requires:       python3-jinja2
+Requires:       python3-libselinux
+Requires:       python3-pyparted
+Requires:       squashfs-tools
 %endif
 
 %if 0%{?suse_version} >= 1500
-Requires: mkisofs
-Requires: python3-Jinja2
-Requires: python3-selinux
-Requires: python3-parted
-Requires: squashfs
+Requires:       mkisofs
+Requires:       python3-Jinja2
+Requires:       python3-selinux
+Requires:       python3-parted
+Requires:       squashfs
 %endif
 
 %if 0%{?mageia}
-Requires: cdrkit-genisoimage
-Requires: mock
-Requires: python3-jinja2
-Requires: python3-libselinux
-Requires: python3-parted
-Requires: squashfs-tools
+Requires:       cdrkit-genisoimage
+Requires:       mock
+Requires:       python3-jinja2
+Requires:       python3-libselinux
+Requires:       python3-parted
+Requires:       squashfs-tools
 %endif
 
 %description
