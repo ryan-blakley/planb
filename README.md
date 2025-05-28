@@ -3,8 +3,8 @@
 ![Python](https://img.shields.io/badge/Python-v3.6%5E-orange?style=flat-square&logo=python)
 
 ## Description
-Plan B Recovery is a full server backup and recovery tool. Plan B Recovery is designed to be simple with few
-configuration options, this is to prevent complexity. The more complexity added, the potential for loss of 
+Plan B Recovery is a full server backup and recovery tool. Plan B Recovery is designed to be straightforward with few
+configuration options, this is to prevent complexity. The more complexity that is added, the potential for loss of 
 stability is added. Stability is the most important thing needed in a backup and recovery tool.
 
 ## Supported setups

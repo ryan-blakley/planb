@@ -62,10 +62,10 @@ class Recover(object):
 
     def cleanup(self):
         """
-        Un-mount the backup mount, and sync everything.
+        Unmount the backup mount and sync everything.
         """
-        # When finished un-mount the bk_mount if there was a mount
-        # for rsync there isn't a mount, so no need to un-mount anything.
+        # When finished unmount the bk_mount if there was a mount
+        # for rsync, there isn't a mount, so no need to unmount anything.
         if self.bk_mounted:
             umount(self.tmp_bk_mnt)
 
@@ -73,13 +73,13 @@ class Recover(object):
 
     def cmp_disks(self):
         """
-        This function compares the disk set in the backup, to the disk
+        This function compares the disk set in the backup to the disk
         presented to the recovery environment. It possible that disk enumeration
-        changes disk names, there is also going to be people that use this to
-        migrate to different servers all together. So the disk need to be compared
+        changes disk names, there are also going to be people that use this to
+        migrate to different servers all together. So the disk needs to be compared
         and mapped if needed to the proper disk in the recovery environment.
         """
-        # Make a copy, so entries can be removed, and added to the originals.
+        # Make a copy, so entries can be removed and added to the originals.
         facts_disks = self.facts.disks.copy()
         bk_disks = self.bk_disks.copy()
         matching_size_disks = dict()
@@ -99,14 +99,14 @@ class Recover(object):
             if facts_disks.get(disk1, ''):
                 # Check if sn exist and if they match.
                 if sn1 and sn1 == facts_disks[disk1]['id_serial']:
-                    # If the sn matches confirm the size is still the same.
+                    # If the sn matches, then confirm that the size is still the same.
                     if size1 == int(facts_disks[disk1]['size']):
                         self.log.debug("name, sn, and size matches")
                         # Delete disk from facts_disks.
                         del facts_disks[disk1]
                         continue
 
-                # If the serial number doesn't exist, or doesn't match, chk the size.
+                # If the serial number doesn't exist or doesn't match, chk the size.
                 elif size1 == int(facts_disks[disk1]['size']):
                     self.log.debug("name, and size matches")
                     # If the size matches, delete from facts_disks.
@@ -142,8 +142,8 @@ class Recover(object):
                     del facts_disks[disk2]
                     break
 
-                # Come back to, for disk that don't match exact size, we could grab a
-                # list of possible disk that are larger, then the user manually map.
+                # Come back to, for disks that don't match the exact size, we could grab a
+                # list of possible disks that are larger. Then the user can manually map.
                 elif size1 < size2:
                     self.log.debug("Disk is larger append to the list of possible disk if needed.")
                     larger_disks.append(disk2)
@@ -216,10 +216,10 @@ class Recover(object):
 
     def cmp_disk_layout(self, d1, d2, facts):
         """
-        Compare specified disk to see if they contain the same partition
+        Compare specified disks to see if they contain the same partition
         table, or the same filesystem if no partition table. The purpose is to check if
         the disk needs to be repartitioned or not, there is no point in wiping and
-        repartitioning a disk, if the partitions match the backup disk.
+        repartitioning the disk if the partitions match the backup disk.
 
         Args:
             d1 (str): First disk to compare.
@@ -227,7 +227,7 @@ class Recover(object):
             facts (obj): Facts object.
 
         Returns:
-            (bool): Whether the disk match or not.
+            (bool): Whether the disks match or not.
         """
         match = 0
         partitioned = 0
@@ -235,8 +235,8 @@ class Recover(object):
         # Loop through disks d1 entry to look for partitions.
         for key, val in self.bk_disks[d1].items():
             self.log.debug(f"recover: cmp_disk_layout: key:{key} val:{val}")
-            # If there are partitions the key will be the partition number,
-            # so we can ignore non number keys.
+            # If there are partitions, the key will be the partition number,
+            # so we can ignore non-number keys.
             if key.isnumeric():
                 partitioned += 1
                 # If the restore disk is missing a partition,
@@ -266,8 +266,8 @@ class Recover(object):
 
     def grab_bootloader_disk(self, mp):
         """
-        Figure out what disk /boot is mounted on in the tmp dir,
-        and return tha disk's path.
+        Figure out what disk /boot is mounted on in the tmp dir
+        and return that disk's path.
 
         Args:
             mp (str): Mount point to check.
@@ -291,7 +291,7 @@ class Recover(object):
                 else:
                     p = None
 
-                    # Just grab the first disk in the list of devs, they should be sorted to have the top device.
+                    # Grab the first disk in the list of devs, they should be sorted to have the top device.
                     # Probably need to print something to warn that the devices might enumerate different on reboot.
                     if info['type'] == "part-raid":
                         return dev_info.find_parent('block').device_node
@@ -310,7 +310,7 @@ class Recover(object):
 
     def handle_disk_excludes(self):
         """
-        Process any recovery_exclude_disks entries,
+        Process any recovery_exclude_disks entries
         and remove disk from bk_disks, and bk_mnts.
         """
         if self.cfg.rc_exclude_disks:
@@ -325,13 +325,13 @@ class Recover(object):
                     self.log.debug("backup: handle_disk_excludes: Skipping due to being type lvm.")
                     continue
 
-                # Check if it has a parent set, if it does check if it exists in rc_exclude_disks,
-                # if it does then remove it from bk_mnts.
+                # Check if it has a parent set if it does, check if it exists in rc_exclude_disks,
+                # if it does, then remove it from bk_mnts.
                 if info['parent'] and info['parent'] in self.cfg.rc_exclude_disks:
                     self.log.debug(f"backup: handle_disk_excludes: Removing {mp} from bk_mnts.")
                     self.bk_mnts.pop(mp)
 
-            # Loop through each disk and removing any entry from bk_disks that are in the excludes.
+            # Loop through each disk and removing any entry from bk_disks that are excluded.
             self.log.debug("recover: handle_disk_excludes: looping trough bk_disks to remove any.")
             disks = self.bk_disks.copy()
             for d in disks.keys():
@@ -341,7 +341,7 @@ class Recover(object):
 
     def handle_vg_excludes(self):
         """
-        Process any recovery_exclude_vgs that are set,
+        Process any recovery_exclude_vgs that are set
         and remove entries from bk_vgs, and bk_mnts.
         """
         if self.cfg.rc_exclude_vgs:
@@ -358,20 +358,20 @@ class Recover(object):
 
     def map_disk(self, o_disk, n_disk):
         """
-        This function changes the disk stored in bk_mnts and bk_disks, so that the
+        This function changes the disk stored in bk_mnts and bk_disks so that the
         recovery is done on the proper disk in the recovery environment.
 
         Args:
             o_disk (str): Original disk name from the backup.
             n_disk (str): New disk name from the recovery environment.
         """
-        # If the disk exist in bk_disks, then copy to tmp dict with the n_disk as the key.
+        # If the disk exists in bk_disks, then copy to tmp dict with the n_disk as the key.
         if self.bk_disks.get(o_disk, False):
             self.tmp_mapped_disks.update({n_disk: self.bk_disks.pop(o_disk)})
 
-        # For the mnts, we need to loop through each entry, to replace the various info entries.
+        # For the mnts, we need to loop through each entry to replace the various info entries.
         for mnt, info in self.bk_mnts.items():
-            # Loop through the mapped mps list, if the mnt matches, skip it. This is in case for ex.
+            # Loop through the mapped mps list, if the mnt matches, skip it. This is incase for ex.
             # you have /dev/vda being mapped to /dev/vdb, and then later /dev/vdb needs to be mapped
             # to /dev/vda, which would cause the previous map to be overwritten again.
             if [True for x in self.lst_mapped_mps if mnt == x]:
@@ -442,7 +442,7 @@ class Recover(object):
                         self.log.debug(f"recover: map_disk: luks: od:{o_disk} nd:{n_disk} p:{p}")
                         break
 
-            # If the header file exist, rename it to match n_disk.
+            # If the header file exists, rename it to match n_disk.
             luks_header = f"/facts/luks/{o_disk.split('/')[-1]}{p}.backup"
             if exists(luks_header) and p:
                 move(luks_header, f"/facts/luks/{n_disk.split('/')[-1]}{p}.backup")
@@ -454,13 +454,13 @@ class Recover(object):
         """
         if not self.opts.backup_archive:
             if self.cfg.boot_type == "usb" and self.cfg.bk_location_type == "usb":
-                # Since we use LiveOS it mounts the partition up,
+                # Since we use LiveOS, it mounts the partition up,
                 # so just use that instead of another mount point.
                 self.tmp_bk_mnt = "/run/initramfs/live"
                 if self.facts.is_debian_based:
                     self.tmp_bk_mnt = "/run/live/medium"
             elif self.cfg.boot_type == "iso" and self.cfg.bk_location_type == "iso":
-                # Since we use LiveOS it mounts the partition up,
+                # Since we use LiveOS, it mounts the partition up,
                 # so just use that instead of another mount point.
                 self.tmp_bk_mnt = "/run/initramfs/live"
             elif self.cfg.bk_location_type == "rsync":
@@ -473,7 +473,7 @@ class Recover(object):
                 else:
                     ret = mount(self.cfg.bk_mount, self.tmp_bk_mnt)
 
-                # If the mount fails exit, and print the mount error.
+                # If the mount fails, exit and print the mount error.
                 if ret.returncode:
                     self.log.error(f" Failed mounting {self.cfg.bk_mount} due to {ret.stderr.decode().strip()}")
                     raise MountError()
@@ -488,17 +488,17 @@ class Recover(object):
 
     def mnt_restored_rootfs(self):
         """
-        Loop through the bk_mnts, and mount up the restored mounts
-        to /mnt/rootfs, so that the backup archive can be restored.
+        Loop through the bk_mnts and mount up the restored mounts
+        to /mnt/rootfs so that the backup archive can be restored.
         """
-        # Loop through the backed up mp's, and mount them up.
+        # Loop through the backed-up mp's and mount them up.
         for mnt in self.bk_mnts:
             # We can skip swaps for the restore.
             if "SWAP" not in mnt:
                 m = self.bk_mnts[mnt]
                 mp = f"{self.tmp_rootfs_dir}{mnt}"
 
-                # If the mp is a subdirectory create it before trying to mnt.
+                # If the mp is a subdirectory, create it before trying to mnt.
                 if not isdir(mp):
                     self.log.debug(f"recover: mnt_restored_rootfs: Creating {mp} directory since it doesn't exist.")
                     makedirs(mp)
@@ -523,13 +523,13 @@ class Recover(object):
 
                 self.log.info(f"  Mounting {mp}")
 
-                # First check if md raid device, if so mount via the /dev/md/x in case the /dev/mdX changed.
+                # First, check if md raid device, if so mount via the /dev/md/x in case the /dev/mdX changed.
                 if m['type'].startswith("raid") and m['md_devname']:
                     ret = mount(m['md_devname'], mp)
                 else:
                     ret = mount(m['path'], mp)
 
-                # If the mount fails exit, and print the mount error.
+                # If the mount fails, exit and print the mount error.
                 if ret.returncode:
                     stderr = ret.stderr.decode()
                     if "already mounted" not in stderr:
@@ -587,7 +587,7 @@ class Recover(object):
     def selinux_check(self):
         """
         Check if selinux was enabled on the server when backed up,
-        if so create the /.autorelabel file to trigger a relabel on boot.
+        if so, create the /.autorelabel file to trigger a relabeling on boot.
         """
         if self.bk_misc.get('selinux_enabled', ''):
             self.log.info("Setting selinux to relabel on first boot")
@@ -596,7 +596,7 @@ class Recover(object):
             open(f"{self.tmp_rootfs_dir}/.autorelabel", 'a').close()
 
             # Set the proper context on tmp mounts. This is because they will not get labeled before the tmpfs is
-            # mounted over them, so a relabel will not fix the issue. This can cause issues with anything that
+            # mounted over them, so a relabeling will not fix the issue. This can cause issues with anything that
             # bind mounts / somewhere. I hit this issue with dbus failing to start due to an avc denial that
             # occurred on /run/systemd/unit-root/dev.
             chcon(join(self.tmp_rootfs_dir, "dev"), "system_u:object_r:device_t:s0")
@@ -606,7 +606,7 @@ class Recover(object):
 
     def umount_active_mnts(self):
         """
-        Un-mount anything mounted under /mnt/rootfs, this is in case we're running
+        Unmount anything mounted under /mnt/rootfs. This is in case we're running
         after a failed execution, so we don't hit any errors about formatting/re-mounting.
         """
         ret = umount(self.tmp_rootfs_dir, recursive=True)
@@ -635,26 +635,26 @@ class Recover(object):
                 # Grab any bk_vgs.
                 bk_vgs = self.bk_misc.get('bk_vgs', '')
 
-                # Compare the disks, and map if necessary.
+                # Compare the disks and map if necessary.
                 self.cmp_disks()
 
                 # Deactivate any vgs before doing anything.
                 if bk_vgs:
                     deactivate_vgs()
 
-                # Loop through the disks keys, and check if the disk match, if not add
+                # Loop through the disk keys and check if the disks match, if not, add
                 # to the rc_parts_disks to be re-partitioned.
                 for d in self.bk_disks.keys():
                     if not self.cmp_disk_layout(d, d, self.facts):
                         rc_part_disks.append(d)
 
-                # Check if any disk need partition scheme recovered, if they do, then
+                # Check if any disk needs a partition scheme recovered, if they do, then
                 # recover the disk's partition table from the backup info.
                 if rc_part_disks:
                     self.log.info("Starting disk partition recreation")
                     parted = Parted()
 
-                    # Loop through the dict, and restore the partitions on all the disk.
+                    # Loop through the dict and restore the partitions on all the disk.
                     for d in rc_part_disks:
                         self.log.info(f"  Re-partitioning {d}")
                         parted.recreate_disk(self.bk_disks[d], d)
@@ -700,7 +700,7 @@ class Recover(object):
                 self.cmp_disks()
                 self.log.info("Starting to mount the filesystems")
 
-            # Mount the restored rootfs to /mnt/rootfs, to restore backup on.
+            # Mount the restored rootfs to /mnt/rootfs to restore backup on.
             self.mnt_restored_rootfs()
 
             if self.cfg.bk_location_type == "rsync":
@@ -754,7 +754,7 @@ class Recover(object):
 
         self.cleanup()
 
-        # If post scripts are configured, execute them now.
+        # If post-scripts are configured, execute them now.
         if self.cfg.rc_post_script:
             self.log.info("Executing configured post script(s)")
             for script in self.cfg.rc_post_script:

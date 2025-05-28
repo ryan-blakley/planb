@@ -30,8 +30,8 @@ def get_luks_devs(udev_ctx):
 
 def luks_check(udev_ctx, luks, dev):
     """
-    Loop through current devices, if any luks devices open them, and return. Otherwise, restore the
-    luks header, and open the luks device.
+    Loop through current devices if any luks devices open them and return. Otherwise, restore the
+    luks header and open the luks device.
 
     Args:
         udev_ctx (obj): Udev context object.

@@ -19,7 +19,7 @@ def fmt_fs(dev, fs_uuid, fs_label, fs_type):
 
     logger = logging.getLogger('pbr')
 
-    # Check to make sure the path is actually device before continuing.
+    # Check to make sure the path is actually a device before continuing.
     if not exists(dev):
         logger.error(f"ERROR: Can't format {dev}, because it isn't a valid device.")
         raise ExistsError()
@@ -131,11 +131,11 @@ def get_mnts(udev_ctx):
                 md_devname = f"/dev/md/{udev_info.get('MD_DEVNAME', None)}"
         # For luks devices that are on lvm, we need to grab the vg name.
         elif d_type == "crypt":
-            # If a slave device exist, and it is a dm device, grab the vg name.
+            # If a secondary device exists, and it is a dm device, grab the vg name.
             if glob(f"/sys/block/{udev_info['DEVNAME'].split('/')[-1]}/slaves/*/dm/name"):
                 dm_parent = glob(f"/sys/block/{udev_info['DEVNAME'].split('/')[-1]}/slaves/*")[0].split('/')[-1]
                 vg = dev_from_file(udev_ctx, f"/dev/{dm_parent}").get('DM_VG_NAME', '')
-            # Else grab the slave device name and set the parent to it.
+            # Else grab the secondary device name and set the parent to it.
             else:
                 dm_parent = glob(f"/sys/block/{udev_info['DEVNAME'].split('/')[-1]}/slaves/*")[0].split('/')[-1]
                 parent = f"/dev/{dm_parent}"

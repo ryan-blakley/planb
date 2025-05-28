@@ -33,7 +33,7 @@ class LiveOS(object):
 
     def copy_include_files(self):
         """
-        If include files is configured copy them to the recovery environment.
+        If include files are configured, copy them to the recovery environment.
         """
         for src in self.cfg.rc_include_files:
             if exists(src):
@@ -68,7 +68,7 @@ class LiveOS(object):
                                     copy2(fname, dst, follow_symlinks=False)
                                 except FileNotFoundError:
                                     # If exception, try making the dir of the path, then copy, if still
-                                    # the file isn't found there is probably a dead symlink in the path.
+                                    # the file isn't found, there is probably a dead symlink in the path.
                                     with suppress(FileNotFoundError):
                                         makedirs(dirname(dst), exist_ok=True)
                                         copystat(dirname(fname), dirname(dst))
@@ -77,14 +77,14 @@ class LiveOS(object):
                             # copy2 can't copy dirs, so makedirs then copy
                             # the perms, owner, etc.
                             elif isdir(fname) and not exists(dst):
-                                # If not found suppress it, there is probably a dead symlink in the path.
+                                # If not found, suppress it because there is probably a dead symlink in the path.
                                 with suppress(FileNotFoundError):
                                     makedirs(dst, exist_ok=True)
                                     copystat(fname, dst)
 
     def create(self):
         """
-        Create the needed files for the LiveOS.
+        Create the necessary files for the LiveOS.
         """
         self.log.info("Creating initramfs for the LiveOS")
         self.create_initramfs()
@@ -218,7 +218,7 @@ class LiveOS(object):
         if ret.returncode == 1:
             raise RunCMDError()
 
-        # Install the needed extra packages.
+        # Install the necessary extra packages.
         cmd = ['mock', '-r', mock_template, '--no-bootstrap-chroot', '--isolation', 'simple', '--rootdir',
                self.tmp_rootfs_dir, '--dnf-cmd', '--skip-broken', '-v', '--install']
         if self.facts.is_mageia_based:
@@ -278,7 +278,7 @@ class LiveOS(object):
 
     def find_libs(self, pkgs):
         """
-        For each pkg, run ldd on any compiled binary, and find any required dependency pkgs needed.
+        For each pkg, run ldd on any compiled binary and find any required dependency pkgs needed.
 
         Args:
             pkgs (list): List of pkg names.
@@ -307,7 +307,7 @@ class LiveOS(object):
                                 if x not in self.libs:
                                     self.libs.append(x)
 
-        # Loop through the lib files, and find the pkgs they belong to,
+        # Loop through the lib files and find the pkgs they belong to,
         # then append those pkg names to the lib_pkgs list.
         for x in self.libs:
             pkg = pkg_query_file(x)
@@ -321,7 +321,7 @@ class LiveOS(object):
         Args:
             pkgs (list): List of pkgs needed for iso rootfs.
         """
-        # Check if lvm is installed, if so add lvm pkgs.
+        # Check if lvm is installed, if so, add lvm pkgs.
         if self.facts.lvm_installed:
             pkgs.append("lvm2")
 
@@ -329,7 +329,7 @@ class LiveOS(object):
         if self.facts.luks:
             pkgs.append("cryptsetup")
 
-        # Add efibootmgr if it's an uefi install.
+        # Add efibootmgr if it's an uefi installation.
         if self.facts.uefi:
             pkgs.append('efibootmgr')
 
@@ -371,7 +371,7 @@ class LiveOS(object):
         if not self.facts.is_debian_based:
             self.set_common_pkgs(pkgs)
 
-            # Check if lvm is installed, if so add lvm pkgs.
+            # Check if lvm is installed, if so, add lvm pkgs.
             if self.facts.lvm_installed:
                 pkgs.extend(['device-mapper', 'device-mapper-event', 'device-mapper-persistent-data'])
 
@@ -379,7 +379,7 @@ class LiveOS(object):
             if self.facts.luks:
                 pkgs.extend(['device-mapper'])
 
-            # Add the needed bootloader pkgs.
+            # Add the necessary bootloader pkgs.
             pkgs.extend(['grub2-common', 'grub2-pc', 'grub2-pc-modules', 'grub2-tools', 'grub2-tools-extra',
                          'grub2-tools-minimal'])
             if self.facts.arch == "ppc64le":
@@ -392,12 +392,12 @@ class LiveOS(object):
 
 def customize_rootfs_debian(tmp_rootfs_dir):
     """
-    Copy the needed systemd files to the tmp rootfs.
+    Copy the necessary systemd files in the tmp rootfs.
 
     Args:
         tmp_rootfs_dir (str): The tmp rootfs directory for the iso.
     """
-    # Enable the needed services.
+    # Enable the necessary services.
     chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/pbr.target.wants"))
 
     if exists("../networking.service"):
@@ -423,7 +423,7 @@ def customize_rootfs_debian(tmp_rootfs_dir):
 
 def customize_rootfs_rh(tmp_rootfs_dir):
     """
-    Copy the needed systemd files to the tmp rootfs.
+    Copy the necessary systemd files to the tmp rootfs.
 
     Args:
         tmp_rootfs_dir (str): The tmp rootfs directory for the iso.
@@ -435,7 +435,7 @@ def customize_rootfs_rh(tmp_rootfs_dir):
             # Chroot into the tmp_rootfs_dir.
             chroot(tmp_rootfs_dir)
 
-            # Starting in F40 the minimal profile is now named local.
+            # Starting in F40, the minimal profile is now named local.
             # So we need to check what profiles exist before running the select command.
             ret = run_cmd(['/usr/bin/authselect', 'list'], ret=True)
             logger.debug(f"distros: customize_rootfs_rh: cmd: authselect list ret_code: {ret.returncode}"
@@ -459,7 +459,7 @@ def customize_rootfs_rh(tmp_rootfs_dir):
             chroot('.')
             raise RunCMDError
 
-    # Enable the needed services.
+    # Enable the necessary services.
     chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/pbr.target.wants"))
     symlink("../NetworkManager.service", "NetworkManager.service")
 
@@ -475,7 +475,7 @@ def customize_rootfs_rh(tmp_rootfs_dir):
     chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/"))
     # Fedora renamed dbus to dbus-broker, and symlinks dbus and messsagebus from
     # the /etc/systemd/system directory for some reason. So only create the symlinks
-    # if dbus-broker exist.
+    # if dbus-broker exists.
     if exists("dbus-broker.service"):
         symlink("dbus-broker.service", "dbus.service")
         symlink("dbus.service", "messagebus.service")
@@ -498,7 +498,7 @@ def customize_rootfs_rh(tmp_rootfs_dir):
 
 def customize_rootfs_suse(tmp_rootfs_dir):
     """
-    Copy the needed systemd files to the tmp rootfs.
+    Copy the necessary systemd files to the tmp rootfs.
 
     Args:
         tmp_rootfs_dir (str): The tmp rootfs directory for the iso.
@@ -515,7 +515,7 @@ def customize_rootfs_suse(tmp_rootfs_dir):
     chdir(rroot)
     chroot('.')
 
-    # Enable the needed services.
+    # Enable the necessary services.
     chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/pbr.target.wants"))
     symlink("../rng-tools.service", "rng-tools.service")
     symlink("../wicked.service", "wicked.service")
@@ -545,7 +545,7 @@ def customize_rootfs_suse(tmp_rootfs_dir):
 
 def prep_rootfs(cfg, tmp_dir, tmp_rootfs_dir):
     """
-    Prep the rootfs with the app specific customization.
+    Prep the rootfs with app-specific customization.
 
     Args:
         cfg (obj): App cfg file.
@@ -581,14 +581,14 @@ def prep_rootfs(cfg, tmp_dir, tmp_rootfs_dir):
     remove("default.target")
     symlink("pbr.target", "default.target")
 
-    # Create the needed getty wants dir and lnk the service files.
+    # Create the necessary getty wants dir and lnk the service files.
     getty_targets_wants = join(tmp_rootfs_dir, "usr/lib/systemd/system/getty.target.wants")
     if not exists(getty_targets_wants):
         makedirs(getty_targets_wants)
         chdir(getty_targets_wants)
         symlink("../getty@.service", "getty@tty1.service")
 
-    # Create the custom target wants dir, and lnk the needed service and target files.
+    # Create the custom target wants dir, and lnk the necessary service and target files.
     pbr_target_wants = join(tmp_rootfs_dir, "usr/lib/systemd/system/pbr.target.wants")
     makedirs(pbr_target_wants, exist_ok=True)
     chdir(pbr_target_wants)
@@ -600,12 +600,12 @@ def prep_rootfs(cfg, tmp_dir, tmp_rootfs_dir):
 
     # Enable dbus socket.
     chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/sockets.target.wants"))
-    # In r8 the dbus-daemon pkg contains the symlink, so if it exists skip it.
+    # In r8 the dbus-daemon pkg contains the symlink, so if it exists, skip it.
     if not exists("dbus.socket"):
         symlink("../dbus.socket", "dbus.socket")
     symlink("../dm-event.socket", "dm-event.socket")
 
-    # Enable sshd to start by default or not, depending on cfg setting.
+    # Enable sshd to start by default or not, depending on the cfg setting.
     if cfg.rc_enable_sshd:
         symlink("../sshd.service", "sshd.service")
 
@@ -617,13 +617,13 @@ def prep_rootfs(cfg, tmp_dir, tmp_rootfs_dir):
     if exists(join(tmp_rootfs_dir, "etc/crypttab")):
         remove(join(tmp_rootfs_dir, "etc/crypttab"))
 
-    # Check if the mdadm.conf file exist if it does copy it.
+    # Check if the mdadm.conf file exists if it does copy it.
     if exists("/etc/mdadm.conf"):
         copy2("/etc/mdadm.conf", join(tmp_rootfs_dir, "etc"))
         # Remove the monitor service, it seems to cause issues when restoring sometimes.
         remove(join(tmp_rootfs_dir, "lib/systemd/system/mdmonitor.service"))
 
-    # Check if the multipath.conf file exist if it does copy it.
+    # Check if the multipath.conf file exists if it does copy it.
     if exists("/etc/multipath.conf"):
         copy2("/etc/multipath.conf", join(tmp_rootfs_dir, "etc"))
         if exists("/etc/multipath"):
@@ -647,13 +647,13 @@ def prep_rootfs(cfg, tmp_dir, tmp_rootfs_dir):
             else:
                 print(line, end='')
 
-    # Create a profile script that creates an env var,
-    # in order to tell if we're booted into the ISO.
+    # Create a profile script that creates an env var
+    # to tell if we're booted into the ISO.
     with open(join(tmp_rootfs_dir, "etc/profile.d/pbr.sh"), "w+") as fd:
         fd.write("export RECOVERY_MODE='1'\n")
 
-    # Append to the iso's sshd_config file the option to ssh as root,
-    # and to ssh with empty a password.
+    # Append to the iso's sshd_config file the option to ssh as root
+    # and to ssh with an empty a password.
     with open(join(tmp_rootfs_dir, "etc/ssh/sshd_config"), "a+") as fd:
         fd.write("PermitEmptyPasswords yes\n")
         fd.write("PermitRootLogin yes\n")
@@ -665,7 +665,7 @@ def prep_rootfs(cfg, tmp_dir, tmp_rootfs_dir):
 
 def set_distro_pkgs(facts):
     """
-    Append distro specific pkgs to the pkgs array.
+    Append distro-specific pkgs to the pkgs array.
 
     Args:
         facts (obj): Facts object.

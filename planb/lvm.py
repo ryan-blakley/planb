@@ -92,11 +92,11 @@ def get_lvm_report(udev_ctx):
 
 def restore_pv_metadata(bk_pv, bk_pv_uuid, bk_vg):
     """
-    Recreate the physical volume using the backed up metadata file.
+    Recreate the physical volume using the backed-up metadata file.
 
     Args:
         bk_pv (str): The physical volume device name.
-        bk_pv_uuid (str): The uuid to used to restore the proper physical volume from the metadata file.
+        bk_pv_uuid (str): The uuid used to restore the proper physical volume from the metadata file.
         bk_vg (str): The volume group the physical volume will be a part of.
     """
     logger = logging.getLogger('pbr')
@@ -115,7 +115,7 @@ def restore_pv_metadata(bk_pv, bk_pv_uuid, bk_vg):
 
 def restore_vg_metadata(bk_vg):
     """
-    Restore volume group from the backed up metadata file.
+    Restore the volume group from the backed-up metadata file.
 
     Args:
         bk_vg (str): The volume group name being restored.
@@ -137,10 +137,10 @@ class RecoveryLVM(object):
 
     def lvm_check(self, bk_vgs):
         """
-        Check if any volume groups need their layout actually restored, then activate said volume group.
+        Check if any volume groups need their layout actually restored, then activate the volume group.
 
         Args:
-            bk_vgs (list): The list of volume groups needing to be checked.
+            bk_vgs (list): The list of volume groups that need to be checked.
         """
         from os.path import exists
 
@@ -179,7 +179,7 @@ class RecoveryLVM(object):
             # attributes so the matching check below doesn't fail.
             self.rc_lvm = get_lvm_report(self.facts.udev_ctx)
 
-            # Double check that the backup lvm matches the restored lvm.
+            # Double-check that the backup lvm matches the restored lvm.
             if not self.matching_lvm(vg):
                 self.log.error(f" After restoring lvm metadata for {vg}, "
                                "the lvm layout doesn't match the layout from the backup.")
@@ -187,7 +187,7 @@ class RecoveryLVM(object):
 
     def matching_lvm(self, vg):
         """
-        Compare the backup lvm layout to the current, if they don't match fix.
+        Compare the backup lvm layout to the current if they don't match fix.
 
         Args:
             vg (str): Volume group to compare.
@@ -209,7 +209,7 @@ class RecoveryLVM(object):
                     for lv2 in self.rc_lvm['LVS']:
                         self.log.debug(f"lvm: RecoveryLVM: matching_lvm: lv2: {lv2}")
 
-                        # Check if the lv entry exist in lv2, and that it's size match.
+                        # Check if the lv entry exists in lv2, and that it's size matches.
                         if lv['lv_name'] == lv2['lv_name'] and lv['lv_size'] == lv2['lv_size']:
                             match += 1
 

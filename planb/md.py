@@ -5,7 +5,7 @@ from planb.utils import is_block, run_cmd
 
 def get_md_info(udev_ctx):
     """
-    Capture info on the md devices, and the devices associated with it.
+    Capture info on the md devices and the devices associated with it.
 
     Args:
         udev_ctx (obj): The udev ctx to use for querying.
@@ -30,7 +30,7 @@ def get_md_info(udev_ctx):
         if not name:
             name = d.device_node.split('/')[-1]
 
-        # Grab the slave device symlink names.
+        # Grab the secondary device symlink names.
         for dev in listdir(f"/sys/block/{d.device_node.split('/')[-1]}/slaves/"):
             devs.append(dev)
 
@@ -59,7 +59,7 @@ def md_check(udev_ctx, bk_md_info):
 
     logger = logging.getLogger('pbr')
 
-    # Run assemble in case disk had to be recovered earlier.
+    # Run assemble in case the disk had to be recovered earlier.
     ret = run_cmd(['/usr/sbin/mdadm', '-v', '--assemble', '--scan'], ret=True)
     if ret.returncode and not ret.returncode == 2:
         logger.warning(f" The command {ret.args} returned in error, stderr: {ret.stderr.decode()}")
@@ -138,7 +138,7 @@ def md_create(name, level, meta, num, uuid, devs):
 
 def md_re_add(name, dev):
     """
-    Attempt to re-add the device, if not successfully, just add it.
+    Attempt to re-add the device, if not successfully, just adds it.
 
     Args:
         name (str): MD device name.

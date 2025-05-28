@@ -48,7 +48,7 @@ def get_part_layout(udev_ctx):
                 "cd", d.get('ID_TYPE', "")) and not search("usb", d.get('ID_BUS', "")) and not int(
                 d.get('DM_MULTIPATH_DEVICE_PATH', False)):
 
-            # If it's a dm device check if it's mpath if not skip it,
+            # If it's a dm device, check if it's mpath if not skip it
             # if it is set the dm_name.
             if search("dm-", d.device_node):
                 if search("^mpath-", d.get('DM_UUID', "")):
@@ -60,7 +60,7 @@ def get_part_layout(udev_ctx):
             # to query udev here, but apparently in the recovery
             # environment the DM_MULTIPATH_DEVICE_PATH variable is always
             # a zero for some reason. So I don't trust using it, so check
-            # if the dev has any holders, and if they're a mpath device.
+            # if the dev has any holders and if they're a mpath device.
             holders = glob(f"/sys/block/{d.device_node.split('/')[-1]}/holders/*/dm/uuid")
             if holders:
                 with open(holders[0]) as f:
@@ -79,7 +79,7 @@ def get_part_layout(udev_ctx):
                          "id_path": d.get('ID_PATH'),
                          "size": p_device.length})
 
-            # Add a catch for disk that don't have a label and skip them.
+            # Add a catch for disks that don't have a label and skip them.
             try:
                 # Fetch the parted disk object.
                 p_disk = parted.newDisk(p_device)
@@ -98,7 +98,7 @@ def get_part_layout(udev_ctx):
                 update(dm_name, p_device)
                 continue
 
-            # Loop through the partitions, and grab info.
+            # Loop through the partitions and grab info.
             for p in p_disk.partitions:
                 # Define dict to store partition info.
                 part = dict()
@@ -145,7 +145,7 @@ def get_part_layout(udev_ctx):
                 # now just the part number.
                 disk.update({p.number: part})
 
-            # Add the disk dict as an entry to the master dict.
+            # Add the disk dict as an entry to the primary dict.
             update(dm_name, p_device)
 
     return disks_dict
@@ -168,7 +168,7 @@ class Parted(object):
             flags (str): The flags to set on the partition.
             ptype (str): The type of partition it should be.
         """
-        # An array of a few fs types that aren't actually valid parted fs types.
+        # An array of a few fs types that aren't valid parted fs types.
         bad_fs = ['LVM2_member', 'swap', 'linux_raid_member', 'vfat', 'crypto_LUKS']
 
         try:
@@ -200,7 +200,7 @@ class Parted(object):
             self.pdisk.addPartition(partition, constraint=parted.Constraint(exactGeom=geometry))
             self.pdisk.commit()
 
-        # Catch any IOException then print a warning and skip it, normally it's
+        # Catch any IOException then print a warning and skip it. Normally it's
         # due to the device being active in some way lvm, md, etc.
         except IOException:
             self.log.exception("Caught an IOException, when running parted.")
@@ -208,7 +208,7 @@ class Parted(object):
 
     def create_legacy_usb(self, disk):
         """
-        Create the partition table on an usb, to make it bootable.
+        Create the partition table on an usb to make it bootable.
 
         Args:
             disk (str): USB device name.
@@ -228,7 +228,7 @@ class Parted(object):
 
     def create_prep_usb(self, disk):
         """
-        Create the partition table on an usb, to make it bootable.
+        Create the partition table on an usb to make it bootable.
 
         Args:
             disk (str): USB device name.
@@ -254,7 +254,7 @@ class Parted(object):
 
     def create_uefi_usb(self, disk):
         """
-        Create the partition table on an usb, to make it bootable.
+        Create the partition table on an usb to make it bootable.
 
         Args:
             disk (str): USB device name.
@@ -280,7 +280,7 @@ class Parted(object):
 
     def init_disk(self, disk, ptable):
         """
-        Initial and wipe the disk, and set the new partition table to ptable.
+        Initial and wipe the disk and set the new partition table to ptable.
 
         Args:
             disk (str): Device to initialize.
@@ -293,7 +293,7 @@ class Parted(object):
         # Wipe the device.
         self.device.clobber()
 
-        # Create label on the disk.
+        # Create a label on the disk.
         self.pdisk = parted.freshDisk(self.device, ptable)
 
     def recreate_disk(self, bdisk, rdisk):
@@ -312,7 +312,7 @@ class Parted(object):
             self.log.debug("parted: recreate_disk: skipping disk due to no partitions")
             return
 
-        # Go through the backup disk dict, and recreate the
+        # Go through the backup disk dict and recreate the
         # partitions from it on the disk.
         for key, vals in bdisk.items():
             if key.isnumeric():

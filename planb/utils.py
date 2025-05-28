@@ -35,7 +35,7 @@ def dev_from_name(udev_ctx, name):
 
 def get_dev_type(udev_info):
     """
-    Queries the udev object, and returns the device type.
+    Queries the udev object and returns the device type.
 
     Args:
         udev_info (obj): Pass in the udev_ctx to use.
@@ -79,14 +79,14 @@ def get_modules():
         lines = f.readlines()
         # Strip new lines.
         lines = [x.strip() for x in lines]
-        # Split on spaces, return first column.
+        # Split on spaces, return the first column.
         modules = [x.split()[0] for x in lines]
     return modules
 
 
 def is_block(dev):
     """
-    Check if the device path exist and is a block device.
+    Check if the device path exists and is a block device.
 
     Args:
         dev (str): Device path to check.
@@ -253,7 +253,7 @@ def rsync(cfg, opts, facts, bk_excludes=None):
 
         cmd.extend(excludes)
 
-    # For recovering swap the order, and set the restore path to /mnt/rootfs.
+    # For recovering swap the order and set the restore path to /mnt/rootfs.
     if facts.recovery_mode:
         cmd.append(f"{cfg.bk_mount}/{facts.hostname.split('.')[0]}/")
         cmd.append('/mnt/rootfs/')
@@ -280,7 +280,7 @@ def run_cmd(cmd, ret=False, timeout=None, capture_output=True):
         capture_output (bool): Bool, on weather to capture the output or not.
 
     Returns:
-        (obj): The run command object, that includes the output and return code.
+        (obj): The run command object that includes the output and return code.
     """
     import logging
     from subprocess import PIPE, run, TimeoutExpired
@@ -350,8 +350,8 @@ def umount(mnt, recursive=False, lazy=False):
     Wrapper that calls the umount command.
 
     Args:
-        mnt (str): Mount point to un-mount.
-        recursive (bool): Bool, weather to un-mount recursively or not.
+        mnt (str): Mount point to unmount.
+        recursive (bool): Bool, weather to unmount recursively or not.
         lazy (bool): Perform a lazy umount.
 
     Returns:

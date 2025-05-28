@@ -42,7 +42,7 @@ def fmt_usb(device):
             p.create_uefi_usb(device)
         elif "ppc64le" in arch:
             logger.info("Wiping the header first")
-            # Wipe the disk, otherwise the grub install will complain about it not being empty.
+            # Wipe the disk, otherwise the grub installation will complain about it not being empty.
             run_cmd(['/usr/bin/dd', 'bs=5M', 'count=1', 'if=/dev/zero', f"of={device}"])
 
             p.create_prep_usb(device)
@@ -52,8 +52,8 @@ def fmt_usb(device):
         logger.info("Partitioning complete")
         run_cmd(['partprobe'])
 
-        # Apparently the system take a second to recognize the new partition,
-        # so if it doesn't exist query udev on the device again.
+        # Apparently the system takes a second to recognize the new partition,
+        # so if it doesn't exist, query udev on the device again.
         i = 0
         while not is_block(f"{device}1"):
             i += 1
@@ -193,7 +193,7 @@ class USB(object):
                 if "fbx64" not in efi and "fallback" not in efi and "BOOT" not in efi:
                     copy2(efi, self.tmp_efi_dir)
 
-            # If a bootx86.efi or bootaa64.efi file doesn't exist
+            # If a bootx86.efi or bootaa64.efi file doesn't exist,
             # create one by copying the shim or grub efi files.
             if not glob(join(self.tmp_efi_dir, "boot*.efi")) and not glob(join(self.tmp_efi_dir, "BOOT*.EFI")):
                 for shim in ['shimx64.efi', 'shim.efi', 'grubx64.efi', 'shimaa64.efi', 'grubaa64.efi']:
@@ -262,7 +262,7 @@ class USB(object):
 
     def prep_usb(self):
         """
-        Copy the needed files for syslinux in the tmp working directory.
+        Copy the necessary files for syslinux in the tmp working directory.
         """
         self.log.info("Prepping the USB")
         self.log.info("Mounting USB boot directory")
@@ -277,11 +277,11 @@ class USB(object):
             makedirs(self.tmp_syslinux_dir, exist_ok=True)
 
             # Grab the uuid of the fs that /boot is located on, if
-            # /boot isn't a partition then it returns the uuid of /.
+            # /boot isn't a partition, then it returns the uuid of /.
             boot_uuid = self.facts.mnts.get("/boot", self.facts.mnts.get("/", {})).get("fs_uuid")
 
             # Since syslinux is only available on x86_64, check the arch.
-            # Then copy all the needed syslinux files to the tmp dir.
+            # Then copy all the necessary syslinux files to the tmp dir.
             if self.facts.arch == "x86_64":
                 # If the memtest86+ pkg isn't installed, skip adding that boot option.
                 if glob("/boot/memtest*"):

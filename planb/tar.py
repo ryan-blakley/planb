@@ -9,7 +9,7 @@ from shutil import get_terminal_size
 
 def create_tar(cfg, bk_excludes, tmp_dir):
     """
-    create_tar: Create a tar file of the rootfs, and exclude configured dirs.
+    create_tar: Create a tar file of the rootfs and exclude configured dirs.
 
     Args:
         cfg (obj): Cfg object.
@@ -35,7 +35,7 @@ def create_tar(cfg, bk_excludes, tmp_dir):
             else:
                 return tarinfo
 
-        # Add each directory in / to tar archive, and sort the list.
+        # Add each directory in / to the tar archive and sort the list.
         dirs = listdir("/")
         dirs.sort()
 
@@ -85,7 +85,7 @@ def restore_tar(rootfs_dir, archive):
 
             # If the member is a symlink, check to make sure the link doesn't exist,
             # if the symlink exist, it will cause a massive performance hit on
-            # extraction. So skip it if it exists, and move on.
+            # extraction. So skip it if it exists and move on.
             if member_info.issym() and lexists(member_info.name):
                 i += 1
                 continue

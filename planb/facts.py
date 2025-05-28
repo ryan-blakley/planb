@@ -77,7 +77,7 @@ def grub_prefix():
 class Facts(object):
     def __init__(self):
         """
-        The facts class is meant to determine different facts about the server being
+        The Facts class is meant to determine different facts about the server being
         backed up, like what the storage layout is, what are the mount points, selinux,
         etc. The variables are used throughout the application for various stuff.
         """

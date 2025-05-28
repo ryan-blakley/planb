@@ -45,7 +45,7 @@ class ISO(object):
         """
         Generate a bootable live ISO.
         """
-        # Change the isofs directory, and create the output directory.
+        # Change the isofs directory and create the output directory.
         chdir(self.tmp_isofs_dir)
         makedirs(join("/var/lib/pbr", "output"), exist_ok=True)
 
@@ -62,7 +62,7 @@ class ISO(object):
         else:
             cmd = "/usr/bin/mkisofs"
 
-        # isohybrid is only available on x86_64, so set too none to begin with.
+        # isohybrid is only available on x86_64, so to begin with set too none.
         cmd_isohybrid = None
 
         if self.facts.uefi and self.facts.arch == "x86_64":
@@ -145,7 +145,7 @@ class ISO(object):
                 if "fbx64" not in efi and "fallback" not in efi and "BOOT" not in efi:
                     copy2(efi, self.tmp_efi_dir)
 
-            # If a bootx86.efi or bootaa64.efi file doesn't exist
+            # If a bootx86.efi or bootaa64.efi file doesn't exist,
             # create one by copying the shim or grub efi files.
             if not glob(join(self.tmp_efi_dir, "boot*.efi")) and not glob(join(self.tmp_efi_dir, "BOOT*.EFI")):
                 for shim in ['shimx64.efi', 'shim.efi', 'grubx64.efi', 'shimaa64.efi', 'grubaa64.efi']:
@@ -205,7 +205,7 @@ class ISO(object):
         makedirs(self.tmp_efi_dir)
         makedirs(self.tmp_images_dir)
 
-        # Create blank img file.
+        # Create a blank img file.
         with open(join(self.tmp_images_dir, "efiboot.img"), "wb") as f:
             f.seek(15728640 - 1)
             f.write(b"\0")
@@ -217,26 +217,26 @@ class ISO(object):
             self.log.error(f"{ret.args} returned the following error: {ret.stderr.decode()}")
             raise MountError()
 
-        # Create the efi directories, and copy the efi files.
+        # Create the efi directories and copy the efi files.
         makedirs(self.tmp_efi_dir)
         try:
             cp_files()
         except Exception:
             umount(self.tmp_isofs_dir)
 
-        # Unmount the img file, and copy the efi files for the iso file itself.
+        # Unmount the img file and copy the efi files for the iso file itself.
         umount(self.tmp_isofs_dir)
         cp_files()
 
     def prep_iso(self):
         """
-        Copy the needed files to create the iso in the tmp working directory.
+        Copy the necessary files to create the iso in the tmp working directory.
         """
         memtest = 0
         makedirs(self.tmp_isolinux_dir)
 
         # Since syslinux is only available on x86_64, check the arch.
-        # Then copy all the needed isolinux files to the tmp dir.
+        # Then copy all the necessary isolinux files to the tmp dir.
         if self.facts.arch == "x86_64":
             if exists("/usr/lib/syslinux/isolinux.bin"):
                 # Magia location
@@ -256,8 +256,8 @@ class ISO(object):
             copy2("menu.c32", self.tmp_isolinux_dir)
             copy2("vesamenu.c32", self.tmp_isolinux_dir)
 
-            # The below files are only needed for syslinux v5+ so if the
-            # files don't exist don't attempt to copy them.
+            # The below files are only needed for syslinux v5 +, so if the
+            # files don't exist, don't attempt to copy them.
             if exists("ldlinux.c32"):
                 copy2("ldlinux.c32", self.tmp_isolinux_dir)
             if exists("libcom32.c32"):
@@ -291,7 +291,7 @@ class ISO(object):
             makedirs(self.tmp_ppc_dir)
 
             # Grab the uuid of the fs that /boot is located on, if
-            # /boot isn't a partition then it returns the uuid of /.
+            # /boot isn't a partition, then it returns the uuid of /.
             boot_uuid = self.facts.mnts.get("/boot", self.facts.mnts.get("/", {})).get("fs_uuid")
 
             # Create the bootinfo.txt file.
