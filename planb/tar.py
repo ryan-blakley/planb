@@ -88,10 +88,9 @@ def restore_tar(rootfs_dir, archive):
             # extraction. So skip it if it exists and move on.
             if member_info.issym() and lexists(member_info.name):
                 i += 1
-                continue
             else:
                 with suppress(FileExistsError):
-                    tar.extract(member_info)
+                    tar.extract(member_info, filter="fully_trusted")
                 i += 1
 
         print("")

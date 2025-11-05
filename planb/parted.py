@@ -29,7 +29,7 @@ def get_part_layout(udev_ctx):
     from re import search
 
     # Define dict to store disk info.
-    disks_dict = dict()
+    disks_dict = {}
 
     def update(name, p_dev):
         if name:
@@ -68,7 +68,7 @@ def get_part_layout(udev_ctx):
                         continue
 
             # Define a dict to store each disk info.
-            disk = dict()
+            disk = {}
 
             # Fetch the parted device.
             p_device = parted.getDevice(d.device_node)
@@ -101,7 +101,7 @@ def get_part_layout(udev_ctx):
             # Loop through the partitions and grab info.
             for p in p_disk.partitions:
                 # Define dict to store partition info.
-                part = dict()
+                part = {}
 
                 # Grab any part flags, and the part type.
                 part.update({"flags": p.getFlagsAsString(),
@@ -116,7 +116,6 @@ def get_part_layout(udev_ctx):
                             part.update({"name": None})
                     except PartitionException:
                         part.update({"name": None})
-                        pass
                 else:
                     part.update({"name": None})
 
@@ -204,7 +203,6 @@ class Parted(object):
         # due to the device being active in some way lvm, md, etc.
         except IOException:
             self.log.exception("Caught an IOException, when running parted.")
-            pass
 
     def create_legacy_usb(self, disk):
         """

@@ -14,6 +14,12 @@ from planb.utils import is_installed, pkg_files, pkg_query_file, run_cmd
 
 logger = logging.getLogger('pbr')
 
+DBUS_SERVICE = "dbus.service"
+NETWORK_ONLINE_TARGET_WANTS = "usr/lib/systemd/system/network-online.target.wants"
+PBR_TARGET_WANTS = "usr/lib/systemd/system/pbr.target.wants"
+SYSTEMD_SYSTEM = "usr/lib/systemd/system/"
+WICKED_SERVICE = "wicked.service"
+
 
 class LiveOS(object):
     def __init__(self, cfg, facts, opts, tmp_dir):
@@ -60,7 +66,7 @@ class LiveOS(object):
                         if exclude in fname:
                             break
                     else:
-                        if exists(fname) and not fname == "/":
+                        if exists(fname) and fname != "/":
                             dst = join(self.tmp_rootfs_dir, fname[1:])
 
                             if isfile(fname) or islink(fname):
@@ -398,7 +404,7 @@ def customize_rootfs_debian(tmp_rootfs_dir):
         tmp_rootfs_dir (str): The tmp rootfs directory for the iso.
     """
     # Enable the necessary services.
-    chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/pbr.target.wants"))
+    chdir(join(tmp_rootfs_dir, PBR_TARGET_WANTS))
 
     if exists("../networking.service"):
         symlink("../networking.service", "networking.service")
@@ -460,7 +466,7 @@ def customize_rootfs_rh(tmp_rootfs_dir):
             raise RunCMDError
 
     # Enable the necessary services.
-    chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/pbr.target.wants"))
+    chdir(join(tmp_rootfs_dir, PBR_TARGET_WANTS))
     symlink("../NetworkManager.service", "NetworkManager.service")
 
     if exists("../rngd.service"):
@@ -472,19 +478,19 @@ def customize_rootfs_rh(tmp_rootfs_dir):
             else:
                 print(line, end='')
 
-    chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/"))
+    chdir(join(tmp_rootfs_dir, SYSTEMD_SYSTEM))
     # Fedora renamed dbus to dbus-broker, and symlinks dbus and messsagebus from
     # the /etc/systemd/system directory for some reason. So only create the symlinks
     # if dbus-broker exists.
     if exists("dbus-broker.service"):
-        symlink("dbus-broker.service", "dbus.service")
-        symlink("dbus.service", "messagebus.service")
+        symlink("dbus-broker.service", DBUS_SERVICE)
+        symlink(DBUS_SERVICE, "messagebus.service")
 
     if exists("NetworkManager-dispatcher.service"):
         symlink("NetworkManager-dispatcher.service", "dbus-org.freedesktop.nm-dispatcher.service")
 
-    makedirs(join(tmp_rootfs_dir, "usr/lib/systemd/system/network-online.target.wants"), exist_ok=True)
-    chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/network-online.target.wants"))
+    makedirs(join(tmp_rootfs_dir, NETWORK_ONLINE_TARGET_WANTS), exist_ok=True)
+    chdir(join(tmp_rootfs_dir, NETWORK_ONLINE_TARGET_WANTS))
     symlink("../NetworkManager-wait-online.service", "NetworkManager-wait-online.service")
 
     # On Mageia /etc/init.d is symlinked to /etc/rc.d/init.d so manually create it.
@@ -516,9 +522,9 @@ def customize_rootfs_suse(tmp_rootfs_dir):
     chroot('.')
 
     # Enable the necessary services.
-    chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/pbr.target.wants"))
+    chdir(join(tmp_rootfs_dir, PBR_TARGET_WANTS))
     symlink("../rng-tools.service", "rng-tools.service")
-    symlink("../wicked.service", "wicked.service")
+    symlink("../wicked.service", WICKED_SERVICE)
 
     # Replace the execstart of rngd so enough urandom is generated.
     for line in fileinput.input(join(tmp_rootfs_dir, "usr/lib/systemd/system/rng-tools.service"), inplace=True):
@@ -527,12 +533,12 @@ def customize_rootfs_suse(tmp_rootfs_dir):
         else:
             print(line, end='')
 
-    makedirs(join(tmp_rootfs_dir, "usr/lib/systemd/system/network-online.target.wants"), exist_ok=True)
-    chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/network-online.target.wants"))
-    symlink("../wicked.service", "wicked.service")
+    makedirs(join(tmp_rootfs_dir, NETWORK_ONLINE_TARGET_WANTS), exist_ok=True)
+    chdir(join(tmp_rootfs_dir, NETWORK_ONLINE_TARGET_WANTS))
+    symlink("../wicked.service", WICKED_SERVICE)
 
-    chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/"))
-    symlink("wicked.service", "network.service")
+    chdir(join(tmp_rootfs_dir, SYSTEMD_SYSTEM))
+    symlink(WICKED_SERVICE, "network.service")
     symlink("wickedd-auto4.service", "dbus-org.opensuse.Network.AUTO4.service")
     symlink("wickedd-dhcp4.service", "dbus-org.opensuse.Network.DHCP4.service")
     symlink("wickedd-dhcp6.service", "dbus-org.opensuse.Network.DHCP6.service")
@@ -552,6 +558,9 @@ def prep_rootfs(cfg, tmp_dir, tmp_rootfs_dir):
         tmp_dir (str): The generated tmp working directory.
         tmp_rootfs_dir (str): The tmp rootfs directory for the iso.
     """
+    ETC_MULITPATH = "/etc/multipath"
+    ETC_SHADOW = "etc/shadow"
+
     # Create our custom login screen text.
     with open(join(tmp_rootfs_dir, "etc/issue"), "w") as f:
         f.writelines("Plan (B)ackup Recovery\n")
@@ -569,15 +578,15 @@ def prep_rootfs(cfg, tmp_dir, tmp_rootfs_dir):
     copytree(join(tmp_dir, "facts"), join(tmp_rootfs_dir, "facts"))
 
     # Copy our custom pbr service and target file.
-    copy2("/usr/share/planb/pbr.target", join(tmp_rootfs_dir, "usr/lib/systemd/system"))
-    copy2("/usr/share/planb/pbr.service", join(tmp_rootfs_dir, "usr/lib/systemd/system"))
+    copy2("/usr/share/planb/pbr.target", join(tmp_rootfs_dir, SYSTEMD_SYSTEM))
+    copy2("/usr/share/planb/pbr.service", join(tmp_rootfs_dir, SYSTEMD_SYSTEM))
 
     # Link the default target to our custom target.
     etc_default_target = join(tmp_rootfs_dir, "etc/systemd/system/default.target")
     if exists(etc_default_target):
         remove(etc_default_target)
 
-    chdir(join(tmp_rootfs_dir, "usr/lib/systemd/system/"))
+    chdir(join(tmp_rootfs_dir, SYSTEMD_SYSTEM))
     remove("default.target")
     symlink("pbr.target", "default.target")
 
@@ -589,10 +598,10 @@ def prep_rootfs(cfg, tmp_dir, tmp_rootfs_dir):
         symlink("../getty@.service", "getty@tty1.service")
 
     # Create the custom target wants dir, and lnk the necessary service and target files.
-    pbr_target_wants = join(tmp_rootfs_dir, "usr/lib/systemd/system/pbr.target.wants")
+    pbr_target_wants = join(tmp_rootfs_dir, PBR_TARGET_WANTS)
     makedirs(pbr_target_wants, exist_ok=True)
     chdir(pbr_target_wants)
-    symlink("../dbus.service", "dbus.service")
+    symlink("../dbus.service", DBUS_SERVICE)
     symlink("../getty.target", "getty.target")
     symlink("../systemd-logind.service", "systemd-logind.service")
     symlink("../plymouth-quit.service", "plymouth-quit.service")
@@ -626,9 +635,9 @@ def prep_rootfs(cfg, tmp_dir, tmp_rootfs_dir):
     # Check if the multipath.conf file exists if it does copy it.
     if exists("/etc/multipath.conf"):
         copy2("/etc/multipath.conf", join(tmp_rootfs_dir, "etc"))
-        if exists("/etc/multipath"):
-            for f in listdir("/etc/multipath"):
-                copy2(join("/etc/multipath", f), join(tmp_rootfs_dir, "etc/multipath"))
+        if exists(ETC_MULITPATH):
+            for f in listdir(ETC_MULITPATH):
+                copy2(join(ETC_MULITPATH, f), join(tmp_rootfs_dir, "etc/multipath"))
 
     if not exists(join(tmp_rootfs_dir, "etc/group")):
         copy2("/etc/group", join(tmp_rootfs_dir, "etc/group"))
@@ -636,12 +645,12 @@ def prep_rootfs(cfg, tmp_dir, tmp_rootfs_dir):
     if not exists(join(tmp_rootfs_dir, "etc/passwd")):
         copy2("/etc/passwd", join(tmp_rootfs_dir, "etc/passwd"))
 
-    if not exists(join(tmp_rootfs_dir, "etc/shadow")):
-        copy2("/etc/shadow", join(tmp_rootfs_dir, "etc/shadow"))
+    if not exists(join(tmp_rootfs_dir, ETC_SHADOW)):
+        copy2("/etc/shadow", join(tmp_rootfs_dir, ETC_SHADOW))
 
     # Set the root password to empty for the iso environment, unless set not to in the cfg.
     if not cfg.rc_keep_root_password:
-        for line in fileinput.input(join(tmp_rootfs_dir, "etc/shadow"), inplace=True):
+        for line in fileinput.input(join(tmp_rootfs_dir, ETC_SHADOW), inplace=True):
             if search("^root:", line):
                 print("root:::0:99999:7:::")
             else:

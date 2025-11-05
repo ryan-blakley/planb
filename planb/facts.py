@@ -45,12 +45,12 @@ def distro_efi_vars(arch, dis):
                     efi_file = path[-1]
                     efi_distro = path[-2].lower()
                     return efi_distro, efi_file
-                else:
-                    path = line.split("/")[1].split("\\")
-                    logger.debug(f"facts: distro_efi_vars: path: {path}")
-                    efi_file = path[-1]
-                    efi_distro = path[-2].lower()
-                    return efi_distro, efi_file
+
+                path = line.split("/")[1].split("\\")
+                logger.debug(f"facts: distro_efi_vars: path: {path}")
+                efi_file = path[-1]
+                efi_distro = path[-2].lower()
+                return efi_distro, efi_file
     else:
         if "aarch64" in arch:
             efi_file = "shimaa64.efi"
@@ -90,7 +90,7 @@ class Facts(object):
         self.distro_version = distro.version_parts()[0]
         self.grub_prefix = grub_prefix()
         self.hostname = uname().nodename
-        self.lvm = dict()
+        self.lvm = {}
         self.lvm_installed = exists('/usr/sbin/lvm')
         self.pyvers = python_version().rsplit(".", 1)[0]
         self.recovery_mode = environ.get('RECOVERY_MODE', False)

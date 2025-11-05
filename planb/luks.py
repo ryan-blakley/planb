@@ -13,10 +13,10 @@ def get_luks_devs(udev_ctx):
     Returns:
         luks (dict): Luks information.
     """
-    luks = dict()
+    luks = {}
     for d in udev_ctx.list_devices(subsystem='block'):
         if "crypto_LUKS" in d.get('ID_FS_TYPE', ""):
-            info = dict()
+            info = {}
 
             if d.get('DM_NAME', None):
                 info.update({"uuid": d['ID_FS_UUID'], "version": d['ID_FS_VERSION'], "type": "lvm"})
@@ -38,20 +38,19 @@ def luks_check(udev_ctx, luks, dev):
         luks (dict): Luks information.
         dev (str): Device name.
     """
+    cryptsetup = "/usr/sbin/cryptsetup"
     logger = logging.getLogger('pbr')
     uuid = luks[dev]['uuid']
 
     for d in udev_ctx.list_devices(subsystem='block'):
-        if "crypto_LUKS" in d.get('ID_FS_TYPE', ""):
-            if uuid == d['ID_FS_UUID']:
-                run_cmd(['/usr/sbin/cryptsetup', 'luksOpen', dev, f"luks-{uuid}"])
-                logger.info(f"  Opening {dev} at /dev/mapper/luks-{uuid}")
-                return
+        if "crypto_LUKS" in d.get('ID_FS_TYPE', "") and uuid == d['ID_FS_UUID']:
+            run_cmd([cryptsetup, 'luksOpen', dev, f"luks-{uuid}"])
+            logger.info(f"  Opening {dev} at /dev/mapper/luks-{uuid}")
+            return
 
-    run_cmd(['/usr/sbin/cryptsetup', '-q', 'luksHeaderRestore', dev, '--header-backup-file',
+    run_cmd([cryptsetup, '-q', 'luksHeaderRestore', dev, '--header-backup-file',
              f"/facts/luks/{dev.split('/')[-1]}.backup"])
     logger.info(f"  Restoring luks header on {dev}")
 
-    run_cmd(['/usr/sbin/cryptsetup', 'luksOpen', dev, f"luks-{uuid}"])
+    run_cmd([cryptsetup, 'luksOpen', dev, f"luks-{uuid}"])
     logger.info(f"  Opening {dev} at /dev/mapper/luks-{uuid}")
-    return

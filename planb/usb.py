@@ -27,6 +27,8 @@ def fmt_usb(device):
     from planb.facts import grub_prefix
     from planb.parted import Parted
 
+    COMPLETE_MSG = "Formatting complete"
+
     # Query the arch and set the udev context.
     arch = machine()
     udev_ctx = pyudev.Context()
@@ -67,12 +69,12 @@ def fmt_usb(device):
         if exists("/sys/firmware/efi"):
             fmt_fs(f"{device}1", rand_str(8, True), "PBR-EFI", "vfat")
             fmt_fs(f"{device}2", uuid.lower(), "PLANBRECOVER-USB", "ext4")
-            logger.info("Formatting complete")
+            logger.info(COMPLETE_MSG)
         elif "ppc64le" in arch:
             from tempfile import mkdtemp
 
             fmt_fs(f"{device}2", uuid.lower(), "PLANBRECOVER-USB", "ext4")
-            logger.info("Formatting complete")
+            logger.info(COMPLETE_MSG)
 
             # Create a tmp dir to mount the usb on, so grub2 can be installed.
             tmp_dir = mkdtemp(prefix="usb.")
@@ -107,7 +109,7 @@ def fmt_usb(device):
             from tempfile import mkdtemp
 
             fmt_fs(f"{device}1", uuid.lower(), "PLANBRECOVER-USB", "ext4")
-            logger.info("Formatting complete")
+            logger.info(COMPLETE_MSG)
 
             # Create a tmp dir to mount the usb on, so grub2 can be installed.
             tmp_dir = mkdtemp(prefix="usb.")
@@ -159,6 +161,12 @@ class USB(object):
         self.tmp_syslinux_dir = join(tmp_dir, "usbfs/boot/syslinux")
         self.tmp_share_dir = join(tmp_dir, "/usr/share/planb")
 
+        self._bootx64efi = "bootx64.efi"
+        self._boot_syslinux = "/boot/syslinux/"
+        self._efi_boot = "/EFI/BOOT"
+        self._grubcfg = "grub.cfg"
+        self._usr_share_planb = "/usr/share/planb/"
+
         udev_trigger()
 
     def prep_uefi(self, memtest):
@@ -198,23 +206,23 @@ class USB(object):
             if not glob(join(self.tmp_efi_dir, "boot*.efi")) and not glob(join(self.tmp_efi_dir, "BOOT*.EFI")):
                 for shim in ['shimx64.efi', 'shim.efi', 'grubx64.efi', 'shimaa64.efi', 'grubaa64.efi']:
                     if exists(join(self.tmp_efi_dir, shim)):
-                        boot_efi = "bootx64.efi"
+                        boot_efi = self._bootx64efi
                         if "aarch64" in self.facts.arch:
                             boot_efi = "bootaa64.efi"
 
                         copy2(join(self.tmp_efi_dir, shim), join(self.tmp_efi_dir, boot_efi))
                         break
 
-            env = Environment(loader=FileSystemLoader("/usr/share/planb/"))
-            grub_cfg = env.get_template("grub.cfg")
-            with open(join(self.tmp_efi_dir, "grub.cfg"), "w+") as f:
+            env = Environment(loader=FileSystemLoader(self._usr_share_planb))
+            grub_cfg = env.get_template(self._grubcfg)
+            with open(join(self.tmp_efi_dir, self._grubcfg), "w+") as f:
                 # For aarch64 it doesn't use the normal efi commands in grub.cfg.
                 if self.facts.arch == "aarch64":
                     f.write(grub_cfg.render(
                         facts=self.facts,
                         linux_cmd="linux",
                         initrd_cmd="initrd",
-                        location="/boot/syslinux/",
+                        location=self._boot_syslinux,
                         label_name=self.label_name,
                         boot_args=self.cfg.rc_kernel_args,
                         efi=1
@@ -224,7 +232,7 @@ class USB(object):
                         facts=self.facts,
                         linux_cmd="linuxefi",
                         initrd_cmd="initrdefi",
-                        location="/boot/syslinux/",
+                        location=self._boot_syslinux,
                         label_name=self.label_name,
                         boot_args=self.cfg.rc_kernel_args,
                         memtest=memtest,
@@ -232,27 +240,28 @@ class USB(object):
                     ))
 
             if "mageia" in self.facts.efi_distro and self.facts.arch == "x86_64":
-                run_cmd([f'{self.facts.grub_prefix}-mkimage', '--verbose', '-O', 'x86_64-efi', '-p', '/EFI/BOOT', '-o',
-                         join(self.tmp_efi_dir, "bootx64.efi"), 'iso9660', 'ext2', 'fat', 'f2fs', 'jfs', 'reiserfs',
-                         'xfs', 'part_apple', 'part_bsd', 'part_gpt', 'part_msdos', 'all_video', 'font', 'gfxterm',
-                         'gfxmenu', 'png', 'boot', 'chain', 'configfile', 'echo', 'gettext', 'linux', 'linux32', 'ls',
-                         'search', 'test', 'videoinfo', 'reboot', 'gzio', 'gfxmenu', 'gfxterm', 'serial'])
+                run_cmd([f'{self.facts.grub_prefix}-mkimage', '--verbose', '-O', 'x86_64-efi', '-p', self._efi_boot,
+                         '-o', join(self.tmp_efi_dir, self._bootx64efi), 'iso9660', 'ext2', 'fat', 'f2fs', 'jfs',
+                         'reiserfs', 'xfs', 'part_apple', 'part_bsd', 'part_gpt', 'part_msdos', 'all_video', 'font',
+                         'gfxterm', 'gfxmenu', 'png', 'boot', 'chain', 'configfile', 'echo', 'gettext', 'linux',
+                         'linux32', 'ls', 'search', 'test', 'videoinfo', 'reboot', 'gzio', 'gfxmenu', 'gfxterm',
+                         'serial'])
 
             if self.facts.is_debian_based and self.facts.arch == "aarch64":
-                run_cmd([f'{self.facts.grub_prefix}-mkimage', '--verbose', '-O', 'arm64-efi', '-p', '/EFI/BOOT', '-o',
-                         join(self.tmp_efi_dir, "bootaa64.efi"), 'search', 'iso9660', 'configfile', 'normal', 'tar',
-                         'part_msdos', 'part_gpt', 'ext2', 'fat', 'xfs', 'linux', 'boot', 'chain', 'ls', 'reboot',
-                         'all_video', 'gzio', 'gfxmenu', 'gfxterm', 'serial'])
+                run_cmd([f'{self.facts.grub_prefix}-mkimage', '--verbose', '-O', 'arm64-efi', '-p', self._efi_boot,
+                         '-o', join(self.tmp_efi_dir, "bootaa64.efi"), 'search', 'iso9660', 'configfile', 'normal',
+                         'tar', 'part_msdos', 'part_gpt', 'ext2', 'fat', 'xfs', 'linux', 'boot', 'chain', 'ls',
+                         'reboot', 'all_video', 'gzio', 'gfxmenu', 'gfxterm', 'serial'])
 
             if self.facts.is_debian_based and self.facts.arch == "x86_64":
-                run_cmd([f'{self.facts.grub_prefix}-mkimage', '--verbose', '-O', 'x86_64-efi', '-p', '/EFI/BOOT', '-o',
-                         join(self.tmp_efi_dir, "bootx64.efi"), 'search', 'iso9660', 'configfile', 'normal', 'tar',
-                         'part_msdos', 'part_gpt', 'ext2', 'fat', 'xfs', 'linux', 'linuxefi', 'boot', 'chain', 'ls',
-                         'reboot', 'all_video', 'gzio', 'gfxmenu', 'gfxterm', 'serial'])
+                run_cmd([f'{self.facts.grub_prefix}-mkimage', '--verbose', '-O', 'x86_64-efi', '-p', self._efi_boot,
+                         '-o', join(self.tmp_efi_dir, self._bootx64efi), 'search', 'iso9660', 'configfile', 'normal',
+                         'tar', 'part_msdos', 'part_gpt', 'ext2', 'fat', 'xfs', 'linux', 'linuxefi', 'boot', 'chain',
+                         'ls', 'reboot', 'all_video', 'gzio', 'gfxmenu', 'gfxterm', 'serial'])
 
             self.log.info("Un-mounting EFI directory")
             umount(self.tmp_usbfs_boot_dir)
-        except (Exception, KeyboardInterrupt, RunCMDError) as e:
+        except (Exception, KeyboardInterrupt) as e:
             self.log.info(f"Un-mounting tmp usbfs boot location {self.tmp_usbfs_boot_dir}")
             umount(self.tmp_usbfs_boot_dir, lazy=True)
 
@@ -290,14 +299,14 @@ class USB(object):
 
                 if not self.facts.uefi:
                     # Generate a grub.cfg.
-                    env = Environment(loader=FileSystemLoader("/usr/share/planb/"))
-                    grub_cfg = env.get_template("grub.cfg")
+                    env = Environment(loader=FileSystemLoader(self._usr_share_planb))
+                    grub_cfg = env.get_template(self._grubcfg)
                     with open(join(self.tmp_dir, "usbfs/grub2/grub.cfg"), "w+") as f:
                         f.write(grub_cfg.render(
                             facts=self.facts,
                             linux_cmd="linux",
                             initrd_cmd="initrd",
-                            location="/boot/syslinux/",
+                            location=self._boot_syslinux,
                             label_name=self.label_name,
                             boot_args=self.cfg.rc_kernel_args,
                             memtest=memtest,
@@ -306,14 +315,14 @@ class USB(object):
                         ))
             elif self.facts.arch == "ppc64le":
                 # Generate a grub.cfg.
-                env = Environment(loader=FileSystemLoader("/usr/share/planb/"))
-                grub_cfg = env.get_template("grub.cfg")
+                env = Environment(loader=FileSystemLoader(self._usr_share_planb))
+                grub_cfg = env.get_template(self._grubcfg)
                 with open(join(self.tmp_dir, "usbfs/grub2/grub.cfg"), "w+") as f:
                     f.write(grub_cfg.render(
                         facts=self.facts,
                         linux_cmd="linux",
                         initrd_cmd="initrd",
-                        location="/boot/syslinux/",
+                        location=self._boot_syslinux,
                         label_name=self.label_name,
                         boot_args=self.cfg.rc_kernel_args,
                         boot_uuid=boot_uuid,

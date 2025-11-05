@@ -88,7 +88,7 @@ class PBR(object):
         self.log = set_log_cfg(self.opts, self.cfg)
         self.log.debug(f"planb: PBR: __int__: cfg: {dict(self.cfg.__dict__)}")
 
-        if not getuid() == 0:
+        if getuid() != 0:
             self.log.error("Please run as root")
             exit(1)
 

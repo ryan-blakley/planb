@@ -41,6 +41,17 @@ class ISO(object):
         self.tmp_ppc_dir = join(tmp_dir, "isofs/ppc")
         self.tmp_share_dir = join(tmp_dir, "/usr/share/planb")
 
+        self._bootx64efi = "bootx64.efi"
+        self._efi_boot = "/EFI/BOOT"
+        self._efibootimg = "efiboot.img"
+        self._grubcfg = "grub.cfg"
+        self._images_efibootimg = "images/efiboot.img"
+        self._isolinux_bin = "isolinux.bin"
+        self._isolinux_boot_cat = "isolinux/boot.cat"
+        self._isolinux_no_slashes = "isolinux"
+        self._isolinux_with_slashes = "/isolinux/"
+        self._usr_share_planb = "/usr/share/planb/"
+
     def create_iso(self):
         """
         Generate a bootable live ISO.
@@ -67,25 +78,25 @@ class ISO(object):
 
         if self.facts.uefi and self.facts.arch == "x86_64":
             if "SUSE" in self.facts.distro:
-                cmd_mkisofs = [cmd, '-vv', '-o', iso_file, '-b', 'isolinux/isolinux.bin', '-J', '-R', '-l', '-c',
-                               'isolinux/boot.cat', '-no-emul-boot', '-boot-load-size', '4', '-boot-info-table',
-                               '-eltorito-alt-boot', '-eltorito-platform', 'efi', '-eltorito-boot',
-                               'images/efiboot.img', '-no-emul-boot', '-graft-points', '-V', self.label_name, '.']
+                cmd_mkisofs = [cmd, '-vv', '-o', iso_file, '-b', f"{self._isolinux_no_slashes}/{self._isolinux_bin}",
+                               '-J', '-R', '-l', '-c', self._isolinux_boot_cat, '-no-emul-boot', '-boot-load-size', '4',
+                               '-boot-info-table', '-eltorito-alt-boot', '-eltorito-platform', 'efi', '-eltorito-boot',
+                               self._images_efibootimg, '-no-emul-boot', '-graft-points', '-V', self.label_name, '.']
             else:
-                cmd_mkisofs = [cmd, '-vv', '-o', iso_file, '-b', 'isolinux/isolinux.bin', '-J', '-R', '-l', '-c',
-                               'isolinux/boot.cat', '-no-emul-boot', '-boot-load-size', '4', '-boot-info-table',
-                               '-eltorito-alt-boot', '-e', 'images/efiboot.img', '-no-emul-boot', '-graft-points',
-                               '-V', self.label_name, '.']
+                cmd_mkisofs = [cmd, '-vv', '-o', iso_file, '-b', f"{self._isolinux_no_slashes}/{self._isolinux_bin}",
+                               '-J', '-R', '-l', '-c', self._isolinux_boot_cat, '-no-emul-boot', '-boot-load-size', '4',
+                               '-boot-info-table', '-eltorito-alt-boot', '-e', self._images_efibootimg, '-no-emul-boot',
+                               '-graft-points', '-V', self.label_name, '.']
 
             cmd_isohybrid = ['/usr/bin/isohybrid', '-v', '-u', iso_file]
         elif self.facts.arch == "aarch64":
             if "SUSE" in self.facts.distro:
                 cmd_mkisofs = [cmd, '-vv', '-o', iso_file, '-J', '-r', '-l', '-eltorito-alt-boot', '-eltorito-platform',
-                               'efi', '-eltorito-boot', 'images/efiboot.img', '-no-emul-boot', '-graft-points', '-V',
+                               'efi', '-eltorito-boot', self._images_efibootimg, '-no-emul-boot', '-graft-points', '-V',
                                self.label_name, '.']
             else:
                 cmd_mkisofs = [cmd, '-vv', '-o', iso_file, '-J', '-r', '-l', '-eltorito-alt-boot', '-e',
-                               'images/efiboot.img', '-no-emul-boot', '-graft-points', '-V', self.label_name, '.']
+                               self._images_efibootimg, '-no-emul-boot', '-graft-points', '-V', self.label_name, '.']
         elif self.facts.arch == "ppc64le":
             cmd_mkisofs = [cmd, '-vv', '-o', iso_file, '-U', '-chrp-boot', '-J', '-R', '-iso-level', '3',
                            '-graft-points', '-V', self.label_name, '.']
@@ -101,12 +112,12 @@ class ISO(object):
                      '-p', 'images/cdboot.prm'])
 
             cmd_mkisofs = [cmd, '-vv', '-o', iso_file, '-b', 'images/cdboot.img', '-J', '-R', '-l', '-c',
-                           'isolinux/boot.cat', '-no-emul-boot', '-boot-load-size', '4', '-V', self.label_name,
+                           self._isolinux_boot_cat, '-no-emul-boot', '-boot-load-size', '4', '-V', self.label_name,
                            '-graft-points', '.']
         else:
-            cmd_mkisofs = [cmd, '-vv', '-o', iso_file, '-b', 'isolinux/isolinux.bin', '-J', '-R', '-l', '-c',
-                           'isolinux/boot.cat', '-no-emul-boot', '-boot-load-size', '4', '-boot-info-table', '-V',
-                           self.label_name, '-graft-points', '.']
+            cmd_mkisofs = [cmd, '-vv', '-o', iso_file, '-b', f"{self._isolinux_no_slashes}/{self._isolinux_bin}", '-J',
+                           '-R', '-l', '-c', self._isolinux_boot_cat, '-no-emul-boot', '-boot-load-size', '4',
+                           '-boot-info-table', '-V', self.label_name, '-graft-points', '.']
 
             cmd_isohybrid = ['/usr/bin/isohybrid', '-v', iso_file]
 
@@ -150,23 +161,23 @@ class ISO(object):
             if not glob(join(self.tmp_efi_dir, "boot*.efi")) and not glob(join(self.tmp_efi_dir, "BOOT*.EFI")):
                 for shim in ['shimx64.efi', 'shim.efi', 'grubx64.efi', 'shimaa64.efi', 'grubaa64.efi']:
                     if exists(join(self.tmp_efi_dir, shim)):
-                        boot_efi = "bootx64.efi"
+                        boot_efi = self._bootx64efi
                         if "aarch64" in self.facts.arch:
                             boot_efi = "bootaa64.efi"
 
                         copy2(join(self.tmp_efi_dir, shim), join(self.tmp_efi_dir, boot_efi))
                         break
 
-            env = Environment(loader=FileSystemLoader("/usr/share/planb/"))
-            grub_cfg = env.get_template("grub.cfg")
-            with open(join(self.tmp_efi_dir, "grub.cfg"), "w+") as cfg:
+            env = Environment(loader=FileSystemLoader(self._usr_share_planb))
+            grub_cfg = env.get_template(self._grubcfg)
+            with open(join(self.tmp_efi_dir, self._grubcfg), "w+") as cfg:
                 # For aarch64 it doesn't use the normal efi commands in grub.cfg.
                 if self.facts.arch == "aarch64":
                     cfg.write(grub_cfg.render(
                         facts=self.facts,
                         linux_cmd="linux",
                         initrd_cmd="initrd",
-                        location="/isolinux/",
+                        location=self._isolinux_with_slashes,
                         label_name=self.label_name,
                         boot_args=self.cfg.rc_kernel_args,
                         efi=1
@@ -176,7 +187,7 @@ class ISO(object):
                         facts=self.facts,
                         linux_cmd="linuxefi",
                         initrd_cmd="initrdefi",
-                        location="/isolinux/",
+                        location=self._isolinux_with_slashes,
                         label_name=self.label_name,
                         boot_args=self.cfg.rc_kernel_args,
                         memtest=memtest,
@@ -184,35 +195,36 @@ class ISO(object):
                     ))
 
             if "mageia" in self.facts.efi_distro and self.facts.arch == "x86_64":
-                run_cmd([f'{self.facts.grub_prefix}-mkimage', '--verbose', '-O', 'x86_64-efi', '-p', '/EFI/BOOT', '-o',
-                         join(self.tmp_efi_dir, "bootx64.efi"), 'iso9660', 'ext2', 'fat', 'f2fs', 'jfs', 'reiserfs',
-                         'xfs', 'part_apple', 'part_bsd', 'part_gpt', 'part_msdos', 'all_video', 'font', 'gfxterm',
-                         'gfxmenu', 'png', 'boot', 'chain', 'configfile', 'echo', 'gettext', 'linux', 'linux32', 'ls',
-                         'search', 'test', 'videoinfo', 'reboot', 'gzio', 'gfxmenu', 'gfxterm', 'serial'])
+                run_cmd([f'{self.facts.grub_prefix}-mkimage', '--verbose', '-O', 'x86_64-efi', '-p', self._efi_boot,
+                         '-o', join(self.tmp_efi_dir, self._bootx64efi), 'iso9660', 'ext2', 'fat', 'f2fs', 'jfs',
+                         'reiserfs', 'xfs', 'part_apple', 'part_bsd', 'part_gpt', 'part_msdos', 'all_video', 'font',
+                         'gfxterm', 'gfxmenu', 'png', 'boot', 'chain', 'configfile', 'echo', 'gettext', 'linux',
+                         'linux32', 'ls', 'search', 'test', 'videoinfo', 'reboot', 'gzio', 'gfxmenu', 'gfxterm',
+                         'serial'])
 
             if self.facts.is_debian_based and self.facts.arch == "aarch64":
-                run_cmd([f'{self.facts.grub_prefix}-mkimage', '--verbose', '-O', 'arm64-efi', '-p', '/EFI/BOOT', '-o',
-                         join(self.tmp_efi_dir, "bootaa64.efi"), 'search', 'iso9660', 'configfile', 'normal', 'tar',
-                         'part_msdos', 'part_gpt', 'ext2', 'fat', 'xfs', 'linux', 'boot', 'chain', 'ls', 'reboot',
-                         'all_video', 'gzio', 'gfxmenu', 'gfxterm', 'serial'])
+                run_cmd([f'{self.facts.grub_prefix}-mkimage', '--verbose', '-O', 'arm64-efi', '-p', self._efi_boot,
+                         '-o', join(self.tmp_efi_dir, "bootaa64.efi"), 'search', 'iso9660', 'configfile', 'normal',
+                         'tar', 'part_msdos', 'part_gpt', 'ext2', 'fat', 'xfs', 'linux', 'boot', 'chain', 'ls',
+                         'reboot', 'all_video', 'gzio', 'gfxmenu', 'gfxterm', 'serial'])
 
             if self.facts.is_debian_based and self.facts.arch == "x86_64":
-                run_cmd([f'{self.facts.grub_prefix}-mkimage', '--verbose', '-O', 'x86_64-efi', '-p', '/EFI/BOOT', '-o',
-                         join(self.tmp_efi_dir, "bootx64.efi"), 'search', 'iso9660', 'configfile', 'normal', 'tar',
-                         'part_msdos', 'part_gpt', 'ext2', 'fat', 'xfs', 'linux', 'linuxefi', 'boot', 'chain', 'ls',
-                         'reboot', 'all_video', 'gzio', 'gfxmenu', 'gfxterm', 'serial'])
+                run_cmd([f'{self.facts.grub_prefix}-mkimage', '--verbose', '-O', 'x86_64-efi', '-p', self._efi_boot,
+                         '-o', join(self.tmp_efi_dir, self._bootx64efi), 'search', 'iso9660', 'configfile', 'normal',
+                         'tar', 'part_msdos', 'part_gpt', 'ext2', 'fat', 'xfs', 'linux', 'linuxefi', 'boot', 'chain',
+                         'ls', 'reboot', 'all_video', 'gzio', 'gfxmenu', 'gfxterm', 'serial'])
 
         makedirs(self.tmp_efi_dir)
         makedirs(self.tmp_images_dir)
 
         # Create a blank img file.
-        with open(join(self.tmp_images_dir, "efiboot.img"), "wb") as f:
+        with open(join(self.tmp_images_dir, self._efibootimg), "wb") as f:
             f.seek(15728640 - 1)
             f.write(b"\0")
 
         # Format and mount the img file.
-        fmt_fs(join(self.tmp_images_dir, "efiboot.img"), rand_str(8, True), "PBR-EFI", "vfat")
-        ret = mount(join(self.tmp_images_dir, "efiboot.img"), self.tmp_isofs_dir)
+        fmt_fs(join(self.tmp_images_dir, self._efibootimg), rand_str(8, True), "PBR-EFI", "vfat")
+        ret = mount(join(self.tmp_images_dir, self._efibootimg), self.tmp_isofs_dir)
         if ret.returncode:
             self.log.error(f"{ret.args} returned the following error: {ret.stderr.decode()}")
             raise MountError()
@@ -241,16 +253,16 @@ class ISO(object):
             if exists("/usr/lib/syslinux/isolinux.bin"):
                 # Magia location
                 chdir("/usr/lib/syslinux/")
-                copy2("isolinux.bin", self.tmp_isolinux_dir)
+                copy2(self._isolinux_bin, self.tmp_isolinux_dir)
             elif exists("/usr/lib/ISOLINUX/"):
                 # Debian location
                 chdir("/usr/lib/ISOLINUX/")
-                copy2("isolinux.bin", self.tmp_isolinux_dir)
+                copy2(self._isolinux_bin, self.tmp_isolinux_dir)
                 chdir("/usr/lib/syslinux/modules/bios/")
             else:
                 # RH based location
                 chdir("/usr/share/syslinux/")
-                copy2("isolinux.bin", self.tmp_isolinux_dir)
+                copy2(self._isolinux_bin, self.tmp_isolinux_dir)
 
             copy2("chain.c32", self.tmp_isolinux_dir)
             copy2("menu.c32", self.tmp_isolinux_dir)
@@ -273,12 +285,12 @@ class ISO(object):
                 memtest = 1
 
             # Write out the isolinux.cfg based on the template file.
-            env = Environment(loader=FileSystemLoader("/usr/share/planb/"))
+            env = Environment(loader=FileSystemLoader(self._usr_share_planb))
             isolinux_cfg = env.get_template("isolinux.cfg")
             with open(join(self.tmp_isofs_dir, "isolinux.cfg"), "w+") as f:
                 f.write(isolinux_cfg.render(
                     facts=self.facts,
-                    location="/isolinux/",
+                    location=self._isolinux_with_slashes,
                     label_name=self.label_name,
                     boot_args=self.cfg.rc_kernel_args,
                     memtest=memtest
@@ -309,14 +321,14 @@ class ISO(object):
                      'gfxmenu', 'gfxterm', 'serial'])
 
             # Generate a grub.cfg.
-            env = Environment(loader=FileSystemLoader("/usr/share/planb/"))
-            grub_cfg = env.get_template("grub.cfg")
-            with open(join(self.tmp_boot_grub_dir, "grub.cfg"), "w+") as f:
+            env = Environment(loader=FileSystemLoader(self._usr_share_planb))
+            grub_cfg = env.get_template(self._grubcfg)
+            with open(join(self.tmp_boot_grub_dir, self._grubcfg), "w+") as f:
                 f.write(grub_cfg.render(
                     facts=self.facts,
                     linux_cmd="linux",
                     initrd_cmd="initrd",
-                    location="/isolinux/",
+                    location=self._isolinux_with_slashes,
                     label_name=self.label_name,
                     boot_args=self.cfg.rc_kernel_args,
                     boot_uuid=boot_uuid,
@@ -391,6 +403,6 @@ class ISO(object):
         # If the bk location isn't set to iso, then create the iso. Otherwise,
         # skip this step since the iso needs to be created after the backup
         # archive is done.
-        if not self.cfg.bk_location_type == "iso":
+        if self.cfg.bk_location_type != "iso":
             self.log.info("Creating the ISO file")
             self.create_iso()

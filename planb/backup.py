@@ -7,7 +7,7 @@ from shutil import copyfile, copytree, rmtree
 from tempfile import mkdtemp
 from time import strftime
 
-from planb.exceptions import ExistsError, GeneralError, MountError, RunCMDError
+from planb.exceptions import ExistsError, GeneralError, MountError
 from planb.facts import Facts
 from planb.iso import ISO
 from planb.tar import create_tar
@@ -188,10 +188,7 @@ class Backup(object):
                         not_in_append(dev_from_name(self.facts.udev_ctx, d).find_parent('block').device_node, bk_disks)
                         self.log.debug(f"backup: cleanup_disks: Appending the parent of {d} to bk_disks.")
                 else:
-                    if d_type == "disk" and pv_name not in bk_disks:
-                        bk_disks.append(pv_name)
-                        self.log.debug(f"backup: cleanup_disks: Appending {pv_name} to bk_disks.")
-                    elif d_type == "mpath" and pv_name not in bk_disks:
+                    if d_type == "disk" and pv_name not in bk_disks or d_type == "mpath" and pv_name not in bk_disks:
                         bk_disks.append(pv_name)
                         self.log.debug(f"backup: cleanup_disks: Appending {pv_name} to bk_disks.")
                     elif d_type == "part":
@@ -395,7 +392,6 @@ class Backup(object):
                                 self.log.debug(f"backup: get_bk_vgs: Excluding {vg} it's parent is in the excludes.")
                                 self.cfg.bk_exclude_vgs.append(vg)
                                 self.facts.mnts.pop(mnt)
-                                continue
                         # Next, if the parent is null, use the pv_name. This is for pvs that aren't partitioned.
                         elif pv['vg_name'] == vg and not pv['parent']:
                             # Check if the pv_name is in the exclude list, if so, remove the mp and continue.
@@ -404,7 +400,6 @@ class Backup(object):
                                 self.log.debug(f"backup: get_bk_vgs: Excluding {vg} it's pv_name is in the excludes.")
                                 self.cfg.bk_exclude_vgs.append(vg)
                                 self.facts.mnts.pop(mnt)
-                                continue
 
                 not_in_append(vg, bk_vgs)
 
@@ -431,8 +426,8 @@ class Backup(object):
                 import filecmp
 
                 # Compare the 4 fact files to see if they're different.
-                match, mismatch, errors = filecmp.cmpfiles(self.tmp_facts_dir, join(self.var_lib, "facts"),
-                                                           ['disks.json', 'lvm.json', 'mnts.json', 'misc.json'])
+                _, mismatch, errors = filecmp.cmpfiles(self.tmp_facts_dir, join(self.var_lib, "facts"),
+                                                       ['disks.json', 'lvm.json', 'mnts.json', 'misc.json'])
 
                 # If no mismatch or errors, set matched to true, if there is any
                 # log the mismatch and errors to the log file.
@@ -500,7 +495,7 @@ class Backup(object):
             # Otherwise, if -k is passed, don't remove the directory. This is used for debugging.
             if not self.opts.keep:
                 rmtree(self.tmp_dir)
-        except (Exception, KeyboardInterrupt, RunCMDError):
+        except (Exception, KeyboardInterrupt):
             # Change the cwd to /tmp to avoid any umount errors.
             chdir("/tmp")
 

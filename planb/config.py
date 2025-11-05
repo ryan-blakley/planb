@@ -48,7 +48,7 @@ class LoadConfig(object):
                                  "nfs, cifs, usb, iso, rsync, local.")
                     exit(1)
 
-                if not self.bk_location_type == "iso":
+                if self.bk_location_type != "iso":
                     self.bk_mount = cfg['Backup']['backup_mount']
 
                 if self.boot_type == "usb" and self.bk_location_type == "iso":

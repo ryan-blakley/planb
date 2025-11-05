@@ -44,7 +44,7 @@ def get_lvm_report(udev_ctx):
     import json
 
     logger = logging.getLogger('pbr')
-    lvm = dict()
+    lvm = {}
 
     cmds = ['pvs', 'vgs', 'lvs']
     for c in cmds:

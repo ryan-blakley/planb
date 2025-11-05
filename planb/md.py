@@ -2,6 +2,8 @@ import logging
 
 from planb.utils import is_block, run_cmd
 
+MDADM = "/usr/sbin/mdadm"
+
 
 def get_md_info(udev_ctx):
     """
@@ -15,7 +17,7 @@ def get_md_info(udev_ctx):
     """
     from os import listdir
 
-    md_info = dict()
+    md_info = {}
 
     # Loop through disk pulled from udev.
     for d in udev_ctx.list_devices(subsystem='block', DEVTYPE='disk'):
@@ -23,7 +25,7 @@ def get_md_info(udev_ctx):
             continue
 
         devs = []
-        info = dict()
+        info = {}
 
         # Set the name based off udev.
         name = d.get('MD_DEVNAME', '')
@@ -60,8 +62,8 @@ def md_check(udev_ctx, bk_md_info):
     logger = logging.getLogger('pbr')
 
     # Run assemble in case the disk had to be recovered earlier.
-    ret = run_cmd(['/usr/sbin/mdadm', '-v', '--assemble', '--scan'], ret=True)
-    if ret.returncode and not ret.returncode == 2:
+    ret = run_cmd([MDADM, '-v', '--assemble', '--scan'], ret=True)
+    if ret.returncode and ret.returncode != 2:
         logger.warning(f" The command {ret.args} returned in error, stderr: {ret.stderr.decode()}")
 
     logger.debug(f"bk_md_info: {bk_md_info}")
@@ -76,7 +78,7 @@ def md_check(udev_ctx, bk_md_info):
 
             # Check the lens of the devs, if they don't match, then a dev
             # is missing, so we need to re-add it.
-            if not len(devs1) == len(devs2):
+            if len(devs1) != len(devs2):
                 logger.debug(f"md: md_check: dev1.difference:{devs1.difference(devs2)}")
                 logger.info("Re-adding disk to md raid")
                 for d in devs1.difference(devs2):
@@ -92,7 +94,7 @@ def md_check(udev_ctx, bk_md_info):
             # Stop any mdraids before trying to recreate.
             globs = glob("/dev/md*")
             if globs:
-                cmd = ['/usr/sbin/mdadm', '-v', '--stop']
+                cmd = [MDADM, '-v', '--stop']
                 for d in globs:
                     if is_block(d):
                         cmd.append(d)
@@ -101,7 +103,7 @@ def md_check(udev_ctx, bk_md_info):
 
             logger.info("Re-creating md raids")
             for x in diff:
-                level = search("([0-9]+)", bk_md_info[x]['md_level']).group()
+                level = search(r"(\d+)", bk_md_info[x]['md_level']).group()
                 meta = bk_md_info[x]['md_metadata']
                 uuid = bk_md_info[x]['md_uuid']
                 devs = bk_md_info[x]['devs']
@@ -124,11 +126,11 @@ def md_create(name, level, meta, num, uuid, devs):
     from os.path import exists
 
     # Set the create command, and zero the superblocks.
-    cmd = ['mdadm', '-v', '--create', '-R', f"/dev/md/{name}", f"--metadata={meta}", f"--level={level}",
+    cmd = [MDADM, '-v', '--create', '-R', f"/dev/md/{name}", f"--metadata={meta}", f"--level={level}",
            f"--raid-devices={num}", f"--uuid={uuid}", '--force']
     for d in devs:
         if exists(d):
-            run_cmd(['/usr/sbin/mdadm', '-v', '--zero-superblock', '--force', f"/dev/{d}"])
+            run_cmd([MDADM, '-v', '--zero-superblock', '--force', f"/dev/{d}"])
 
         cmd.append(f"/dev/{d}")
 
@@ -147,7 +149,7 @@ def md_re_add(name, dev):
     logger = logging.getLogger('pbr')
 
     logger.info(f"  Re-adding /dev/{dev} to the /dev/md/{name} array")
-    ret = run_cmd(['/usr/sbin/mdadm', '-v', '--manage', f"/dev/md/{name}", '--re-add', f"/dev/{dev}"], ret=True)
+    ret = run_cmd([MDADM, '-v', '--manage', f"/dev/md/{name}", '--re-add', f"/dev/{dev}"], ret=True)
     if ret.returncode:
         logger.debug(f" {ret.args} returned in error attempting to just add instead: {ret.stderr.decode()}")
-        run_cmd(['/usr/sbin/mdadm', '-v', '--manage', f"/dev/md/{name}", '--add', f"/dev/{dev}"])
+        run_cmd([MDADM, '-v', '--manage', f"/dev/md/{name}", '--add', f"/dev/{dev}"])

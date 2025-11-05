@@ -35,7 +35,7 @@ Requires:       syslinux
 Requires:       s390utils-base >= 2.15.0-2
 %endif
 
-%if 0%{?fedora}%{?el8}%{?el9}
+%if 0%{?fedora}%{?el8}%{?el9}%{?el10}
 Requires:       authselect-libs >= 1.2
 Requires:       dracut-live
 Requires:       genisoimage
@@ -44,6 +44,7 @@ Requires:       python3-jinja2
 Requires:       python3-libselinux
 Requires:       python3-pyparted
 Requires:       squashfs-tools
+Suggests:       nfs-utils
 %endif
 
 %if 0%{?suse_version} >= 1500
@@ -52,6 +53,7 @@ Requires:       python3-Jinja2
 Requires:       python3-selinux
 Requires:       python3-parted
 Requires:       squashfs
+Suggests:       nfs-client
 %endif
 
 %if 0%{?mageia}

@@ -1,4 +1,15 @@
-from planb.exceptions import GeneralError
+import logging
+import random
+import string
+
+from os.path import exists
+from time import sleep
+
+from planb.exceptions import GeneralError, RunCMDError
+
+DPKG_PATH = "/usr/bin/dpkg"
+ERROR_MSG = "This system doesn't have a supported package management tool, or it has conflicting tools installed."
+logger = logging.getLogger("pbr")
 
 
 def dev_from_file(udev_ctx, dev):
@@ -95,7 +106,6 @@ def is_block(dev):
         (bool): Whether the device is a block device or not.
     """
     from os import stat
-    from os.path import exists
     from stat import S_ISBLK
 
     if exists(dev) and S_ISBLK(stat(dev).st_mode):
@@ -114,9 +124,7 @@ def is_installed(pkg):
     Returns:
         (bool): Whether the pkg is installed or not.
     """
-    from os.path import exists
-
-    if exists("/usr/bin/rpm") and not exists("/usr/bin/dpkg"):
+    if _has_rpm() and not _has_dpkg():
         from rpm import RPMTAG_NAME, TransactionSet
 
         ts = TransactionSet()
@@ -125,15 +133,14 @@ def is_installed(pkg):
             return True
         else:
             return False
-    elif exists("/usr/bin/dpkg") and not exists("/usr/bin/rpm"):
-        ret = run_cmd(['/usr/bin/dpkg', '-s', pkg], ret=True)
+    elif _has_dpkg() and not _has_rpm():
+        ret = run_cmd([DPKG_PATH, '-s', pkg], ret=True)
         if ret.returncode:
             return False
         else:
             return True
     else:
-        raise GeneralError("This system doesn't have a supported package management tool, or it has conflicting tools "
-                           "installed.")
+        raise GeneralError(ERROR_MSG)
 
 
 def pkg_files(pkg):
@@ -146,21 +153,18 @@ def pkg_files(pkg):
     Returns:
         (list): The files in the pkg.
     """
-    from os.path import exists
-
-    if exists("/usr/bin/rpm") and not exists("/usr/bin/dpkg"):
+    if _has_rpm() and not _has_dpkg():
         from rpm import RPMTAG_NAME, files, TransactionSet
 
         ts = TransactionSet()
         for h in ts.dbMatch(RPMTAG_NAME, pkg):
             return files(h)
-    elif exists("/usr/bin/dpkg") and not exists("/usr/bin/rpm"):
-        ret = run_cmd(['/usr/bin/dpkg', '-L', pkg], ret=True)
+    elif _has_dpkg() and not _has_rpm():
+        ret = run_cmd([DPKG_PATH, '-L', pkg], ret=True)
         if not ret.returncode:
             return ret.stdout.decode().split()
     else:
-        raise GeneralError("This system doesn't have a supported package management tool, or it has conflicting tools "
-                           "installed.")
+        raise GeneralError(ERROR_MSG)
 
 
 def pkg_query_file(file_name):
@@ -173,21 +177,18 @@ def pkg_query_file(file_name):
     Returns:
         (str): Pkg name.
     """
-    from os.path import exists
-
-    if exists("/usr/bin/rpm") and not exists("/usr/bin/dpkg"):
+    if _has_rpm() and not _has_dpkg():
         from rpm import RPMTAG_BASENAMES, TransactionSet
 
         ts = TransactionSet()
         for h in ts.dbMatch(RPMTAG_BASENAMES, file_name):
             return h['name']
-    elif exists("/usr/bin/dpkg") and not exists("/usr/bin/rpm"):
-        ret = run_cmd(['/usr/bin/dpkg', '-S', file_name], ret=True)
+    elif _has_dpkg() and not _has_rpm():
+        ret = run_cmd([DPKG_PATH, '-S', file_name], ret=True)
         if not ret.returncode:
             return ret.stdout.decode().split(':')[0]
     else:
-        raise GeneralError("This system doesn't have a supported package management tool, or it has conflicting tools "
-                           "installed.")
+        raise GeneralError(ERROR_MSG)
 
 
 def not_in_append(dev, array):
@@ -213,9 +214,6 @@ def rand_str(length, hexa):
     Returns:
         (str): Random generated string.
     """
-    import random
-    import string
-
     if not hexa:
         letters = string.ascii_uppercase + string.digits
     else:
@@ -233,11 +231,6 @@ def rsync(cfg, opts, facts, bk_excludes=None):
         facts (obj): The facts object.
         bk_excludes (list): A list of paths to exclude from the backup.
     """
-    import logging
-    from planb.exceptions import RunCMDError
-
-    logger = logging.getLogger('pbr')
-
     if opts.verbose:
         cmd = ['/usr/bin/rsync', '-av']
     else:
@@ -282,11 +275,8 @@ def run_cmd(cmd, ret=False, timeout=None, capture_output=True):
     Returns:
         (obj): The run command object that includes the output and return code.
     """
-    import logging
     from subprocess import PIPE, run, TimeoutExpired
-    from planb.exceptions import RunCMDError
 
-    logger = logging.getLogger('pbr')
     if not ret:
         logger.debug(f"utils: run_cmd: cmd: {cmd}")
 
@@ -315,8 +305,6 @@ def udev_trigger():
     """
     Run udevadm trigger, to force udev reload.
     """
-    from time import sleep
-
     run_cmd(['udevadm', 'trigger'])
     sleep(2)
 
@@ -334,13 +322,14 @@ def mount(src, dest, fstype=None, opts=None):
     Returns:
         (obj): Returns the run command obj.
     """
+    _mount = "/usr/bin/mount"
     if opts is None:
         opts = "defaults"
 
     if fstype:
-        cmd = ['/usr/bin/mount', '-v', '-o', opts, '-t', fstype, src, dest]
+        cmd = [_mount, '-v', '-o', opts, '-t', fstype, src, dest]
     else:
-        cmd = ['/usr/bin/mount', '-v', '-o', opts, src, dest]
+        cmd = [_mount, '-v', '-o', opts, src, dest]
 
     return run_cmd(cmd, ret=True, timeout=10)
 
@@ -357,15 +346,40 @@ def umount(mnt, recursive=False, lazy=False):
     Returns:
         (obj): Returns the run command obj.
     """
+    _umount = "/usr/bin/umount"
     if recursive:
         if lazy:
-            cmd = ['/usr/bin/umount', '-l', '-R', mnt]
+            cmd = [_umount, '-l', '-R', mnt]
         else:
-            cmd = ['/usr/bin/umount', '-R', mnt]
+            cmd = [_umount, '-R', mnt]
     else:
         if lazy:
-            cmd = ['/usr/bin/umount', '-l', mnt]
+            cmd = [_umount, '-l', mnt]
         else:
-            cmd = ['/usr/bin/umount', mnt]
+            cmd = [_umount, mnt]
 
     return run_cmd(cmd, ret=True)
+
+
+def _has_dpkg() -> bool:
+    """
+    Function to check if dpkg is installed.
+
+    Returns:
+        bool: True if dpkg is installed, False otherwise.
+    """
+    if exists(DPKG_PATH):
+        return True
+    return False
+
+
+def _has_rpm() -> bool:
+    """
+    Function to check if rpm is installed.
+
+    Returns:
+        bool: True if rpm is installed, False otherwise.
+    """
+    if exists("/usr/bin/rpm"):
+        return True
+    return False

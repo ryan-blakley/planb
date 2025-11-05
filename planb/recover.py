@@ -10,7 +10,7 @@ from shutil import move
 
 from selinux import chcon
 
-from planb.exceptions import ExistsError, GeneralError, MountError, RunCMDError
+from planb.exceptions import ExistsError, GeneralError, MountError
 from planb.facts import Facts
 from planb.fs import fmt_fs, get_mnts
 from planb.luks import luks_check
@@ -56,7 +56,7 @@ class Recover(object):
         self.tmp_rootfs_dir = "/mnt/rootfs"
 
         # Tmp variables for mapping.
-        self.tmp_mapped_disks = dict()
+        self.tmp_mapped_disks = {}
         self.lst_mapped_mps = []
         self.bk_mounted = False
 
@@ -82,8 +82,8 @@ class Recover(object):
         # Make a copy, so entries can be removed and added to the originals.
         facts_disks = self.facts.disks.copy()
         bk_disks = self.bk_disks.copy()
-        matching_size_disks = dict()
-        possible_larger_disks = dict()
+        matching_size_disks = {}
+        possible_larger_disks = {}
 
         # Loop through the disk needed for mount points, from the backup.
         for disk1, info1 in bk_disks.items():
@@ -119,7 +119,7 @@ class Recover(object):
             larger_disks = []
 
             # If checking by dev name doesn't match, loop through facts_disks.
-            for disk2, info2 in list(facts_disks.items()):
+            for disk2, info2 in facts_disks.items():
                 # If disk1 is an mpath device, skip all regular disk/paths.
                 if not search("/dev/mapper", disk2) and d1_mapper:
                     continue
@@ -244,7 +244,7 @@ class Recover(object):
                 try:
                     # Check if the partitions start sectors match, if not return false. Wrap key in int(),
                     # since when the backup facts are written to disk, they're converted to str.
-                    if not self.bk_disks[d1][key]['start'] == facts.disks[d2][int(key)]['start']:
+                    if self.bk_disks[d1][key]['start'] != facts.disks[d2][int(key)]['start']:
                         return False
                     else:
                         match += 1
@@ -436,7 +436,7 @@ class Recover(object):
             p = None
             for dev in self.bk_misc['luks']:
                 if o_disk.split('/')[-1] == search("([a-z]+)", dev.split('/')[-1]).group():
-                    p = search("([0-9]+)", dev.split('/')[-1]).group()
+                    p = search(r"(\d+)", dev.split('/')[-1]).group()
                     if p:
                         self.bk_misc['luks'][f"{n_disk}{p}"] = self.bk_misc['luks'].pop(dev)
                         self.log.debug(f"recover: map_disk: luks: od:{o_disk} nd:{n_disk} p:{p}")
@@ -744,7 +744,7 @@ class Recover(object):
             else:
                 chmod(self.tmp_rootfs_dir, 0o555)
 
-        except (Exception, KeyboardInterrupt, RunCMDError):
+        except (Exception, KeyboardInterrupt):
             # Call cleanup before exiting.
             self.cleanup()
 

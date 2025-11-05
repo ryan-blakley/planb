@@ -88,7 +88,7 @@ def get_mnts(udev_ctx):
     """
     from glob import glob
 
-    mnts = dict()
+    mnts = {}
 
     def add_entries(dev, mp):
         """
@@ -98,7 +98,7 @@ def get_mnts(udev_ctx):
             dev (str): Device name.
             mp (str): Mount point.
         """
-        info = dict()
+        info = {}
         logger = logging.getLogger('pbr')
         md_devname = None
         parent = None
