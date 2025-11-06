@@ -2,7 +2,7 @@
 %define debug_package   %{nil}
 
 Name:           planb
-Version:        0.7
+Version:        0.8
 Release:        1%{?dist}
 Summary:        Plan B Recovery is a backup and recovery utility.
 
@@ -96,6 +96,12 @@ Plan B Recovery is a backup and recovery utility.
 %doc %{_mandir}/man5/pbr.conf.5*
 
 %changelog
+* Thu Nov 06 2025 Ryan Blakley <rblakley@redhat.com> 0.8-1
+- Update makefile to use F43 (rblakley@redhat.com)
+- Add RHEL 10 support and misc sonarqube issues fixed (rblakley@redhat.com)
+- fix: Misc grammar issues reported by pycharm (rblakley@redhat.com)
+- fix: Requirements for fedora 42 due to conflicts (rblakley@redhat.com)
+
 * Mon Jun 10 2024 Ryan Blakley <rblakley@redhat.com> 0.7-1
 - Update Makefile to build with F40 and new spec location (rblakley@redhat.com)
 - fix: Move the spec file back to the base of the project (rblakley@redhat.com)
