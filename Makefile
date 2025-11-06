@@ -1,5 +1,5 @@
 ifeq ($(fedora),1)
-DIST = fedora-42
+DIST = fedora-43
 else ifeq ($(epel-8),1)
 DIST = centos-stream+epel-8
 else ifeq ($(epel-9),1)
