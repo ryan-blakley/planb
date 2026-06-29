@@ -7,7 +7,7 @@ DIST = centos-stream+epel-9
 else ifeq ($(epel-10),1)
 DIST = centos-stream+epel-10
 else ifeq ($(suse),1)
-DIST = opensuse-leap-15.4
+DIST = opensuse-leap-15.6
 else ifeq ($(mageia-8),1)
 DIST = mageia-8
 else ifeq ($(mageia-9),1)

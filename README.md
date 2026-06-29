@@ -4,7 +4,7 @@
 
 ## Description
 Plan B Recovery is a full server backup and recovery tool. Plan B Recovery is designed to be straightforward with few
-configuration options, this is to prevent complexity. The more complexity that is added, the potential for loss of 
+configuration options. This is to prevent complexity. The more complexity that is added, the potential for loss of 
 stability is added. Stability is the most important thing needed in a backup and recovery tool.
 
 ## Supported setups

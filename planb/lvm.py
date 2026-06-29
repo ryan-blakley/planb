@@ -213,7 +213,7 @@ class RecoveryLVM(object):
                         if lv['lv_name'] == lv2['lv_name'] and lv['lv_size'] == lv2['lv_size']:
                             match += 1
 
-                    # If there wasn't any entries where the name
+                    # If there weren't any entries where the name
                     # and size matches, then return false.
                     if not match:
                         return False

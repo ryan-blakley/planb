@@ -57,7 +57,7 @@ class LiveOS(object):
             pkgs (list): List of pkg names.
         """
         for pkg in pkgs:
-            # Suppress the following exceptions, normally they're caused by symlinks, or multiple
+            # Suppress the following exceptions; normally they're caused by symlinks, or multiple
             # pkgs that state they own the same file/dir.
             with suppress(TypeError, FileExistsError, SameFileError):
                 for f in pkg_files(pkg):
@@ -372,7 +372,7 @@ class LiveOS(object):
         Returns:
             pkgs (list): List of pkgs needed for iso rootfs.
         """
-        # Set distro specific pkgs.
+        # Set distro-specific pkgs.
         pkgs = set_distro_pkgs(self.facts)
         if not self.facts.is_debian_based:
             self.set_common_pkgs(pkgs)
@@ -558,7 +558,7 @@ def prep_rootfs(cfg, tmp_dir, tmp_rootfs_dir):
         tmp_dir (str): The generated tmp working directory.
         tmp_rootfs_dir (str): The tmp rootfs directory for the iso.
     """
-    ETC_MULITPATH = "/etc/multipath"
+    ETC_MULTIPATH = "/etc/multipath"
     ETC_SHADOW = "etc/shadow"
 
     # Create our custom login screen text.
@@ -635,9 +635,9 @@ def prep_rootfs(cfg, tmp_dir, tmp_rootfs_dir):
     # Check if the multipath.conf file exists if it does copy it.
     if exists("/etc/multipath.conf"):
         copy2("/etc/multipath.conf", join(tmp_rootfs_dir, "etc"))
-        if exists(ETC_MULITPATH):
-            for f in listdir(ETC_MULITPATH):
-                copy2(join(ETC_MULITPATH, f), join(tmp_rootfs_dir, "etc/multipath"))
+        if exists(ETC_MULTIPATH):
+            for f in listdir(ETC_MULTIPATH):
+                copy2(join(ETC_MULTIPATH, f), join(tmp_rootfs_dir, "etc/multipath"))
 
     if not exists(join(tmp_rootfs_dir, "etc/group")):
         copy2("/etc/group", join(tmp_rootfs_dir, "etc/group"))

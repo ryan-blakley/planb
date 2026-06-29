@@ -106,7 +106,7 @@ def get_mnts(udev_ctx):
 
         # If the dev is a zram or loop device, skip adding it.
         logger.debug(f"fs: get_mnts: dev: {dev} mp: {mp}")
-        if dev.startswith("/dev/zram") or dev.startswith("/dev/loop"):
+        if dev.startswith(("/dev/zram", "/dev/loop")):
             return
 
         udev_info = dev_from_file(udev_ctx, dev)
@@ -171,7 +171,7 @@ def get_mnts(udev_ctx):
         # Only add swap entries that the type is partition. Will try to add
         # file type entries in the future.
         if "partition" in x_split[1]:
-            # To distinguish from actual mount points, name the entries SWAP-X,
+            # To distinguish from actual mount points, name the entries SWAP-X;
             # this is in case there are multiple swap devices in use.
             add_entries(x_split[0], f"SWAP-{loop}")
             loop += 1

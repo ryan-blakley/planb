@@ -21,7 +21,7 @@ def create_tar(cfg, bk_excludes, tmp_dir):
     # Change the directory to / beforehand.
     chdir("/")
 
-    # Sort the excludes, they're easier to parse if they are sorted.
+    # Sort the excludes; they're easier to parse if they are sorted.
     bk_excludes.sort()
 
     with tarfile.open(join(tmp_dir, f"{cfg.bk_archive_prefix}.tar.gz"), "w:gz") as tar:
@@ -84,7 +84,7 @@ def restore_tar(rootfs_dir, archive):
                                         int((100 / width) * (i / total_percentage))), end='\r')
 
             # If the member is a symlink, check to make sure the link doesn't exist,
-            # if the symlink exist, it will cause a massive performance hit on
+            # if the symlink exists, it will cause a massive performance hit on
             # extraction. So skip it if it exists and move on.
             if member_info.issym() and lexists(member_info.name):
                 i += 1

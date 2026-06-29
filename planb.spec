@@ -6,7 +6,7 @@ Version:        0.8
 Release:        1%{?dist}
 Summary:        Plan B Recovery is a backup and recovery utility.
 
-License:        GPL-3.0
+License:        AGPL-3.0
 URL:            https://github.com/ryan-blakley/planb
 Source0:        %{name}-%{version}.tar.gz
 

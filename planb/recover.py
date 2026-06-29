@@ -75,7 +75,7 @@ class Recover(object):
         """
         This function compares the disk set in the backup to the disk
         presented to the recovery environment. It possible that disk enumeration
-        changes disk names, there are also going to be people that use this to
+        changes disk names; there are also going to be people that use this to
         migrate to different servers all together. So the disk needs to be compared
         and mapped if needed to the proper disk in the recovery environment.
         """
@@ -120,7 +120,7 @@ class Recover(object):
 
             # If checking by dev name doesn't match, loop through facts_disks.
             for disk2, info2 in facts_disks.items():
-                # If disk1 is an mpath device, skip all regular disk/paths.
+                # If disk1 is a mpath device, skip all regular disk/paths.
                 if not search("/dev/mapper", disk2) and d1_mapper:
                     continue
 
@@ -135,7 +135,7 @@ class Recover(object):
                         del facts_disks[disk2]
                         break
 
-                # If the size matches, add to list, and del the entry, we'll handle the list later.
+                # If the size matches, add to list, and del the entry; we'll handle the list later.
                 elif size1 == size2:
                     self.log.debug("sizes only match")
                     possible_size_matching_disks.append(disk2)
@@ -242,7 +242,7 @@ class Recover(object):
                 # If the restore disk is missing a partition,
                 # it will throw a key error, so catch and return false.
                 try:
-                    # Check if the partitions start sectors match, if not return false. Wrap key in int(),
+                    # Check if the partition start sectors match, if not return false. Wrap key in int(),
                     # since when the backup facts are written to disk, they're converted to str.
                     if self.bk_disks[d1][key]['start'] != facts.disks[d2][int(key)]['start']:
                         return False
@@ -257,7 +257,7 @@ class Recover(object):
         if partitioned == 0:
             return self.bk_disks[d1].get('fs', '')
 
-        # If we haven't returned false yet, make sure match was incremented,
+        # If we haven't returned false yet, make sure match was incremented
         # if it was return true, if not false.
         if match > 0:
             return True
@@ -403,7 +403,7 @@ class Recover(object):
                 self.log.debug(f"recover: map_disk: mnts: od:{o_disk} nd:{n_disk} d:{d}")
                 self.log.debug(f"recover: map_disk: mnts: bk_mnts[mnt]:{self.bk_mnts[mnt]}")
 
-        # If md_info exist in bk_misc, update the devs entries if they need to be.
+        # If md_info exist in bk_misc, update the dev entries if they need to be.
         if self.bk_misc.get('md_info', ''):
             od_split = o_disk.split('/')[-1]
             nd_split = n_disk.split('/')[-1]
@@ -503,7 +503,7 @@ class Recover(object):
                     self.log.debug(f"recover: mnt_restored_rootfs: Creating {mp} directory since it doesn't exist.")
                     makedirs(mp)
 
-                    # Set the context on the directory before mounting, on a test box I hit an issue being
+                    # Set the context on the directory before mounting; on a test box I hit an issue being
                     # able to log in. After bind mounting / and relabeling the directories that were unlabeled_t,
                     # the issue disappeared. So any time a directory is created set the proper context.
                     if mnt == "/boot":

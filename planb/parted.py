@@ -103,7 +103,7 @@ def get_part_layout(udev_ctx):
                 # Define dict to store partition info.
                 part = {}
 
-                # Grab any part flags, and the part type.
+                # Grab any partition flags, and the partition type.
                 part.update({"flags": p.getFlagsAsString(),
                              "type": p.type})
 
@@ -141,7 +141,7 @@ def get_part_layout(udev_ctx):
 
                 # Add the part dict as an entry to the disk dict.
                 # Might change this to the full path later, for
-                # now just the part number.
+                # now just the partition number.
                 disk.update({p.number: part})
 
             # Add the disk dict as an entry to the primary dict.

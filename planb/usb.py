@@ -85,7 +85,7 @@ def fmt_usb(device):
                     logger.error(f" Failed running {ret.args} due to {stderr}")
                     raise MountError()
 
-            # Go ahead and install grub2 on the usb device, I don't think grub needs
+            # Go ahead and install grub2 on the usb device; I don't think grub needs
             # to be installed every time a backup is created, so it makes sense to
             # just do it here once.
             ret = run_cmd([f'{grub_prefix()}-install', '-v', '--target=powerpc-ieee1275', f"--boot-directory={tmp_dir}",
@@ -120,7 +120,7 @@ def fmt_usb(device):
                     logger.error(f" Failed running {ret.args} due to {stderr}")
                     raise MountError()
 
-            # Go ahead and install grub2 on the usb device, I don't think grub needs
+            # Go ahead and install grub2 on the usb device; I don't think grub needs
             # to be installed every time a backup is created, so it makes sense to
             # just do it here once.
             ret = run_cmd([f'{grub_prefix()}-install', '-v', f"--boot-directory={tmp_dir}", f"{device}"], ret=True)

@@ -407,7 +407,7 @@ class Backup(object):
 
     def start(self):
         """
-        Run the backup tasks from here, so there isn't duplicate
+        Run the backup tasks from here, so there is no duplicate
         code in the main function above.
         """
         # Create the necessary dirs in the tmp dir.

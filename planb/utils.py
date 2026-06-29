@@ -315,7 +315,7 @@ def mount(src, dest, fstype=None, opts=None):
 
     Args:
         src (str): The device/network share that's being mounted.
-        dest (str): The location the src will be mounted.
+        dest (str): The location of the src will be mounted.
         fstype (str): The filesystem type.
         opts (str): Mount options to use when mounting.
 
